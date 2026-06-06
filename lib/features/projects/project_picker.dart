@@ -30,124 +30,169 @@ Future<Project?> showNewProjectSheet(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final l10n = AppLocalizations.of(context);
   final areas = ref.read(areasProvider).valueOrNull ?? const <Area>[];
-  final titleCtrl = TextEditingController();
-  final outcomeCtrl = TextEditingController();
-  String? areaId;
-  String? titleError;
 
-  final ok = await showModalBottomSheet<bool>(
+  final result = await showModalBottomSheet<_NewProjectResult>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => StatefulBuilder(
-      builder: (context, setState) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.newProject,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: titleCtrl,
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: l10n.projectName,
-                  hintText: l10n.projectNameHint,
-                  errorText: titleError,
-                ),
-                onChanged: titleError == null
-                    ? null
-                    : (_) => setState(() => titleError = null),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: outcomeCtrl,
-                minLines: 2,
-                maxLines: 4,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Outcome — what does "done" look like?',
-                ),
-              ),
-              if (areas.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String?>(
-                  initialValue: areaId,
-                  decoration: InputDecoration(
-                    labelText: l10n.areaOfFocusOptional,
-                  ),
-                  items: [
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text(l10n.unfiledOption),
-                    ),
-                    for (final a in areas)
-                      DropdownMenuItem<String?>(
-                        value: a.id,
-                        child: Text(a.name),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => areaId = v),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(l10n.cancel),
-                  ),
-                  const Spacer(),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create'),
-                    onPressed: () {
-                      if (titleCtrl.text.trim().isEmpty) {
-                        setState(() => titleError = l10n.projectNameRequired);
-                        return;
-                      }
-                      Navigator.pop(context, true);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
+    builder: (_) => _NewProjectSheet(areas: areas),
   );
-
-  final title = titleCtrl.text.trim();
-  final outcome = outcomeCtrl.text.trim();
-  titleCtrl.dispose();
-  outcomeCtrl.dispose();
-  if (ok != true || title.isEmpty) return null;
+  if (result == null) return null;
 
   final now = ref.read(clockProvider).now();
   final project = Project(
     id: ref.read(idGeneratorProvider).newId(),
-    title: title,
-    outcome: outcome.isEmpty ? null : outcome,
-    areaId: areaId,
+    title: result.title,
+    outcome: result.outcome.isEmpty ? null : result.outcome,
+    areaId: result.areaId,
     status: ProjectStatus.active,
     createdAt: now,
     updatedAt: now,
   );
   await ref.read(projectRepositoryProvider).upsert(project);
   return project;
+}
+
+/// What [_NewProjectSheet] hands back on "Create". Carries plain values so the
+/// sheet can own (and dispose) its own controllers — disposing them in the
+/// async caller raced the route's dismiss animation, which rebuilt the
+/// TextField against an already-disposed controller (use-after-dispose).
+class _NewProjectResult {
+  const _NewProjectResult({
+    required this.title,
+    required this.outcome,
+    required this.areaId,
+  });
+  final String title;
+  final String outcome;
+  final String? areaId;
+}
+
+/// The new-project form. A StatefulWidget so its [TextEditingController]s are
+/// disposed in [dispose] — after the route fully unmounts — not synchronously
+/// when the sheet future resolves while the close animation is still running.
+class _NewProjectSheet extends StatefulWidget {
+  const _NewProjectSheet({required this.areas});
+  final List<Area> areas;
+
+  @override
+  State<_NewProjectSheet> createState() => _NewProjectSheetState();
+}
+
+class _NewProjectSheetState extends State<_NewProjectSheet> {
+  final _titleCtrl = TextEditingController();
+  final _outcomeCtrl = TextEditingController();
+  String? _areaId;
+  String? _titleError;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _outcomeCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) {
+      setState(() => _titleError = AppLocalizations.of(context).projectNameRequired);
+      return;
+    }
+    Navigator.pop(
+      context,
+      _NewProjectResult(
+        title: title,
+        outcome: _outcomeCtrl.text.trim(),
+        areaId: _areaId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final areas = widget.areas;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.newProject,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _titleCtrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: l10n.projectName,
+                hintText: l10n.projectNameHint,
+                errorText: _titleError,
+              ),
+              onChanged: _titleError == null
+                  ? null
+                  : (_) => setState(() => _titleError = null),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _outcomeCtrl,
+              minLines: 2,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Outcome — what does "done" look like?',
+              ),
+            ),
+            if (areas.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _areaId,
+                decoration: InputDecoration(
+                  labelText: l10n.areaOfFocusOptional,
+                ),
+                items: [
+                  DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(l10n.unfiledOption),
+                  ),
+                  for (final a in areas)
+                    DropdownMenuItem<String?>(
+                      value: a.id,
+                      child: Text(a.name),
+                    ),
+                ],
+                onChanged: (v) => setState(() => _areaId = v),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.cancel),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create'),
+                  onPressed: _submit,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Prompts for a project and re-files [item] under it (or detaches it on

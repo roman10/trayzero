@@ -1,0 +1,9 @@
+First public release of Trayzero.
+
+- The full GTD inbox: Capture, Clarify, Organize, Reflect, Engage.
+- Process Inbox card-stack flow with the full GTD decision tree.
+- Weekly Review wizard, projects with next-action warnings, @-contexts, Areas.
+- Reminders with Done / Snooze / Move-to-Next-Actions action buttons.
+- Two-way system calendar sync.
+- Home-screen widget for one-tap capture.
+- 100% on-device. No account. JSON backup/restore.
