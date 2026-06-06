@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5E2A55"/>
+      <stop offset="100%" stop-color="#E8702A"/>
+    </linearGradient>
+    <!-- Clip halos to the sky portion only (above the horizon) -->
+    <clipPath id="sky">
+      <rect x="0" y="0" width="1024" height="640"/>
+    </clipPath>
+  </defs>
+  <!-- background -->
+  <rect width="1024" height="1024" fill="url(#dawn)"/>
+  <!-- soft halo above the sun, clipped to the sky -->
+  <g clip-path="url(#sky)">
+    <circle cx="512" cy="640" r="420" fill="#FFC36B" opacity="0.06"/>
+    <circle cx="512" cy="640" r="340" fill="#FFC36B" opacity="0.10"/>
+  </g>
+  <!-- horizon line -->
+  <rect x="0" y="640" width="1024" height="3" fill="#FFFFFF" opacity="0.30"/>
+  <!-- half sun rising over the horizon -->
+  <path d="M 512 640 m -260 0 a 260 260 0 1 1 520 0 Z" fill="#FFE3B0"/>
+</svg>

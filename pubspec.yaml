@@ -1,0 +1,126 @@
+name: cleartray
+description: "Cleartray — a GTD-method productivity app: capture, clarify, organize, reflect, engage."
+publish_to: 'none'
+version: 1.0.2+34
+
+environment:
+  sdk: ^3.11.4
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Local database
+  drift: ^2.22.0
+  sqlite3: ^2.4.0
+  sqlite3_flutter_libs: ^0.5.27
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.20.1
+  collection: ^1.18.0
+  diacritic: ^0.1.5 # accent folding for search normalisation
+
+  # Notifications + background
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4 # pinned to 0.9.x for device_calendar 4.x compatibility
+  permission_handler: ^11.3.1
+
+  # Capture / sharing
+  share_plus: ^10.1.2
+  receive_sharing_intent: ^1.8.1
+  speech_to_text: ^7.0.0
+
+  # Home screen widget
+  home_widget: ^0.7.0
+
+  # Persistence
+  shared_preferences: ^2.3.4
+
+  # App version/build info
+  package_info_plus: ^9.0.0
+
+  # UX
+  flutter_slidable: ^3.1.2
+  flutter_staggered_animations: ^1.1.1
+
+  # Clickable links in item notes
+  url_launcher: ^6.3.0
+  flutter_linkify: ^6.0.0
+
+  # Crash reporting (opt-in; off by default for privacy)
+  sentry_flutter: ^9.20.0
+
+  # v1.1: attachments
+  image_picker: ^1.1.2
+  record: ^5.1.2
+  audioplayers: ^6.1.0
+
+  # v1.1: system calendar two-way sync
+  device_calendar: ^4.3.3
+  # device local timezone name, used to set tz.local at startup so mirrored
+  # calendar events and notifications use real local time, not UTC.
+  flutter_timezone: ^5.0.2
+
+  # backup import: pick a previously-exported .json file
+  file_picker: ^11.0.2
+  purchases_flutter: ^10.2.0
+
+dependency_overrides:
+  # record 5.x pulls in record_linux 0.7.2 which is incompatible with the
+  # newer record_platform_interface; pin to a compatible Linux build. We
+  # don't ship Linux but Flutter compiles all platforms during build.
+  record_linux: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Code generation
+  build_runner: ^2.4.13
+  drift_dev: ^2.22.0
+  riverpod_generator: ^2.6.4
+  custom_lint: ^0.7.0
+  riverpod_lint: ^2.6.4
+
+  # Testing
+  mocktail: ^1.0.4
+
+  # Launcher icon generation
+  flutter_launcher_icons: ^0.14.2
+
+  # Screenshot harness: center-crops 1080×2400 emulator captures to 9:16
+  # (1080×1920) so Play Console accepts them without manual cropping.
+  image: ^4.5.4
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true # required by App Store
+  image_path: "assets/icon/cleartray-1024.png"
+  # The icon is full-bleed; iOS rounds it for you. Android adaptive icons
+  # need a background colour + foreground; we re-use the master with a
+  # deepened sunrise amber as the fallback.
+  adaptive_icon_background: "#C2531B"
+  adaptive_icon_foreground: "assets/icon/cleartray-1024.png"
+  min_sdk_android: 23

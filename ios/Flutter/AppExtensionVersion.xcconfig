@@ -1,0 +1,6 @@
+// Gives app extensions (ShareExtension, CleartrayInboxWidget) access to the
+// Flutter-managed version vars (FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER) so
+// their CFBundleShortVersionString / CFBundleVersion match the host Runner app.
+// Without this, extensions defaulted to MARKETING_VERSION=1.0 / CURRENT_PROJECT_VERSION=1
+// and App Store flagged warning 90473 (version mismatch).
+#include "Generated.xcconfig"

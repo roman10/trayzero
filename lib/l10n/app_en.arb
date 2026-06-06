@@ -1,0 +1,696 @@
+{
+  "@@locale": "en",
+  "appName": "Trayzero",
+  "@appName": {
+    "description": "App brand name. Do not translate."
+  },
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "ok": "OK",
+  "next": "Next",
+  "back": "Back",
+  "skip": "Skip",
+  "done": "Done",
+  "retry": "Retry",
+  "settings": "Settings",
+  "enable": "Enable",
+  "none": "None",
+  "notSet": "Not set",
+  "search": "Search",
+  "select": "Select",
+  "selectAll": "All",
+  "selectNone": "None",
+  "rename": "Rename",
+  "inbox": "Inbox",
+  "@inbox": {
+    "description": "GTD term — the universal capture bucket."
+  },
+  "doVerb": "Do",
+  "@doVerb": {
+    "description": "Bottom-nav label for the Engage tab — the imperative verb 'do', not the auxiliary 'do you'."
+  },
+  "projects": "Projects",
+  "review": "Review",
+  "more": "More",
+  "@more": {
+    "description": "Bottom-nav label leading to Settings/More."
+  },
+  "navInbox": "Inbox",
+  "navDo": "Do",
+  "navProjects": "Projects",
+  "navReview": "Review",
+  "navMore": "More",
+  "capture": "Capture",
+  "@capture": {
+    "description": "GTD stage 1 — record anything that has your attention."
+  },
+  "clarify": "Clarify",
+  "@clarify": {
+    "description": "GTD stage 2 — decide what each captured item is."
+  },
+  "organize": "Organize",
+  "@organize": {
+    "description": "GTD stage 3 — file outcomes onto the right list."
+  },
+  "reflect": "Reflect",
+  "@reflect": {
+    "description": "GTD stage 4 — review your lists regularly."
+  },
+  "engage": "Engage",
+  "@engage": {
+    "description": "GTD stage 5 — actually do the work."
+  },
+  "nextAction": "Next action",
+  "waitingFor": "Waiting for",
+  "someday": "Someday",
+  "somedayMaybe": "Someday / Maybe",
+  "reference": "Reference",
+  "calendar": "Calendar",
+  "project": "Project",
+  "completed": "Completed",
+  "scheduled": "Scheduled",
+  "needsClarifying": "Needs clarifying",
+  "howGtdWorks": "How GTD works",
+  "@howGtdWorks": {
+    "description": "Tooltip / button that opens the GTD workflow diagram."
+  },
+  "whatIsGtd": "What is GTD?",
+  "@whatIsGtd": {
+    "description": "Settings entry opening the GTD overview."
+  },
+  "onboardingPage1Title": "Get it out of your head",
+  "onboardingPage1Body": "Anything that has your attention — a task, an idea, a worry — goes into the Inbox. The point is to free your mind, not to organize yet.",
+  "onboardingPage2Title": "Clarify, one item at a time",
+  "onboardingPage2Body": "The Process flow walks each captured item through the GTD decision tree: is it actionable? Less than two minutes? Delegate? A project? A next action?",
+  "onboardingPage3Title": "Engage when you have time",
+  "onboardingPage3Body": "The Do tab filters next actions by context, energy and time available, so you always know what you could be doing right now.",
+  "onboardingPage4Title": "Review to stay trustworthy",
+  "onboardingPage4Body": "Weekly Reviews keep the system honest. Once a week, run through every list, empty your inbox, and look ahead.",
+  "onboardingSeedTitle": "You're ready",
+  "onboardingSeedBody": "Default contexts (@phone, @computer, @errands, @home, @office, @anywhere, @waiting) are seeded for you. You can add or edit them in Settings.",
+  "onboardingSeedSampleLabel": "Seed a sample project",
+  "onboardingSeedSampleSubtitle": "Adds a starter project plus a few items so the app isn't empty.",
+  "onboardingFinish": "Let's go",
+  "inboxEmptyTitle": "Inbox zero",
+  "inboxEmptyMessage": "Nothing to clarify. Tap Capture to brain-dump anything that has your attention — you'll process it later.",
+  "inboxEmptyAction": "Capture something",
+  "inboxItemsToClarify": "{count, plural, =0{No items to clarify} =1{1 item to clarify} other{{count} items to clarify}}",
+  "@inboxItemsToClarify": {
+    "description": "Header in the inbox list showing how many items are waiting to be clarified.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "processInbox": "Process inbox",
+  "deleteItemsConfirmTitle": "{count, plural, =1{Delete 1 item?} other{Delete {count} items?}}",
+  "@deleteItemsConfirmTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteItemsConfirmBody": "This permanently removes them and their attachments. This can't be undone.",
+  "deletedItemsSnackbar": "{count, plural, =1{Deleted 1 item.} other{Deleted {count} items.}}",
+  "@deletedItemsSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filedItemsSnackbar": "{count, plural, =1{Filed 1 into the project.} other{Filed {count} into the project.}}",
+  "@filedItemsSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "movedItemsSnackbar": "{count, plural, =1{Moved 1 to {destination}.} other{Moved {count} to {destination}.}}",
+  "@movedItemsSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "destination": {
+        "type": "String",
+        "example": "Someday"
+      }
+    }
+  },
+  "selectionCountTitle": "{count} selected",
+  "@selectionCountTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "captureTitle": "Brain dump",
+  "captureHint": "What's on your mind?",
+  "captureNotesHint": "Notes (optional)",
+  "captureEmptyError": "Enter something to capture",
+  "captureSubmit": "Add to inbox",
+  "dictate": "Dictate",
+  "stopDictation": "Stop dictation",
+  "processTitle": "Process inbox",
+  "processCompleteTitle": "Inbox zero!",
+  "processCompleteNoItems": "There is nothing to clarify.",
+  "processCompleteStats": "You filed {filed}, knocked out {doneNow} in under 2 minutes, and trashed {trashed}. Nicely done.",
+  "@processCompleteStats": {
+    "placeholders": {
+      "filed": {
+        "type": "int"
+      },
+      "doneNow": {
+        "type": "int"
+      },
+      "trashed": {
+        "type": "int"
+      }
+    }
+  },
+  "processStepCounter": "Step {step} of {total}",
+  "@processStepCounter": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "processItemsRemaining": "{count} left",
+  "@processItemsRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "previousStepTooltip": "Previous step",
+  "skipItemTooltip": "Skip",
+  "actionableQuestion": "Is this actionable?",
+  "actionableYes": "Yes — there is something to do",
+  "actionableReference": "No — keep as reference",
+  "actionableSomeday": "No — someday / maybe",
+  "actionableTrash": "Trash",
+  "twoMinQuestion": "Will it take less than 2 minutes?",
+  "twoMinYes": "Yes — I'll do it now",
+  "twoMinNo": "No",
+  "delegateQuestion": "Can someone else do it?",
+  "waitingOnPromptTitle": "Who are you waiting on?",
+  "waitingOnPromptHint": "Name or system",
+  "multiStepQuestion": "Does it need more than one step?",
+  "recurrencePrompt": "Repeat?",
+  "recurrenceOff": "Doesn't repeat",
+  "capturedLabel": "CAPTURED",
+  "engageTitle": "Do now",
+  "engageEmptyTitle": "No next actions yet",
+  "engageEmptyMessage": "Capture something or process your inbox to build your next actions list.",
+  "engageInlineEmpty": "No next actions yet — capture or process your inbox.",
+  "engageOpenInbox": "Open inbox",
+  "engageNoMatchTitle": "Nothing matches",
+  "engageNoMatchMessage": "No actions match the current filters. Try widening them or clear the filter.",
+  "hardLandscape": "Hard landscape",
+  "hardLandscapeSubtitle": "due today & overdue",
+  "filterAllContexts": "All contexts",
+  "filterAnyTime": "Any time",
+  "filterUnder5m": "< 5m",
+  "filterUnder15m": "< 15m",
+  "filterUnder30m": "< 30m",
+  "filterUnder1h": "< 1h",
+  "filterAnyEnergy": "Any energy",
+  "energyLow": "Low",
+  "energyMedium": "Medium",
+  "energyHigh": "High",
+  "projectsTitle": "Projects",
+  "newProject": "New project",
+  "organizeLooseActionsTooltip": "Organize loose actions",
+  "projectsEmptyTitle": "No projects yet",
+  "projectsEmptyMessage": "A project is any outcome that needs more than one action. Create one to organize related next actions and stay on track to a defined result.",
+  "projectMissingNextAction": "No next action defined",
+  "projectActionCount": "{count, plural, =1{1 action} other{{count} actions}}",
+  "@projectActionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "organizeActionsTitle": "Organize actions",
+  "organizeEmptyTitle": "Nothing loose",
+  "organizeEmptyMessage": "Every next action already belongs to a project. New unassigned actions will show up here to be organized.",
+  "assignToProject": "{count, plural, =1{Assign 1 to project} other{Assign {count} to project}}",
+  "@assignToProject": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addNextActionTitle": "Add next action",
+  "addNextActionHint": "e.g. Email Sara the timeline",
+  "addExistingActions": "Add existing actions",
+  "noUnassignedActionsMessage": "No unassigned next actions to pull in.",
+  "addCount": "{count, plural, =1{Add 1} other{Add {count}}}",
+  "@addCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editProject": "Edit project",
+  "projectName": "Project name",
+  "projectNameHint": "e.g. Launch the new website",
+  "projectNameRequired": "Enter a project name",
+  "areaOfFocusOptional": "Area of focus (optional)",
+  "unfiledOption": "— Unfiled —",
+  "dueDate": "Due date",
+  "deleteProjectConfirmTitle": "Delete project?",
+  "deleteProjectWarning": "Items assigned to it become orphaned but are not deleted.",
+  "addActionFab": "Add action",
+  "projectOutcomeHint": "What does \"done\" look like?",
+  "outcomeSection": "Outcome",
+  "nextActionsSection": "Next actions",
+  "noNextActionsMessage": "No next actions yet.",
+  "projectMissingNextActionError": "No next action defined. Every active project should own at least one.",
+  "statusTooltip": "Status",
+  "reviewTitle": "Review",
+  "weeklyReviewCardTitle": "Weekly review",
+  "weeklyReviewCardSubtitle": "Run through your inbox, lists, and projects. The ritual that keeps the system trustworthy.",
+  "calendarEmpty": "Nothing tied to a specific day.",
+  "waitingForEmpty": "Nothing delegated.",
+  "somedayEmpty": "No future-maybe items.",
+  "referenceEmpty": "No reference items.",
+  "completedThisWeek": "Completed this week",
+  "completedThisWeekEmpty": "Nothing completed yet this week.",
+  "bucketCount": "{count, plural, =1{1 item} other{{count} items}}",
+  "@bucketCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "needsReDecision": "Needs re-decision",
+  "pastDueCount": "{count, plural, =1{1 item past due} other{{count} items past due}}",
+  "@pastDueCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewStep1Title": "Empty your head",
+  "reviewStep1Body": "Capture anything that has your attention into the inbox so the system can be trusted.",
+  "reviewStep2Title": "Process inbox to zero",
+  "reviewStep2Body": "Clarify every captured item using the decision tree until your inbox is empty.",
+  "reviewStep3Title": "Review your next actions",
+  "reviewStep3Body": "Skim every action. Done? Mark it done. Stale? Edit or delete. Still next? Leave it.",
+  "reviewStep4Title": "Review your waiting-for list",
+  "reviewStep4Body": "Has anyone come back to you? Should you follow up? Update or remove.",
+  "reviewStep5Title": "Review every project",
+  "reviewStep5Body": "Each project should be active, on hold, or done — and each active project must own at least one next action.",
+  "reviewStep6Title": "Look at the next two weeks",
+  "reviewStep6Body": "Check your calendar items. Anything you can prepare for now?",
+  "reviewStep7Title": "Review someday / maybe",
+  "reviewStep7Body": "Any of these worth committing to now? Promote them to projects or next actions.",
+  "reviewStepCounter": "Step {step} of {total}",
+  "@reviewStepCounter": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "finishReview": "Finish review",
+  "reviewCompleteSnackbar": "Weekly review complete",
+  "searchHint": "Search items, notes",
+  "searchMinChars": "Type at least two characters",
+  "clearFilters": "Clear filters",
+  "clearSearch": "Clear search",
+  "searchNoResults": "No matches for \"{query}\"",
+  "@searchNoResults": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoMatchTitle": "Nothing matches",
+  "searchNoMatchMessage": "No results match the current filters. Try widening them or clear the filter.",
+  "filterAllProjects": "All projects",
+  "filterCompleted": "Completed",
+  "statusInbox": "Inbox",
+  "statusNext": "Next",
+  "statusWaiting": "Waiting",
+  "statusSomeday": "Someday",
+  "statusReference": "Reference",
+  "appearanceSection": "Appearance",
+  "themeLabel": "Theme",
+  "themeFollowSystem": "Follow system",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "hapticFeedback": "Haptic feedback",
+  "organizationSection": "Organization",
+  "contextsLabel": "Contexts",
+  "areasOfFocusLabel": "Areas of focus",
+  "areasOfFocusDescription": "Group projects by ongoing spheres of responsibility.",
+  "calendarSyncLabel": "Calendar sync",
+  "calendarSyncDescription": "Mirror items with due dates to your system calendar.",
+  "remindersSection": "Reminders",
+  "weeklyReviewNudge": "Weekly review nudge",
+  "weeklyReviewNudgeDescription": "A gentle reminder every Friday at 4 PM.",
+  "remindBeforeDue": "Remind me before due time",
+  "remindBeforeDueOff": "Off · only an alert at the due time",
+  "remindBeforeDueSuffix": "applies to items saved from now on",
+  "deferSurfaceLabel": "Deferred items remind me at",
+  "deferSurfaceDescription": "no-time deferred items stay in the list all day and nudge at this hour",
+  "checkingNotificationStatus": "Checking notification status…",
+  "dataSection": "Data",
+  "exportBackup": "Export backup",
+  "exportBackupDescriptionIos": "Share a JSON copy. Save it to a cloud drive (e.g. Files → iCloud Drive) for backup.",
+  "exportBackupDescriptionAndroid": "Share a JSON copy. Save it to a cloud drive (e.g. Google Drive) for backup.",
+  "exportBackupError": "Could not export: {error}",
+  "@exportBackupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weeklyBackupReminder": "Weekly backup reminder",
+  "weeklyBackupReminderDescription": "Nudge me every Sunday morning to export and save.",
+  "importBackup": "Import backup",
+  "importBackupDescription": "Restore a Trayzero backup, or import a Google Tasks (Takeout) export.",
+  "importConfirmTitle": "Import this backup?",
+  "importConfirmBody": "This will add or update {sections}.\n\nExisting entries with the same id will be overwritten with the backup version. This cannot be undone.",
+  "@importConfirmBody": {
+    "placeholders": {
+      "sections": {
+        "type": "String"
+      }
+    }
+  },
+  "importButton": "Import",
+  "importSourceSheetTitle": "Import backup",
+  "importFromFileTitle": "Choose a backup file",
+  "importFromFileDescription": "Recommended — a Trayzero .json backup or a Google Takeout Tasks.json.",
+  "importFromPasteTitle": "Paste backup JSON",
+  "importFromPasteDescription": "Paste the backup text instead.",
+  "pasteBackupHint": "Paste backup JSON…",
+  "privacySection": "Privacy",
+  "crashReports": "Send crash reports",
+  "crashReportsDescription": "Anonymous crash + error reports via Sentry. No personal data is collected. Off by default.",
+  "crashReportsEnabled": "Crash reports will be sent on next launch",
+  "crashReportsDisabled": "Crash reporting disabled",
+  "aboutSection": "About",
+  "showOnboardingAgain": "Show onboarding again",
+  "versionLabel": "Version",
+  "settingsFooter": "Local-first. Your data stays on this device. Inspired by David Allen's Getting Things Done methodology.",
+  "editTitle": "Edit",
+  "savedIndicator": "Saved",
+  "titleLabel": "Title",
+  "notesLabel": "Notes",
+  "statusSection": "Status",
+  "contextSection": "Context",
+  "energySection": "Energy",
+  "timeEstimateSection": "Time estimate",
+  "waitingOnSection": "Waiting on",
+  "waitingOnHint": "Who or what are you waiting for?",
+  "projectSection": "Project",
+  "datesSection": "Dates",
+  "dueLabel": "Due",
+  "deferUntilLabel": "Defer until",
+  "repeatSection": "Repeat",
+  "recurrenceNeedsDeferHint": "Add a Defer date above to enable repeating — recurrence works by shifting that date forward.",
+  "recurrenceNeedsDueDateHint": "Add a Due or Defer date above to enable repeating — recurrence works by shifting that date forward.",
+  "recurrenceExplanation": "When you complete this item, the next instance will appear with shifted dates.",
+  "recurrenceNoDateNextActionError": "This repeats but has no Defer date, so completing it won't create a next occurrence. Add a Defer date above, or turn repeat Off.",
+  "recurrenceNoDateError": "This repeats but has no Due or Defer date, so completing it won't create a next occurrence. Add a date above, or turn repeat Off.",
+  "attachmentsSection": "Attachments",
+  "markComplete": "Mark complete",
+  "reopen": "Reopen",
+  "deleteItemConfirmTitle": "Delete item?",
+  "deleteItemConfirmBody": "This cannot be undone.",
+  "completeError": "Could not complete this item.",
+  "reopenError": "Could not reopen this item.",
+  "remindersBlockedWarning": "Reminders are blocked in system settings — this won't alert you.",
+  "remindersOffWarning": "Reminders are off — this won't alert you.",
+  "preciseReminderOffWarning": "Precise reminder timing is off — short reminders may be delayed.",
+  "allowExactAlarms": "Allow exact alarms",
+  "noContextsAvailable": "No contexts yet — add some in Settings.",
+  "noActiveProjects": "No active projects yet.",
+  "attachmentPhoto": "Photo",
+  "attachmentCamera": "Camera",
+  "attachmentVoiceMemo": "Voice memo",
+  "attachmentStop": "Stop",
+  "remove": "Remove",
+  "@remove": {
+    "description": "Tooltip on the button that removes an attachment."
+  },
+  "imageViewerClose": "Close",
+  "@imageViewerClose": {
+    "description": "Tooltip on the close button of the full-screen image viewer."
+  },
+  "imageViewerCounter": "{current} / {total}",
+  "@imageViewerCounter": {
+    "description": "Page position in the image viewer when an item has several photos, e.g. 2 / 3.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "attachmentPhotoCount": "{count, plural, =1{1 photo} other{{count} photos}}",
+  "@attachmentPhotoCount": {
+    "description": "Accessibility label for the photo-count chip on an item card.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "attachmentAudioCount": "{count, plural, =1{1 voice memo} other{{count} voice memos}}",
+  "@attachmentAudioCount": {
+    "description": "Accessibility label for the audio-count chip on an item card.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "attachmentFileCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "@attachmentFileCount": {
+    "description": "Accessibility label for the file-count chip on an item card.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "areasTitle": "Areas of focus",
+  "newArea": "New area",
+  "renameArea": "Rename area",
+  "areasEmptyMessage": "No areas yet. Areas are ongoing spheres of responsibility — Health, Career, Family — that hold projects.",
+  "areaNameHint": "e.g. Health, Career, Family",
+  "deleteAreaConfirmTitle": "Delete \"{name}\"?",
+  "@deleteAreaConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAreaWarning": "Projects in this area will become unfiled (they will not be deleted).",
+  "contextsTitle": "Contexts",
+  "newContext": "New context",
+  "editContext": "Edit context",
+  "contextsEmptyMessage": "No contexts yet. Contexts tag actions with where or with what they can be done (@phone, @home, @errands).",
+  "nameLabel": "Name",
+  "iconLabel": "Icon",
+  "colorLabel": "Color",
+  "deleteContextConfirmTitle": "Delete {name}?",
+  "@deleteContextConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteContextWarning": "Items using this context will lose it.",
+  "calendarSyncTitle": "Calendar sync",
+  "calendarSyncIntro": "Mirror items with due dates to your system calendar, and pull events tagged \"#gtd\" back into your Trayzero inbox.",
+  "enableCalendarSync": "Enable calendar sync",
+  "targetCalendar": "Target calendar",
+  "calendarAccessDenied": "Calendar access is denied. Grant it to choose a target calendar.",
+  "grantCalendarAccess": "Grant calendar access",
+  "noCalendarsAvailable": "No calendars available yet. If you just granted access, give it a moment and retry. Also check that calendar sync is on for your account in the system Calendar/Accounts settings.",
+  "mirrorOutAction": "Mirror items → calendar",
+  "importInAction": "Import #gtd events → inbox",
+  "mirrorOutSuccess": "Mirrored {written} items out",
+  "@mirrorOutSuccess": {
+    "placeholders": {
+      "written": {
+        "type": "int"
+      }
+    }
+  },
+  "mirrorOutSuccessWithStale": "Mirrored {written} items out, removed {removed} stale",
+  "@mirrorOutSuccessWithStale": {
+    "placeholders": {
+      "written": {
+        "type": "int"
+      },
+      "removed": {
+        "type": "int"
+      }
+    }
+  },
+  "importInSuccess": "Imported {count} calendar events",
+  "@importInSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mirroringProgress": "Mirroring out…",
+  "importingProgress": "Importing…",
+  "calendarSyncTip": "Tip: type \"#gtd\" anywhere in a calendar event title and it will appear in your Trayzero inbox the next time you sync.",
+  "gtdDiagramTitle": "How GTD works",
+  "gtdDiagramSubtitle": "Five steps to get every open loop out of your head and into a system you trust. Tap a highlighted list to jump there.",
+  "gtdAttribution": "Method by David Allen · gettingthingsdone.com",
+  "youAreHere": "You're here",
+  "gtdStage1Body": "Throw anything that has your attention into the Inbox — tasks, ideas, worries. No filtering, no organizing yet.",
+  "gtdStage2Body": "Take one item at a time and decide what it is. The Process flow walks each item through this decision tree:",
+  "gtdStage3Body": "The outcome lands on the right list, so nothing lives in your head anymore.",
+  "gtdStage3Footnote": "Waiting / Calendar / Someday / Reference live under Review.",
+  "gtdStage4Body": "Review your lists regularly — especially the Weekly Review — so the system stays trustworthy.",
+  "gtdStage5Body": "Just do the work — pick actions by context, time, energy and priority, with a clear mind.",
+  "decisionNotActionableQ": "Not actionable?",
+  "decisionNotActionableA": "Trash, Someday/Maybe, or Reference",
+  "decisionTwoMinQ": "Takes under 2 minutes?",
+  "decisionTwoMinA": "Do it right now",
+  "decisionDelegateQ": "Someone else should do it?",
+  "decisionDelegateA": "Delegate → Waiting for",
+  "decisionMultiStepQ": "Needs more than one step?",
+  "decisionMultiStepA": "Make it a Project",
+  "decisionOtherwiseQ": "Otherwise",
+  "decisionOtherwiseA": "Define the very next action",
+  "supportTitle": "Support Trayzero",
+  "@supportTitle": {
+    "description": "Settings section title for tips and supporter purchases."
+  },
+  "supportSummaryDefault": "Tip the developer or become a supporter",
+  "@supportSummaryDefault": {
+    "description": "Collapsed summary for non-supporters."
+  },
+  "supportSummarySupporter": "Thanks for supporting Trayzero 💙",
+  "@supportSummarySupporter": {
+    "description": "Collapsed summary for supporters."
+  },
+  "supportIntro": "Trayzero is free, with every feature unlocked. If it helps you, you can chip in — it keeps the app independent and ad-free.",
+  "@supportIntro": {
+    "description": "Intro paragraph in the Support section."
+  },
+  "supportUnavailable": "Support options are unavailable right now.",
+  "@supportUnavailable": {
+    "description": "Shown when the store offering cannot be loaded."
+  },
+  "supportTipHeader": "Leave a tip",
+  "@supportTipHeader": {
+    "description": "Header above the one-time tip options."
+  },
+  "supportTipSmall": "Small tip",
+  "@supportTipSmall": {
+    "description": "Label for the small consumable tip."
+  },
+  "supportTipLarge": "Large tip",
+  "@supportTipLarge": {
+    "description": "Label for the large consumable tip."
+  },
+  "supportSupporterYearly": "Supporter — yearly",
+  "@supportSupporterYearly": {
+    "description": "Title for the yearly supporter subscription."
+  },
+  "supportSupporterYearlySubtitle": "{price} / year · best value · unlocks supporter perks",
+  "@supportSupporterYearlySubtitle": {
+    "description": "Subtitle for yearly supporter; price is store-localized.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "supportSupporterMonthly": "Supporter — monthly",
+  "@supportSupporterMonthly": {
+    "description": "Title for the monthly supporter subscription."
+  },
+  "supportSupporterMonthlySubtitle": "{price} / month · cancel anytime",
+  "@supportSupporterMonthlySubtitle": {
+    "description": "Subtitle for monthly supporter; price is store-localized.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "supportRestore": "Restore purchases",
+  "@supportRestore": {
+    "description": "Title for the restore purchases row."
+  },
+  "supportRestoreSubtitle": "Already a supporter? Restore on this device.",
+  "@supportRestoreSubtitle": {
+    "description": "Subtitle for restore row."
+  },
+  "supportAutoRenewNote": "Subscriptions auto-renew until cancelled in Settings.",
+  "@supportAutoRenewNote": {
+    "description": "Auto-renewal disclosure shown under the supporter subscription rows."
+  },
+  "legalPrivacyPolicy": "Privacy Policy",
+  "@legalPrivacyPolicy": {
+    "description": "Row that opens the privacy policy web page."
+  },
+  "legalTermsOfUse": "Terms of Use",
+  "@legalTermsOfUse": {
+    "description": "Row that opens the Terms of Use (EULA) web page."
+  },
+  "supportThanksTip": "Thank you so much! 💙",
+  "@supportThanksTip": {
+    "description": "Snackbar after a successful tip."
+  },
+  "supportThanksSupporter": "You're a supporter now — thank you! 💙",
+  "@supportThanksSupporter": {
+    "description": "Snackbar after becoming a supporter."
+  },
+  "supportRestored": "Purchases restored. Welcome back! 💙",
+  "@supportRestored": {
+    "description": "Snackbar after a restore that found a purchase."
+  },
+  "supportRestoreNone": "No previous purchases found.",
+  "@supportRestoreNone": {
+    "description": "Snackbar after a restore that found nothing."
+  },
+  "supportBadgeYearly": "Supporter · yearly",
+  "@supportBadgeYearly": {
+    "description": "Supporter badge label for yearly subscribers."
+  },
+  "supportBadgeMonthly": "Supporter · monthly",
+  "@supportBadgeMonthly": {
+    "description": "Supporter badge label for monthly subscribers."
+  },
+  "supportBadgeGeneric": "Supporter",
+  "@supportBadgeGeneric": {
+    "description": "Supporter badge label when plan is unknown."
+  },
+  "supportBadgeSubtitle": "Thank you for keeping Trayzero independent.",
+  "@supportBadgeSubtitle": {
+    "description": "Subtitle under the supporter badge."
+  }
+}

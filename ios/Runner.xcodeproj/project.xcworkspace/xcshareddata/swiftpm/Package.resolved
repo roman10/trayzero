@@ -1,0 +1,103 @@
+{
+  "pins" : [
+    {
+      "identity" : "csqlite",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/simolus3/CSQLite.git",
+      "state" : {
+        "revision" : "1ee46d19a4f451a7aa64ffc64fc99b4748131e62"
+      }
+    },
+    {
+      "identity" : "cwlcatchexception",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mattgallagher/CwlCatchException.git",
+      "state" : {
+        "revision" : "07b2ba21d361c223e25e3c1e924288742923f08c",
+        "version" : "2.2.1"
+      }
+    },
+    {
+      "identity" : "dkcamera",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/zhangao0086/DKCamera",
+      "state" : {
+        "branch" : "master",
+        "revision" : "5c691d11014b910aff69f960475d70e65d9dcc96"
+      }
+    },
+    {
+      "identity" : "dkimagepickercontroller",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/zhangao0086/DKImagePickerController",
+      "state" : {
+        "branch" : "4.3.9",
+        "revision" : "0bdfeacefa308545adde07bef86e349186335915"
+      }
+    },
+    {
+      "identity" : "dkphotogallery",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/zhangao0086/DKPhotoGallery",
+      "state" : {
+        "branch" : "master",
+        "revision" : "311c1bc7a94f1538f82773a79c84374b12a2ef3d"
+      }
+    },
+    {
+      "identity" : "purchases-hybrid-common",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-hybrid-common.git",
+      "state" : {
+        "revision" : "4a4a4ddc2cc19ec097fba2a1f6bfa4cc89ded235",
+        "version" : "18.8.0"
+      }
+    },
+    {
+      "identity" : "purchases-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-ios-spm",
+      "state" : {
+        "revision" : "98435c3d7b0f6210b2303fc7f2ec09510d4790b6",
+        "version" : "5.74.0"
+      }
+    },
+    {
+      "identity" : "sdwebimage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/SDWebImage",
+      "state" : {
+        "revision" : "b62cb63bf4ed1f04c961a56c9c6c9d5ab8524ec6",
+        "version" : "5.21.1"
+      }
+    },
+    {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "cf44aa8cb4147f39e698c1f28be0b6b2c89f79d2",
+        "version" : "8.58.2"
+      }
+    },
+    {
+      "identity" : "swiftygif",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kirualex/SwiftyGif.git",
+      "state" : {
+        "revision" : "4430cbc148baa3907651d40562d96325426f409a",
+        "version" : "5.4.5"
+      }
+    },
+    {
+      "identity" : "tocropviewcontroller",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/TimOliver/TOCropViewController",
+      "state" : {
+        "revision" : "d4a6d8100f4b886fdbc8ae399bf144ff3e9afb7e",
+        "version" : "2.8.0"
+      }
+    }
+  ],
+  "version" : 2
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only override: tints the adaptive-icon background blue so the debug
+     build (app.cleartray.debug) is visually distinct from the amber
+     release (app.cleartray) when both are installed. Merged by Gradle
+     for the debug build type only; release/profile keep the amber value
+     from src/main/res/values/colors.xml. -->
+<resources>
+    <color name="ic_launcher_background">#1565C0</color>
+</resources>
