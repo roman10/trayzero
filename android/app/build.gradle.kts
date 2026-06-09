@@ -79,6 +79,14 @@ android {
             }
         }
     }
+
+    // F-Droid only: drop AGP's Google "Dependency Info" block so F-Droid's
+    // source scanner passes. Gated on -Pfdroid; ABSENT by default so Play (AAB)
+    // and App Store builds keep AGP defaults (true/true) and are byte-identical.
+    dependenciesInfo {
+        includeInApk = !project.hasProperty("fdroid")
+        includeInBundle = !project.hasProperty("fdroid")
+    }
 }
 
 dependencies {

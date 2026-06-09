@@ -5,6 +5,9 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "build/**"
+    # FOSS build stub: its imports resolve only after build_foss_apk.sh copies
+    # it into lib/infrastructure/. Invalid (by design) in its source location.
+    - "tool/foss/**"
   errors:
     invalid_annotation_target: ignore
 

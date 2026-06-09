@@ -142,7 +142,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3)); // hold on prices
 
     // 2. Reveal the legal link rows (Privacy Policy + Terms of Use).
-    final label = _link == 'terms' ? 'Terms of Use' : 'Privacy Policy';
+    const label = _link == 'terms' ? 'Terms of Use' : 'Privacy Policy';
     for (var i = 0; i < 20; i++) {
       if (find.text(label).evaluate().isNotEmpty) break;
       await tester.drag(list, const Offset(0, -260));
