@@ -87,6 +87,25 @@ android {
         includeInApk = !project.hasProperty("fdroid")
         includeInBundle = !project.hasProperty("fdroid")
     }
+
+    // Per-ABI split builds (`flutter build apk --split-per-abi`, used by F-Droid)
+    // embed versionCode * 10 + {1,2,3} so each ABI gets a distinct, ordered code.
+    // Outputs without an ABI filter — the universal APK and the Play AAB — have
+    // no matching filter here, so they keep the plain versionCode untouched.
+    // Uses the legacy variant API: the modern androidComponents.onVariants hook
+    // runs before Flutter's split versionCode composition and loses to it.
+    applicationVariants.configureEach {
+        val variant = this
+        outputs.forEach { output ->
+            val abiCode = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)[
+                output.filters.find { it.filterType == "ABI" }?.identifier
+            ]
+            if (abiCode != null) {
+                (output as com.android.build.gradle.internal.api.ApkVariantOutputImpl)
+                    .versionCodeOverride = variant.versionCode * 10 + abiCode
+            }
+        }
+    }
 }
 
 dependencies {
