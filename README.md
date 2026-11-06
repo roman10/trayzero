@@ -2,17 +2,15 @@
 
 A free, private, **local-first** task manager that follows David Allen's
 **Getting Things Done (GTD)** method end to end — Capture → Clarify → Organize →
-Reflect → Engage. Your tasks live on your device, with no Trayzero account or ads.
+Reflect → Engage. Your tasks, notes, and attachments are stored on your device.
+Trayzero has no ads and requires no Trayzero account.
 
-- **Website:** <https://trayzero.app>
-- **App Store (iOS):** <https://apps.apple.com/app/id6771756447>
-- **Google Play (Android):** search "Trayzero" (package `app.cleartray`)
-- **Video tutorials:** [Trayzero on YouTube](https://www.youtube.com/@trayzeroapp)
-- **Privacy policy:** <https://trayzero.app/privacy>
+## Install
 
-Built with Flutter, so one codebase ships to both iOS and Android. (App store
-identifiers and the package id are `app.cleartray` for historical reasons — the
-app was renamed from "Cleartray" to "Trayzero".)
+- [Download for iPhone and iPad on the App Store](https://apps.apple.com/app/id6771756447)
+- [Download for Android on Google Play](https://play.google.com/store/apps/details?id=app.cleartray)
+
+[Video tutorials on YouTube](https://www.youtube.com/@trayzeroapp) · [Website](https://trayzero.app) · [Privacy policy](https://trayzero.app/privacy)
 
 ## Features
 
@@ -32,10 +30,11 @@ app was renamed from "Cleartray" to "Trayzero".)
 - **Reminders** — local notifications with action buttons (Done / Snooze / Move
   to Next Actions) that survive reboots; opt-in two-way system-calendar sync.
 - **Attachments** — photos and voice memos on any item.
-- **Privacy** — tasks are stored locally in SQLite. Standard builds use
-  RevenueCat for purchase checks and purchase analytics. Crash reporting is off
-  by default and requires a configured Sentry DSN. Portable JSON backups include
-  attachments and Review history. Older JSON backups remain supported.
+- **Privacy** — tasks, notes, and attachments are stored locally. Standard builds
+  use RevenueCat for anonymous purchase checks and purchase analytics. See the
+  [privacy policy](https://trayzero.app/privacy) for crash reporting and optional
+  integrations. Portable JSON backups include attachments and Review history.
+  Older JSON backups remain supported.
   Restore validates before writing, merges by id, and refreshes reminders.
   Appearance preferences and native calendar associations stay on the device.
 - **Import from other apps** — Settings → Data → Import from another app.
@@ -66,24 +65,25 @@ an explicitly empty value disables this importer. See
 
 ## Tech stack
 
-- **Flutter 3.44.0** (Dart `^3.11.4`)
+- **Flutter 3.44.0** (bundles Dart 3.12.0)
 - **Riverpod** for state management + DI
 - **Drift** over SQLite for local persistence
 - **go_router** for navigation
 - **flutter_local_notifications**, **device_calendar**, **speech_to_text**,
   **home_widget**, **purchases_flutter** (RevenueCat) for platform features
 
-## Getting started
+## Build from source
+
+Install [Flutter 3.44.0](https://docs.flutter.dev/install/archive) and run these
+commands from the directory containing `pubspec.yaml`.
 
 ```bash
-# 1. Install Flutter 3.44.0 (https://docs.flutter.dev/get-started/install), then:
 flutter pub get --enforce-lockfile
 
-# 2. Run code generation (Drift database + Riverpod providers).
-#    Required before the first run and after touching generated code.
+# Generate Drift and Riverpod code before the first run and after changing its inputs.
 dart run build_runner build --delete-conflicting-outputs
 
-# 3. Run on a connected device or simulator.
+# Run on a connected device or simulator.
 flutter run
 ```
 
