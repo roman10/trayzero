@@ -22,6 +22,7 @@ class FakeNotificationScheduler implements NotificationScheduler {
   scheduled = [];
   final List<int> cancelled = [];
   bool ready = false;
+  final Map<int, String?> pending = {};
 
   final _responses = StreamController<NotificationActionEvent>.broadcast();
 
@@ -75,6 +76,7 @@ class FakeNotificationScheduler implements NotificationScheduler {
     String? payload,
     Duration? timeoutAfter,
   }) async {
+    pending[id] = payload;
     scheduled.add((
       id: id,
       at: at,
@@ -97,10 +99,21 @@ class FakeNotificationScheduler implements NotificationScheduler {
   }
 
   @override
-  Future<void> cancel(int id) async => cancelled.add(id);
+  Future<void> cancel(int id) async {
+    cancelled.add(id);
+    pending.remove(id);
+  }
 
   @override
-  Future<void> cancelAll() async => cancelled.add(-1);
+  Future<void> cancelAll() async {
+    cancelled.add(-1);
+    pending.clear();
+  }
+
+  @override
+  Future<List<PendingNotification>> getPendingNotifications() async => [
+    for (final entry in pending.entries) (id: entry.key, payload: entry.value),
+  ];
 
   @override
   Future<List<ActiveNotification>> getActiveNotifications() async => active;
@@ -126,6 +139,9 @@ class FakeCalendarGateway implements CalendarGateway {
 
   @override
   Future<bool> requestPermissions() async => permissionGranted;
+
+  @override
+  Future<bool> hasPermissions() async => permissionGranted;
 
   @override
   Future<List<CalendarInfo>> listCalendars() async => calendars;

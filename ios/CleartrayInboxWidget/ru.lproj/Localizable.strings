@@ -1,0 +1,22 @@
+/* Widgets and controls (ADR 0009). Follows the system language. */
+
+"Today" = "Сегодня";
+"%lld done" = "Выполнено: %lld";
+"+%lld more" = "Ещё %lld";
+"Complete %@" = "Выполнить «%@»";
+"All done for today" = "На сегодня всё сделано";
+"Nothing focused yet" = "Пока ничего в фокусе";
+"Plan your day" = "Спланировать день";
+"Your focused items for today. Tap a circle to complete." = "Ваши задачи в фокусе на сегодня. Нажмите на кружок, чтобы выполнить.";
+"Complete Item" = "Выполнить задачу";
+"Item" = "Задача";
+"Capture to Trayzero" = "Записать в Trayzero";
+"Open Quick Capture" = "Открыть быструю запись";
+"Opens Trayzero's quick capture sheet." = "Открывает быструю запись Trayzero.";
+"Show Today" = "Показать «Сегодня»";
+"Opens the items you focused for today." = "Открывает задачи в фокусе на сегодня.";
+"item in Inbox" = "во «Входящих»";
+"items in Inbox" = "во «Входящих»";
+"+ Capture" = "+ Записать";
+"Trayzero Inbox" = "«Входящие» Trayzero";
+"See your unprocessed inbox count and capture in one tap." = "Сколько записей ждёт во «Входящих» — и запись одним касанием.";

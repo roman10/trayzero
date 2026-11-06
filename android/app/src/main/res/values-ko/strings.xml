@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Trayzero 받은함에 빠르게 수집</string>
+    <string name="today_widget_name">오늘</string>
+    <string name="today_widget_description">오늘 집중할 항목입니다. 원을 탭하면 완료됩니다.</string>
+    <string name="today_widget_title">오늘</string>
+    <string name="today_widget_done">%1$d개 완료</string>
+    <string name="today_widget_more">+%1$d개 더</string>
+    <string name="today_widget_empty">아직 집중한 항목이 없습니다</string>
+    <string name="today_widget_all_done">오늘 할 일을 모두 마쳤습니다</string>
+    <string name="today_widget_plan">하루 계획하기</string>
+    <string name="today_widget_complete">%1$s 완료</string>
+    <string name="tile_capture_label">Trayzero에 수집</string>
+    <string name="shortcut_capture_short">수집</string>
+    <string name="shortcut_capture_long">받은함에 수집</string>
+    <string name="shortcut_today_short">오늘</string>
+    <string name="shortcut_today_long">오늘 보기</string>
+    <string name="shortcut_process_short">처리</string>
+    <string name="shortcut_process_long">받은함 처리</string>
+</resources>

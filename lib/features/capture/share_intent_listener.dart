@@ -8,6 +8,7 @@ import '../../application/providers.dart';
 import '../../core/clock.dart';
 import '../../core/id_generator.dart';
 import '../../domain/entities/entities.dart';
+import '../../l10n/gen/app_localizations.dart';
 
 /// Wraps a child and listens to inbound share intents. Any incoming text
 /// is silently added to the Inbox and a snackbar is shown.
@@ -30,13 +31,15 @@ class _ShareIntentListenerState extends ConsumerState<ShareIntentListener> {
   }
 
   Future<void> _init() async {
-    final initial =
-        await ReceiveSharingIntent.instance.getInitialMedia();
+    // Subscribe before awaiting cold-start media: warm shares can arrive while
+    // that platform call or the initial database write is still in flight.
+    _sub = ReceiveSharingIntent.instance.getMediaStream().listen(_handle);
+    final initial = await ReceiveSharingIntent.instance.getInitialMedia();
+    if (!mounted) return;
     if (initial.isNotEmpty) {
       await _handle(initial);
       unawaited(ReceiveSharingIntent.instance.reset());
     }
-    _sub = ReceiveSharingIntent.instance.getMediaStream().listen(_handle);
   }
 
   Future<void> _handle(List<SharedMediaFile> shared) async {
@@ -47,19 +50,35 @@ class _ShareIntentListenerState extends ConsumerState<ShareIntentListener> {
       final text = (m.path).trim();
       if (text.isEmpty) continue;
       final now = clock.now();
-      await repo.upsert(Item(
-        id: ids.newId(),
-        title: text.length > 120 ? '${text.substring(0, 117)}…' : text,
-        notes: text.length > 120 ? text : null,
-        status: ItemStatus.inbox,
-        createdAt: now,
-        updatedAt: now,
-      ));
+      await repo.upsert(
+        Item(
+          id: ids.newId(),
+          title: _shareTitle(text),
+          notes: text.length > 120 ? text : null,
+          status: ItemStatus.inbox,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
     }
     if (!mounted || shared.isEmpty) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added ${shared.length} to inbox')),
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context).sharedAddedToInbox(shared.length),
+        ),
+      ),
     );
+  }
+
+  /// Leave room for the ellipsis without splitting a UTF-16 surrogate pair.
+  /// SQLite would otherwise replace the orphaned surrogate with U+FFFD.
+  static String _shareTitle(String text) {
+    if (text.length <= 120) return text;
+    var end = 117;
+    final unit = text.codeUnitAt(end - 1);
+    if (unit >= 0xD800 && unit <= 0xDBFF) end--;
+    return '${text.substring(0, end)}…';
   }
 
   @override

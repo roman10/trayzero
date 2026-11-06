@@ -1,0 +1,14 @@
+/* App Intents (ADR 0009). Follows the system language. */
+
+"Add to Inbox" = "加入收件匣";
+"Adds text to your Trayzero Inbox without opening the app." = "無需開啟 App 即可將文字加入 Trayzero 收件匣。";
+"Text" = "文字";
+"What do you want to capture?" = "要收集什麼？";
+"Add ${text} to Inbox" = "將 ${text} 加入收件匣";
+"Added to your Inbox." = "已加入收件匣。";
+"Open Quick Capture" = "開啟快速收集";
+"Opens Trayzero's quick capture sheet." = "開啟 Trayzero 的快速收集面板。";
+"Show Today" = "查看今天";
+"Opens the items you focused for today." = "開啟今天聚焦的項目。";
+"Quick Capture" = "快速收集";
+"Today" = "今天";

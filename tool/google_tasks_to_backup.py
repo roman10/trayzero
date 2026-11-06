@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert a Google Takeout Tasks.json export into a Cleartray backup JSON.
+"""Convert a Google Takeout Tasks.json export into a Trayzero backup JSON.
 
 Mapping (per user choice):
   - Every Google task -> one Inbox item (status: inbox). Lists are NOT
@@ -10,7 +10,7 @@ Mapping (per user choice):
     task title recorded in notes.
 
 Usage:
-    python3 tool/google_tasks_to_backup.py Tasks.json > cleartray-from-gtasks.json
+    python3 tool/google_tasks_to_backup.py Tasks.json > trayzero-from-gtasks.json
 
 Then in the app: Settings -> Import backup -> paste the output JSON.
 """
@@ -31,6 +31,20 @@ def norm_date(value):
         # Python <3.11 doesn't parse a bare 'Z'; normalise it.
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         return parsed.isoformat()
+    except ValueError:
+        return None
+
+
+def due_date(value):
+    """Google due encodes a calendar date, not a midnight-UTC instant.
+
+    Emit local midnight without an offset so the importing device keeps the
+    source day regardless of where this conversion script is run.
+    """
+    if not norm_date(value):
+        return None
+    try:
+        return datetime.strptime(value[:10], "%Y-%m-%d").isoformat()
     except ValueError:
         return None
 
@@ -71,7 +85,7 @@ def emit_task(task, list_name, parent_title, fallback_ts, out_items):
         "status": "inbox",
         "projectId": None,
         "contextId": None,
-        "dueAt": norm_date(task.get("due")),
+        "dueAt": due_date(task.get("due")),
         "deferUntil": None,
         "waitingOn": None,
         "energy": None,

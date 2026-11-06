@@ -25,8 +25,12 @@ void main() {
         _p('x1', ProjectStatus.dropped),
       ], const []);
 
-      expect(sections.map((s) => s.label),
-          ['Active', 'On hold', 'Someday', 'Completed']);
+      expect(sections.map((s) => s.kind), [
+        ProjectSectionKind.active,
+        ProjectSectionKind.onHold,
+        ProjectSectionKind.someday,
+        ProjectSectionKind.completed,
+      ]);
       // dropped is never surfaced
       expect(
         sections.expand((s) => s.projects).map((p) => p.id),
@@ -45,7 +49,12 @@ void main() {
         _p('h1', ProjectStatus.active, areaId: 'home'),
       ], areas);
 
-      expect(sections.map((s) => s.label), ['Work', 'Home', 'Unfiled']);
+      expect(sections.map((s) => s.kind), [
+        ProjectSectionKind.area,
+        ProjectSectionKind.area,
+        ProjectSectionKind.unfiled,
+      ]);
+      expect(sections.map((s) => s.areaName), ['Work', 'Home', null]);
       expect(sections[0].projects.single.id, 'w1');
       expect(sections[2].projects.single.id, 'u1');
     });
@@ -55,7 +64,7 @@ void main() {
         [_p('h1', ProjectStatus.onHold)],
         [const Area(id: 'work', name: 'Work')],
       );
-      expect(sections.map((s) => s.label), ['On hold']);
+      expect(sections.map((s) => s.kind), [ProjectSectionKind.onHold]);
     });
 
     test('empty input yields no sections', () {

@@ -8,6 +8,7 @@ import 'package:cleartray/l10n/gen/app_localizations.dart';
 import 'package:cleartray/application/complete_item.dart';
 import 'package:cleartray/application/save_item.dart';
 import 'package:cleartray/core/clock.dart';
+import 'package:cleartray/core/folder_backup.dart';
 import 'package:cleartray/core/id_generator.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:cleartray/data/db/database.dart';
@@ -19,6 +20,7 @@ import 'package:cleartray/features/settings/settings_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fakes.dart';
+import '../support/folder_backup_fake.dart';
 
 /// End-to-end coverage of GTD's killer flow:
 ///
@@ -35,16 +37,18 @@ Future<Widget> _wrap({
   required NotificationScheduler scheduler,
   required Widget child,
 }) async {
-  return UncontrolledProviderScope(
-    container: ProviderContainer(
-      overrides: [
-        databaseProvider.overrideWithValue(db),
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        clockProvider.overrideWithValue(clock),
-        idGeneratorProvider.overrideWithValue(ids),
-        notificationSchedulerProvider.overrideWithValue(scheduler),
-      ],
-    ),
+  return ProviderScope(
+    overrides: [
+      databaseProvider.overrideWithValue(db),
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      clockProvider.overrideWithValue(clock),
+      idGeneratorProvider.overrideWithValue(ids),
+      notificationSchedulerProvider.overrideWithValue(scheduler),
+      folderBackupPreferencesProvider.overrideWithValue(
+        MemoryFolderBackupPreferences(),
+      ),
+      folderBackupFilesProvider.overrideWithValue(MemoryFolderBackupFiles()),
+    ],
     child: MaterialApp(
       theme: AppTheme.light(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -117,6 +121,8 @@ void main() {
     final after = await items.getById('walk-the-dog');
     expect(after?.status, ItemStatus.done);
     expect(after?.completedAt, isNotNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(Duration.zero);
   });
 
   testWidgets(

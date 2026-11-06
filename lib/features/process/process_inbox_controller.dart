@@ -110,14 +110,21 @@ class ProcessInboxController extends Notifier<ProcessInboxState> {
           (list != null && list.isNotEmpty) ? list.first.id : null;
       if (headId == _clarifyingId) return;
       _clarifyingId = headId;
-      state = ProcessInboxState(
+      state = _fresh(list?.firstOrNull);
+    });
+    return const ProcessInboxState();
+  }
+
+  /// A restarted flow for [head], keeping the session tally. A Context or
+  /// Project recognized at capture (ADR 0007) is preselected for the detail
+  /// step; the user can still change or clear it there.
+  ProcessInboxState _fresh(Item? head) => ProcessInboxState(
+        selectedContextId: head?.contextId,
+        selectedProjectId: head?.projectId,
         doneNow: state.doneNow,
         filed: state.filed,
         trashed: state.trashed,
       );
-    });
-    return const ProcessInboxState();
-  }
 
   void advance() {
     final next = (state.stepIndex + 1).clamp(0, _stepOrder.length - 1);
@@ -152,12 +159,38 @@ class ProcessInboxController extends Notifier<ProcessInboxState> {
   /// resets itself once [inboxItemsProvider] drops [current] and the build
   /// listener sees a new head item — so a thrown decision leaves the item,
   /// step, and tally untouched for a clean retry.
-  Future<void> decide(Item current, ProcessingDecision decision) async {
-    await ref.read(processInboxDecisionProvider).call(current, decision);
+  ///
+  /// Returns the id of the recurrence instance a [DoItNowDecision] spawned (or
+  /// null), which [undoDecision] needs to take the decision back.
+  Future<String?> decide(Item current, ProcessingDecision decision) async {
+    final spawnedId =
+        await ref.read(processInboxDecisionProvider).call(current, decision);
     state = switch (decision) {
       TrashDecision() => state.copyWith(trashed: state.trashed + 1),
       DoItNowDecision() => state.copyWith(doneNow: state.doneNow + 1),
       _ => state.copyWith(filed: state.filed + 1),
+    };
+    return spawnedId;
+  }
+
+  /// Reverses [decide]: [original] returns to the inbox (the build listener
+  /// then restarts the flow on it when it becomes the head again) and the
+  /// session tally drops the decision.
+  Future<void> undoDecision(
+    Item original,
+    ProcessingDecision decision, {
+    String? spawnedRecurrenceId,
+  }) async {
+    await ref.read(undoProcessDecisionProvider).call(
+          original,
+          decision,
+          spawnedRecurrenceId: spawnedRecurrenceId,
+        );
+    int dec(int n) => n > 0 ? n - 1 : 0;
+    state = switch (decision) {
+      TrashDecision() => state.copyWith(trashed: dec(state.trashed)),
+      DoItNowDecision() => state.copyWith(doneNow: dec(state.doneNow)),
+      _ => state.copyWith(filed: dec(state.filed)),
     };
   }
 
@@ -168,11 +201,10 @@ class ProcessInboxController extends Notifier<ProcessInboxState> {
   /// honour its intent: "abandon my progress on this one for now."
   Future<void> skip(Item current) async {
     await ref.read(skipInboxItemProvider).call(current);
-    state = ProcessInboxState(
-      doneNow: state.doneNow,
-      filed: state.filed,
-      trashed: state.trashed,
-    );
+    // Seed from whatever is at the head now: the skipped item when it is the
+    // only one, else the next item (the listener reseeds if the stream has
+    // not caught up yet).
+    state = _fresh(ref.read(inboxItemsProvider).valueOrNull?.firstOrNull);
   }
 }
 

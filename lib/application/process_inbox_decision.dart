@@ -1,13 +1,17 @@
 import '../domain/entities/entities.dart';
 import 'complete_item.dart';
 import 'convert_to_project.dart';
-import 'delete_item.dart';
 import 'save_item.dart';
+import 'trash_item.dart';
 
 /// Closed set of clarify-step outcomes from the Process Inbox flow. One
 /// variant per terminal branch of GTD's decision tree.
 sealed class ProcessingDecision {
   const ProcessingDecision();
+
+  /// Whether `UndoProcessDecision` can reverse this decision. Turning an item
+  /// into a Project also creates a Project row, which Undo does not unwind.
+  bool get isUndoable => this is! ToProjectDecision;
 }
 
 class TrashDecision extends ProcessingDecision {
@@ -70,23 +74,26 @@ class ToNextActionDecision extends ProcessingDecision {
 final class ProcessInboxDecisionUseCase {
   ProcessInboxDecisionUseCase({
     required SaveItem saveItem,
-    required DeleteItem deleteItem,
+    required TrashItem trashItem,
     required CompleteItem completeItem,
     required ConvertToProject convertToProject,
   })  : _saveItem = saveItem,
-        _deleteItem = deleteItem,
+        _trashItem = trashItem,
         _completeItem = completeItem,
         _convertToProject = convertToProject;
 
   final SaveItem _saveItem;
-  final DeleteItem _deleteItem;
+  final TrashItem _trashItem;
   final CompleteItem _completeItem;
   final ConvertToProject _convertToProject;
 
-  Future<void> call(Item current, ProcessingDecision decision) async {
+  /// Returns the id of the recurrence instance spawned by [DoItNowDecision]
+  /// (null otherwise), which `UndoProcessDecision` needs to remove it again.
+  Future<String?> call(Item current, ProcessingDecision decision) async {
     switch (decision) {
       case TrashDecision():
-        await _deleteItem(current.id);
+        // Soft delete: the Process screen offers Undo; PurgeTrash finishes it.
+        await _trashItem(current.id);
       case ReferenceDecision():
         await _saveItem(current.copyWith(status: ItemStatus.reference));
       case SomedayDecision():
@@ -95,7 +102,7 @@ final class ProcessInboxDecisionUseCase {
         // Mark done via CompleteItem so recurrence rollover + reminder
         // cancellation are honoured even for two-min items.
         await _saveItem(current.copyWith(isTwoMin: true));
-        await _completeItem(current.id);
+        return _completeItem(current.id);
       case WaitingDecision(:final waitingOn):
         await _saveItem(current.copyWith(
           status: ItemStatus.waiting,
@@ -148,5 +155,6 @@ final class ProcessInboxDecisionUseCase {
           recurrence: deferUntil == null ? null : recurrence,
         ));
     }
+    return null;
   }
 }

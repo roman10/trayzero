@@ -19,6 +19,7 @@
 		<string>fr</string>
 		<string>pt</string>
 		<string>ko</string>
+		<string>ru</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Trayzero uses the microphone to capture brain-dump items by voice and record voice memos as attachments.</string>
@@ -28,6 +29,10 @@
 	<string>Trayzero uses the camera to attach a photo to an item.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Trayzero reads photos you choose to attach to an item.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Trayzero reads the reminder lists you select to import a copy of your tasks. Your Apple reminders stay unchanged.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Trayzero reads the reminder lists you select to import a copy of your tasks. Your Apple reminders stay unchanged.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Trayzero optionally mirrors items with due dates to your calendar (off by default).</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
@@ -41,7 +46,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>cleartray</string>
+	<string>Trayzero</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -77,6 +82,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- cleartray:// links reach Dart through LaunchLinkRelay (ADR 0009).
+	     Flutter's own deep linking would also push the raw URL to go_router. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -85,6 +94,9 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>cleartray</string>
+				<string>ShareMedia-app.cleartray</string>
+				<string>app.cleartray.microsoft</string>
+				<string>app.cleartray.microsoft.debug</string>
 			</array>
 		</dict>
 	</array>

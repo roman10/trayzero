@@ -13,13 +13,18 @@ If `Runner.xcodeproj/project.pbxproj` is ever regenerated from scratch
 extension targets in Xcode), re-attach by running:
 
 ```bash
-cd mobile
 /usr/bin/ruby ios/scripts/add_extensions.rb
 flutter clean && flutter build ios --no-codesign --debug
 ```
 
 The script is idempotent — running it on a project that already has the
-targets just refreshes build settings and is a no-op for files/phases.
+targets is a no-op. Build settings are seeded only when a target is created,
+so later hand-tuned settings (e.g. extension versions from
+`Flutter/AppExtensionVersion.xcconfig`) survive a re-run.
+
+After any `flutter build ios`, run `git status ios` and revert Flutter's
+project migration churn (`objectVersion` 60 → 54, `LastUpgradeCheck`,
+`Runner.xcscheme`) before committing.
 
 > **System ruby (`/usr/bin/ruby`) is required** — Homebrew Ruby 4.x cannot
 > load the xcodeproj gem installed under the 3.4.0 gem dir.
@@ -33,12 +38,25 @@ targets just refreshes build settings and is a no-op for files/phases.
    attaches `CleartrayInboxWidget.swift`, `Info.plist`,
    `CleartrayInboxWidget.entitlements`, and links `WidgetKit` + `SwiftUI`.
 3. Creates the **`ShareExtension`** app-extension target
-   (`app.cleartray.ShareExtension`, iOS 14.0 deployment, Swift 5 — 14.0 because
-   `ShareViewController.swift` uses `UTType`), attaches
+   (`app.cleartray.ShareExtension`, iOS 15.0 deployment, Swift 5 — 15.0 is the App Store floor (ITMS-90068);
+   `ShareViewController.swift` uses `UTType`, which needs 14+), attaches
    `ShareViewController.swift`, `MainInterface.storyboard`, `Info.plist`,
    `ShareExtension.entitlements`, and links `Social`, `MobileCoreServices`,
    `UniformTypeIdentifiers`, and `UIKit`.
-4. Adds both as target dependencies of Runner and embeds them via a new
+4. Capture anywhere and the Today widget (ADR 0009):
+   - `TrayzeroShared/` (App Group store, *Open Quick Capture* and *Show Today*
+     intents) is compiled into **both** Runner and the widget extension, so
+     the Control Center control can run an app-opening intent.
+   - Runner gets `LaunchLinkRelay.swift` (the `app.cleartray/launch_link`
+     channel and scene URL handling) and `TrayzeroAppIntents.swift` (*Add to
+     Inbox* and the `AppShortcutsProvider`).
+   - The widget extension gets `TrayzeroWidgets.swift` (the `@main`
+     `WidgetBundle`), `TrayzeroTodayWidget.swift` (iOS 17+), and
+     `TrayzeroCaptureControl.swift` (iOS 18+).
+   - `Localizable.strings` (Runner and widget) and `AppShortcuts.strings`
+     (Runner) are added as variant groups for en, de, es, fr, ja, ko, pt, ru,
+     zh-Hans, and zh-Hant, and those regions are added to `knownRegions`.
+5. Adds both as target dependencies of Runner and embeds them via a new
    `Embed App Extensions` copy-files phase. The phase is inserted **before**
    `Thin Binary` to avoid a build-graph cycle (Thin Binary thins the embedded
    binaries; if Embed App Extensions runs after it, the .appex copy ends up
@@ -56,7 +74,6 @@ to all three App IDs (`app.cleartray`, `app.cleartray.CleartrayInboxWidget`,
 ## Verify
 
 ```bash
-cd mobile
 flutter clean
 flutter build ios --no-codesign --debug
 ```
@@ -65,8 +82,14 @@ Expected: build succeeds and
 `build/ios/iphoneos/Runner.app/PlugIns/{CleartrayInboxWidget,ShareExtension}.appex`
 both exist. Run on a device:
 
-- Add the **Cleartray Inbox** widget to the home screen → live inbox count.
-- Open Safari → Share → **Add to Cleartray** → host app opens with the
+- Add the **Trayzero Inbox** widget to the home screen → live inbox count.
+- Add the **Today** widget (iOS 17+) → focused Items; tap a circle to
+  complete, then open the app and confirm the Item is done.
+- Shortcuts app → Trayzero → **Add to Inbox** with the app terminated → the
+  text is in the Inbox on next launch.
+- Control Center → add **Capture to Trayzero** (iOS 18+) → opens the capture
+  sheet.
+- Open Safari → Share → **Add to Trayzero** → host app opens with the
   shared text/URL pre-filled in the capture sheet.
 
 ## Historical note (kept for reference)
@@ -123,16 +146,15 @@ procedure is preserved below in case something blocks the script.
 ## 4. Verify
 
 ```bash
-cd mobile
 flutter clean
 flutter build ios --no-codesign --debug
 ```
 
 Expected: build succeeds. Run on a device / simulator:
 
-- Add the **Cleartray Inbox** widget to the home screen → it should show the live
+- Add the **Trayzero Inbox** widget to the home screen → it should show the live
   inbox count from the running app.
-- Open Safari → Share → **Add to Cleartray** → host app should open with the URL
+- Open Safari → Share → **Add to Trayzero** → host app should open with the URL
   pre-filled in the capture sheet.
 
 ## 5. Troubleshooting

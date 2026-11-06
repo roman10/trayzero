@@ -1,0 +1,11 @@
+﻿TYPE,CONTENT,DESCRIPTION,PRIORITY,INDENT,AUTHOR,RESPONSIBLE,DATE,DATE_LANG,TIMEZONE,DURATION,DURATION_UNIT,DEADLINE,DEADLINE_LANG,meta
+task,Call hardware store @phone @urgent,"Ask about shelves, hooks, and bins",1,1,Ana (1),,2026-11-03,en,,15,minute,,,
+note,"Bring measurements, they asked",,,,,,,,,,,,,
+section,Clear out,,,,,,,,,,,,,
+task,Sort boxes @home,,4,1,Ana (1),,Nov 5,en,,,None,Nov 20,en,
+task,Label the bins,"Line one
+Line two",4,2,Ana (1),Ben (2),,,,,None,,,
+task,Water the plants @Büro,,4,1,Ana (1),,every monday at 9am,en,,,None,,,
+task,Café Größe 日本語,,4,1,Ana (1),,every 2nd tue,en,,,None,,,
+task,Check gutters,,4,1,Ana (1),,someday soonish,en,,,None,,,
+task,  ,,4,1,Ana (1),,,,,,None,,,

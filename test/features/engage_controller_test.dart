@@ -34,6 +34,31 @@ void main() {
           ['a', 'b', 'c']);
     });
 
+    test('filters by tag, combined with context by AND', () {
+      const tags = {
+        'a': ['kitchen'],
+        'b': ['kitchen', 'alice'],
+      };
+      expect(
+        applyEngageFilter(
+          items,
+          const EngageFilter(tagId: 'kitchen'),
+          itemTags: tags,
+        ).map((i) => i.id),
+        ['a', 'b'],
+      );
+      expect(
+        applyEngageFilter(
+          items,
+          const EngageFilter(tagId: 'kitchen', contextId: 'work'),
+          itemTags: tags,
+        ).map((i) => i.id),
+        ['b'],
+      );
+      expect(const EngageFilter(tagId: 'x').isEmpty, isFalse);
+      expect(const EngageFilter(tagId: 'x').withContext('c').tagId, 'x');
+    });
+
     test('filters by context', () {
       final r = applyEngageFilter(items, const EngageFilter(contextId: 'home'));
       expect(r.map((i) => i.id), ['a', 'c']);

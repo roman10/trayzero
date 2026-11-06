@@ -1,5 +1,5 @@
-# Launch Screen Assets
+# Native launch artwork
 
-You can customize the launch screen with your own desired assets by replacing the image files in this directory.
-
-You can also do it by opening your Flutter project's Xcode project with `open ios/Runner.xcworkspace`, selecting `Runner/Assets.xcassets` in the Project Navigator and dropping in the desired images.
+Neutral gray sunrise with light/dark variants. Regenerate from `mobile/` with
+`dart run tool/generate_launch_assets.dart`. The storyboard uses the dynamic
+`LaunchBackground` color asset. No runtime preference reads or extra splash view.

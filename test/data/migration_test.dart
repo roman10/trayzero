@@ -4,6 +4,9 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:cleartray/core/clock.dart';
 import 'package:cleartray/data/db/database.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
+import 'package:cleartray/data/repositories/project_repository.dart';
+import 'package:cleartray/data/repositories/review_repository.dart';
+import 'package:cleartray/data/repositories/tag_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 
 /// End-to-end test of the real schema upgrade — not the migration helpers in
@@ -14,6 +17,217 @@ import 'package:cleartray/domain/entities/entities.dart';
 ///   - v6 → v7: `addColumn(searchText)` + `backfillSearchText`
 ///   - v7 → v8: `migrateNextActionDueDates` (stray next-action `dueAt`)
 void main() {
+  test(
+    'v13 → v14 adds persistent import history without changing items',
+    () async {
+      final raw = sqlite3.openInMemory();
+      addTearDown(raw.dispose);
+      AppDatabase open() => AppDatabase.forTesting(
+        NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+      );
+      final seed = open();
+      final now = DateTime(2026, 11, 3);
+      await ItemRepository(seed, FakeClock(now)).upsert(
+        Item(
+          id: 'keep',
+          title: 'Existing task',
+          status: ItemStatus.inbox,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await seed.close();
+      raw.execute('DROP TABLE import_batches');
+      raw.execute('PRAGMA user_version = 13');
+      final migrated = open();
+      addTearDown(migrated.close);
+      expect(
+        (await ItemRepository(migrated, FakeClock(now)).getById('keep'))!.title,
+        'Existing task',
+      );
+      await migrated
+          .into(migrated.importBatches)
+          .insert(
+            ImportBatchesCompanion.insert(id: 'batch', fingerprint: 'digest'),
+          );
+      expect(
+        (await migrated.select(migrated.importBatches).get())
+            .single
+            .fingerprint,
+        'digest',
+      );
+      expect(
+        raw.select(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'import_batches_fingerprint'",
+        ),
+        hasLength(1),
+      );
+    },
+  );
+
+  test('v11 → v12 adds Today focus and project review without touching rows',
+      () async {
+    final raw = sqlite3.openInMemory();
+    addTearDown(raw.dispose);
+    final now = DateTime(2026, 10, 26, 8);
+    AppDatabase open() => AppDatabase.forTesting(
+          NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+        );
+    final seed = open();
+    await ItemRepository(seed, FakeClock(now)).upsert(Item(
+      id: 'a',
+      title: 'Call Bob',
+      status: ItemStatus.nextAction,
+      projectId: 'p',
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await ProjectRepository(seed).upsert(Project(
+      id: 'p',
+      title: 'Garage',
+      status: ProjectStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await seed.close();
+    raw.execute('ALTER TABLE items DROP COLUMN focused_at');
+    raw.execute('ALTER TABLE projects DROP COLUMN last_reviewed_at');
+    raw.execute('DROP TABLE item_tags');
+    raw.execute('DROP TABLE tags');
+    raw.execute('DROP TABLE import_batches');
+    raw.execute('PRAGMA user_version = 11');
+
+    final migrated = open();
+    addTearDown(migrated.close);
+    final items = ItemRepository(migrated, FakeClock(now));
+    final projects = ProjectRepository(migrated);
+    final item = (await items.getById('a'))!;
+    expect(item.title, 'Call Bob');
+    expect(item.focusedAt, isNull);
+    final project = (await projects.getById('p'))!;
+    expect(project.title, 'Garage');
+    expect(project.lastReviewedAt, isNull);
+
+    // The new columns are writable after the upgrade.
+    await items.setFocusedAt({'a': now});
+    await projects.markReviewed('p', now);
+    expect((await items.getById('a'))!.focusedAt, now);
+    expect((await projects.getById('p'))!.lastReviewedAt, now);
+    expect(
+      raw.select('PRAGMA user_version').first['user_version'],
+      migrated.schemaVersion,
+    );
+  });
+
+  test('v12 → v13 adds tags without touching rows', () async {
+    final raw = sqlite3.openInMemory();
+    addTearDown(raw.dispose);
+    final now = DateTime(2026, 10, 27, 8);
+    AppDatabase open() => AppDatabase.forTesting(
+          NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+        );
+    final seed = open();
+    await ItemRepository(seed, FakeClock(now)).upsert(Item(
+      id: 'a',
+      title: 'Ask Alice about the budget',
+      status: ItemStatus.nextAction,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await seed.close();
+    raw.execute('DROP TABLE item_tags');
+    raw.execute('DROP TABLE tags');
+    raw.execute('DROP TABLE import_batches');
+    raw.execute('PRAGMA user_version = 12');
+
+    final migrated = open();
+    addTearDown(migrated.close);
+    final items = ItemRepository(migrated, FakeClock(now));
+    final tags = TagRepository(migrated);
+    expect((await items.getById('a'))!.title, 'Ask Alice about the budget');
+    expect(await tags.all(), isEmpty);
+
+    // The new tables, their index, and the cascade are in place.
+    await tags.upsert(
+      const Tag(id: 't', name: 'Alice', isPerson: true),
+      createdAt: now,
+    );
+    await tags.replaceItemTags({
+      'a': ['t'],
+    });
+    expect(await tags.tagIdsFor('a'), ['t']);
+    expect(
+      raw.select(
+        "SELECT name FROM sqlite_master WHERE name = 'item_tags_tag_id'",
+      ),
+      hasLength(1),
+    );
+    await items.delete('a');
+    expect(await tags.allItemTagIds(), isEmpty);
+    expect(raw.select('PRAGMA user_version').first['user_version'],
+        migrated.schemaVersion);
+  });
+
+  test(
+    'v10 reviews migrate with their history intact and can resume after reopening',
+    () async {
+      final raw = sqlite3.openInMemory();
+      addTearDown(raw.dispose);
+      final now = DateTime(2026, 5, 14);
+      AppDatabase open() => AppDatabase.forTesting(
+        NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+      );
+      final seed = open();
+      final reviews = ReviewRepository(seed);
+      await reviews.insert(
+        ReviewLog(
+          id: 'unfinished',
+          type: ReviewType.weekly,
+          startedAt: now,
+          notes: 'original note',
+        ),
+      );
+      await reviews.insert(
+        ReviewLog(
+          id: 'finished',
+          type: ReviewType.weekly,
+          startedAt: now.subtract(const Duration(days: 7)),
+          completedAt: now,
+        ),
+      );
+      await seed.close();
+      raw.execute('ALTER TABLE items DROP COLUMN focused_at');
+      raw.execute('ALTER TABLE projects DROP COLUMN last_reviewed_at');
+      raw.execute('ALTER TABLE reviews DROP COLUMN current_step');
+      raw.execute('DROP TABLE item_tags');
+      raw.execute('DROP TABLE tags');
+      raw.execute('DROP TABLE import_batches');
+      raw.execute('PRAGMA user_version = 10');
+      final migrated = open();
+      final repo = ReviewRepository(migrated);
+      final pending = await repo.watchIncompleteWeekly().first;
+      expect(pending!.id, 'unfinished');
+      expect(pending.currentStep, WeeklyReviewStep.capture);
+      expect(pending.startedAt, now);
+      expect(pending.notes, 'original note');
+      expect(
+        (await repo.all()).singleWhere((r) => r.id == 'finished').completedAt,
+        now,
+      );
+      await repo.saveStep('unfinished', WeeklyReviewStep.projects);
+      await migrated.close();
+      final reopened = open();
+      addTearDown(reopened.close);
+      expect(
+        (await ReviewRepository(
+          reopened,
+        ).watchIncompleteWeekly().first)!.currentStep,
+        WeeklyReviewStep.projects,
+      );
+      expect(await ReviewRepository(reopened).all(), hasLength(2));
+    },
+  );
+
   test('full upgrade runs the search backfill and the next-action dueAt fix',
       () async {
     final raw = sqlite3.openInMemory();
@@ -74,6 +288,13 @@ void main() {
     raw.execute('ALTER TABLE items DROP COLUMN search_text');
     raw.execute('ALTER TABLE items DROP COLUMN project_sort_order');
     raw.execute("UPDATE items SET status = 'nextAction' WHERE id = 'cal'");
+    raw.execute('DROP TABLE calendar_mirrors');
+    raw.execute('ALTER TABLE items DROP COLUMN focused_at');
+    raw.execute('ALTER TABLE projects DROP COLUMN last_reviewed_at');
+    raw.execute('ALTER TABLE reviews DROP COLUMN current_step');
+    raw.execute('DROP TABLE item_tags');
+    raw.execute('DROP TABLE tags');
+    raw.execute('DROP TABLE import_batches');
     raw.execute('PRAGMA user_version = 6');
     expect(raw.select('PRAGMA user_version').first['user_version'], 6);
 

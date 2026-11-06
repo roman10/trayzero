@@ -7,15 +7,76 @@ import '../../core/search_text.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/empty_state.dart';
+import '../common/error_view.dart';
 import '../common/item_card.dart';
+import '../common/keyboard_shortcut_actions.dart';
+import '../common/workspace_scroll_controller.dart';
 import 'project_filter_sheet.dart';
 import 'search_controller.dart';
 
-class SearchScreen extends ConsumerWidget {
-  const SearchScreen({super.key});
+class SearchScreen extends ConsumerStatefulWidget {
+  const SearchScreen({
+    this.onOpenItem,
+    this.selectedItemId,
+    this.initialScrollOffset = 0,
+    super.key,
+  });
+  final ValueChanged<String>? onOpenItem;
+  final String? selectedItemId;
+  final double initialScrollOffset;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  final _searchFocus = FocusNode();
+  late final _scroll = WorkspaceScrollController(
+    initialScrollOffset: widget.initialScrollOffset,
+  );
+
+  @override
+  void dispose() {
+    _searchFocus.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _openItem(String id) {
+    final open = widget.onOpenItem;
+    if (open != null) {
+      open(id);
+    } else {
+      context.push(
+        Uri(
+          path: '/item/$id',
+          queryParameters: {'workspace': 'search'},
+        ).toString(),
+        extra: _scroll.hasClients ? _scroll.offset : 0.0,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final search = _buildSearch(context);
+    return CallbackShortcuts(
+      bindings: {
+        searchShortcut: () {
+          if (ModalRoute.isCurrentOf(context) == true) {
+            _searchFocus.requestFocus();
+          }
+        },
+      },
+      // Keep key handling active when the standalone page has no focused
+      // field. In a workspace, use its existing cross-pane focus traversal.
+      child: widget.onOpenItem == null
+          ? FocusScope(autofocus: true, child: search)
+          : search,
+    );
+  }
+
+  Widget _buildSearch(BuildContext context) {
     final query = ref.watch(searchQueryProvider);
     final filter = ref.watch(searchFilterProvider);
     final results = ref.watch(filteredSearchResultsProvider);
@@ -23,7 +84,11 @@ class SearchScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const _SearchField(),
+        automaticallyImplyLeading: widget.onOpenItem == null,
+        title: _SearchField(
+          autofocus: widget.onOpenItem == null,
+          focusNode: _searchFocus,
+        ),
         actions: [
           if (filter.activeCount > 0)
             Padding(
@@ -47,54 +112,76 @@ class SearchScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          const _SearchFilterBar(),
-          const Divider(height: 1),
-          Expanded(
-            child: !isSearchableQuery(query)
-                ? _Hint(
-                    text: l.searchMinChars,
-                    icon: Icons.search,
-                  )
-                : results.when(
-                    skipLoadingOnReload: true,
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Error: $e')),
-                    data: (list) {
-                      if (list.isEmpty) {
-                        if (filter.isEmpty) {
-                          return _Hint(
-                            text: l.searchNoResults(query.trim()),
-                            icon: Icons.search_off,
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const _SearchFilterBar(),
+            const Divider(height: 1),
+            Expanded(
+              child: !isSearchableQuery(query)
+                  ? _Hint(text: l.searchMinChars, icon: Icons.search)
+                  : results.when(
+                      skipLoadingOnReload: true,
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, st) => ErrorView(
+                        error: e,
+                        stackTrace: st,
+                        onRetry: () =>
+                            ref.invalidate(filteredSearchResultsProvider),
+                      ),
+                      data: (list) {
+                        if (widget.selectedItemId != null) {
+                          _scroll.prepare(
+                            widget.selectedItemId,
+                            list.map((item) => item.id).toList(),
                           );
                         }
-                        return EmptyState(
-                          icon: Icons.filter_alt_off_outlined,
-                          title: l.searchNoMatchTitle,
-                          message: l.searchNoMatchMessage,
-                          action: FilledButton(
-                            onPressed: () => ref
-                                .read(searchFilterProvider.notifier)
-                                .clear(),
-                            child: Text(l.clearFilters),
+                        if (list.isEmpty) {
+                          if (filter.isEmpty) {
+                            return _Hint(
+                              text: l.searchNoResults(query.trim()),
+                              icon: Icons.search_off,
+                            );
+                          }
+                          return EmptyState(
+                            icon: Icons.filter_alt_off_outlined,
+                            title: l.searchNoMatchTitle,
+                            message: l.searchNoMatchMessage,
+                            action: FilledButton(
+                              onPressed: () => ref
+                                  .read(searchFilterProvider.notifier)
+                                  .clear(),
+                              child: Text(l.clearFilters),
+                            ),
+                          );
+                        }
+                        return WorkspaceListViewport(
+                          controller: _scroll,
+                          child: ListView.separated(
+                            controller: _scroll,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: list.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (_, i) => ItemCard(
+                              key: widget.onOpenItem != null
+                                  ? _scroll.itemKey(list[i].id)
+                                  : null,
+                              item: list[i],
+                              highlighted: list[i].id == widget.selectedItemId,
+                              onTap: list[i].id == widget.selectedItemId
+                                  ? null
+                                  : () => _openItem(list[i].id),
+                            ),
                           ),
                         );
-                      }
-                      return ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: list.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) => ItemCard(
-                          item: list[i],
-                          onTap: () => context.push('/item/${list[i].id}'),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -104,7 +191,9 @@ class SearchScreen extends ConsumerWidget {
 /// [searchQueryProvider]. Kept as the screen's only stateful leaf so the
 /// rest of the tree can be a [ConsumerWidget].
 class _SearchField extends ConsumerStatefulWidget {
-  const _SearchField();
+  const _SearchField({required this.autofocus, required this.focusNode});
+  final bool autofocus;
+  final FocusNode focusNode;
 
   @override
   ConsumerState<_SearchField> createState() => _SearchFieldState();
@@ -140,7 +229,8 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
 
     return TextField(
       controller: _ctrl,
-      autofocus: true,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: AppLocalizations.of(context).searchHint,
@@ -171,9 +261,7 @@ class _SearchFilterBar extends ConsumerWidget {
     ref.listen(projectsProvider, (_, next) {
       final id = filter.projectId;
       final list = next.valueOrNull;
-      if (id != null &&
-          list != null &&
-          !list.any((p) => p.id == id)) {
+      if (id != null && list != null && !list.any((p) => p.id == id)) {
         controller.setProject(null);
       }
     });
@@ -188,7 +276,7 @@ class _SearchFilterBar extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 36,
+            height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -235,7 +323,7 @@ class _SearchFilterBar extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           SizedBox(
-            height: 36,
+            height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -267,13 +355,13 @@ class _SearchFilterBar extends ConsumerWidget {
 /// Short status labels for the filter chips (the enum's own `label` is too
 /// long for a chip strip, e.g. "Someday / Maybe").
 String _statusLabel(AppLocalizations l, ItemStatus s) => switch (s) {
-      ItemStatus.inbox => l.statusInbox,
-      ItemStatus.nextAction => l.statusNext,
-      ItemStatus.waiting => l.statusWaiting,
-      ItemStatus.someday => l.statusSomeday,
-      ItemStatus.reference => l.statusReference,
-      _ => s.label,
-    };
+  ItemStatus.inbox => l.statusInbox,
+  ItemStatus.nextAction => l.statusNext,
+  ItemStatus.waiting => l.statusWaiting,
+  ItemStatus.someday => l.statusSomeday,
+  ItemStatus.reference => l.statusReference,
+  _ => s.label,
+};
 
 class _Hint extends StatelessWidget {
   const _Hint({required this.text, required this.icon});

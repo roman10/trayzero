@@ -1,3 +1,5 @@
+import 'package:cleartray/application/providers.dart' show itemRepositoryProvider;
+import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/features/item_edit/item_edit_screen.dart';
@@ -5,6 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/harness.dart';
+
+class _FailingItems extends ItemRepository {
+  _FailingItems(TestEnv env) : super(env.db, env.clock);
+  bool fail = true;
+  @override
+  Future<void> upsert(Item item) async {
+    if (fail) throw StateError('write failed');
+    await super.upsert(item);
+  }
+}
 
 void main() {
   late TestEnv env;
@@ -16,12 +28,69 @@ void main() {
   });
   tearDown(() => env.dispose());
 
-  testWidgets('shows "Item not found" error when the id does not exist',
+  for (final permission in [
+    NotificationPermission.denied,
+    NotificationPermission.permanentlyDenied,
+  ]) {
+    testWidgets('reminder warning expires after editing ($permission)',
+        (tester) async {
+      env.scheduler.status = permission;
+      await items.upsert(anItem(
+        id: 'reminder',
+        title: 'Book a table',
+        dueAt: DateTime(2026, 5, 15, 19),
+      ));
+      await pumpApp(tester, const ItemEditScreen(itemId: 'reminder'), env: env);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Notes'),
+        'Ask for a quiet table',
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining("this won't alert you."), findsOneWidget);
+      expect((await items.getById('reminder'))!.notes, 'Ask for a quiet table');
+      await tester.pump(const Duration(seconds: 7));
+      await tester.pumpAndSettle();
+      expect(find.textContaining("this won't alert you."), findsNothing);
+    });
+  }
+
+  testWidgets('screen reader retains the reminder recovery action',
+      (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(accessibleNavigation: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    env.scheduler.status = NotificationPermission.denied;
+    await items.upsert(anItem(
+      id: 'reminder',
+      title: 'Book a table',
+      dueAt: DateTime(2026, 5, 15, 19),
+    ));
+    await pumpApp(tester, const ItemEditScreen(itemId: 'reminder'), env: env);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Notes'),
+      'Ask for a quiet table',
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 7));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("this won't alert you."), findsOneWidget);
+    await tester.tap(find.text('Enable'));
+    await tester.pumpAndSettle();
+    expect(find.text('Turn on reminders?'), findsOneWidget);
+  });
+
+  testWidgets('shows the shared error view when the item cannot be loaded',
       (tester) async {
     await pumpApp(tester, const ItemEditScreen(itemId: 'missing'), env: env);
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.textContaining('Item not found'), findsOneWidget);
+    expect(find.text("Couldn't load this"), findsOneWidget);
+    expect(find.textContaining('missing'), findsNothing);
   });
 
   testWidgets('seeds the form fields from the loaded item', (tester) async {
@@ -106,6 +175,46 @@ void main() {
     expect(saved!.notes, 'Some fresh notes');
 
     // Drain the post-save "Saved" flash timer before the tree disposes.
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets(
+    'clearing notes persists an empty value and removes searchable text',
+    (tester) async {
+      await items.upsert(
+        anItem(
+          id: 'a',
+          title: 'Task',
+          status: ItemStatus.nextAction,
+          notes: 'obsolete notes',
+        ),
+      );
+      await pumpApp(tester, const ItemEditScreen(itemId: 'a'), env: env);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.enterText(find.widgetWithText(TextField, 'Notes'), '');
+      await tester.pump(const Duration(milliseconds: 700));
+      expect((await items.getById('a'))!.notes, isNull);
+      expect(await items.search('obsolete'), isEmpty);
+      await tester.pump(const Duration(seconds: 3));
+    },
+  );
+
+  testWidgets('failed autosave keeps the draft and Retry persists it', (tester) async {
+    await items.upsert(anItem(id: 'a', title: 'Original', status: ItemStatus.nextAction));
+    final failing = _FailingItems(env);
+    await pumpApp(tester, const ItemEditScreen(itemId: 'a'), env: env,
+      extraOverrides: [itemRepositoryProvider.overrideWithValue(failing)]);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(find.widgetWithText(TextField, 'Title'), 'Keep this edit');
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.text("Couldn't save your changes. Please try again."), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Keep this edit'), findsOneWidget);
+    expect((await items.getById('a'))!.title, 'Original');
+    failing.fail = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect((await items.getById('a'))!.title, 'Keep this edit');
     await tester.pump(const Duration(seconds: 3));
   });
 
@@ -294,7 +403,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // The status chips sit at the top of the form, in view from the start.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Next Action'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Next action'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 

@@ -47,13 +47,16 @@ Future<ProjectFilterPick?> showProjectFilterPicker(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Filter by project',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  l10n.filterByProject,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -72,9 +75,9 @@ Future<ProjectFilterPick?> showProjectFilterPicker(
                         sheetContext, const ProjectFilterAll()),
                   ),
                   if (projects.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      child: Text('No projects yet.'),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: Text(l10n.projectsEmptyTitle),
                     ),
                   for (final p in projects)
                     ListTile(

@@ -15,9 +15,9 @@
 //
 // HOW TO RUN SO IT ACTUALLY GUARDS THE BUG
 // ----------------------------------------
-//   flutter test --release integration_test/notification_delivery_test.dart
+//   Run bash tool/ci_android_native.sh on a disposable Android emulator. flutter test --release cannot attach to a release VM service.
 //
-// `--release` is mandatory to exercise R8. Default `flutter test` builds the
+// Release instrumentation is mandatory to exercise R8. Default `flutter test` builds the
 // `.debug` variant (applicationId app.cleartray.debug) which co-installs
 // safely alongside a Play `app.cleartray`; a `--release` run is signed
 // with the release key (android/key.properties), a DIFFERENT signature than
@@ -53,16 +53,23 @@ void main() {
 
   final raw = FlutterLocalNotificationsPlugin();
   late LocalNotificationScheduler scheduler;
+  const strict = bool.fromEnvironment('CI_NATIVE_TEST');
 
   setUpAll(() async {
+    if (strict) {
+      expect(
+        kReleaseMode,
+        isTrue,
+        reason: 'Native Android CI must exercise R8.',
+      );
+    }
     if (!kReleaseMode) {
       debugPrint(
         '\n==================================================================\n'
         '  ⚠  NOT a --release build: R8 is OFF, so the flutter_local_\n'
         '     notifications "Missing type parameter" regression is NOT\n'
-        '     being exercised. Re-run with:\n'
-        '       flutter test --release integration_test/'
-        'notification_delivery_test.dart\n'
+        '     being exercised. Use the release instrumentation runner in\n'
+        '       tool/ci_android_native.sh\n'
         '==================================================================\n',
       );
     }
@@ -94,6 +101,10 @@ void main() {
     // window (dumpsys windowLength=3600000).
     expect(perm, isA<NotificationPermission>());
     expect(canExact, isA<bool>());
+    if (strict) {
+      expect(perm, NotificationPermission.granted);
+      expect(canExact, isTrue, reason: 'CI must verify exact-alarm delivery.');
+    }
   });
 
   testWidgets(
@@ -158,6 +169,7 @@ void main() {
   ) async {
     final perm = await scheduler.permissionStatus();
     if (perm != NotificationPermission.granted) {
+      if (strict) fail('Native CI did not grant POST_NOTIFICATIONS.');
       markTestSkipped(
         'POST_NOTIFICATIONS not granted — pre-grant with: adb shell pm grant '
         '<appId> android.permission.POST_NOTIFICATIONS, then re-run.',
@@ -169,7 +181,10 @@ void main() {
           AndroidFlutterLocalNotificationsPlugin
         >();
     if (android == null) {
-      markTestSkipped('Not an Android device — delivery probe is Android-only.');
+      if (strict) fail('Android delivery probe requires an Android device.');
+      markTestSkipped(
+        'Not an Android device — delivery probe is Android-only.',
+      );
       return;
     }
 

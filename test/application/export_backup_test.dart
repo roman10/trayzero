@@ -6,10 +6,15 @@ import 'package:cleartray/core/result.dart';
 import 'package:cleartray/data/db/database.dart';
 import 'package:cleartray/data/repositories/area_repository.dart';
 import 'package:cleartray/data/repositories/context_repository.dart';
+import 'package:cleartray/data/repositories/tag_repository.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/data/repositories/project_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/application/backup_service.dart';
+import 'package:cleartray/data/repositories/attachment_repository.dart';
+import 'package:cleartray/data/repositories/review_repository.dart';
+import 'package:cleartray/core/id_generator.dart';
+import '../support/backup_files_fake.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,9 +28,14 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     clock = FakeClock(DateTime(2026, 5, 15, 9));
     backup = BackupService(
+      database: db,
+      attachments: AttachmentRepository(db, clock, FixedIdGenerator([])),
+      reviews: ReviewRepository(db),
+      files: MemoryBackupFiles(),
       items: ItemRepository(db, clock),
       projects: ProjectRepository(db),
       contexts: ContextRepository(db),
+      tags: TagRepository(db),
       areas: AreaRepository(db),
       clock: clock,
     );
@@ -118,9 +128,14 @@ void main() {
 class _SpyBackupService extends BackupService {
   _SpyBackupService(AppDatabase db, Clock clock)
       : super(
+          database: db,
+          attachments: AttachmentRepository(db, clock, FixedIdGenerator([])),
+          reviews: ReviewRepository(db),
+          files: MemoryBackupFiles(),
           items: ItemRepository(db, clock),
           projects: ProjectRepository(db),
           contexts: ContextRepository(db),
+          tags: TagRepository(db),
           areas: AreaRepository(db),
           clock: clock,
         );

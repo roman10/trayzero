@@ -1,0 +1,6 @@
+# Preserve the vendor template byte-for-byte, including its CSV CRLF endings.
+todoist_official_template.csv -text whitespace=cr-at-eol
+
+# These synthetic fixtures exercise CRLF input.
+things_copy.txt -text whitespace=cr-at-eol
+todoist_garage.csv -text whitespace=cr-at-eol

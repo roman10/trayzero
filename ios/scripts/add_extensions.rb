@@ -2,9 +2,10 @@
 # frozen_string_literal: true
 
 # Attach the CleartrayInboxWidget (WidgetKit) and ShareExtension targets to
-# Runner.xcodeproj. Idempotent — running twice is a no-op.
+# Runner.xcodeproj, plus the capture-anywhere / Today widget sources and
+# localizations (ADR 0009). Idempotent — running twice is a no-op.
 #
-# Run from the repo root or from mobile/ios:
+# Run from the repo root:
 #   ruby ios/scripts/add_extensions.rb
 #
 # Requires the `xcodeproj` gem (ships with CocoaPods).
@@ -40,7 +41,11 @@ end
 
 def add_app_extension_target(project, name, bundle_suffix, deployment_target, dev_team)
   target = project.targets.find { |t| t.name == name }
-  target ||= project.new_target(
+  # Settings are seeded only on creation: existing targets carry later
+  # hand-tuned settings (e.g. versions from AppExtensionVersion.xcconfig).
+  return target if target
+
+  target = project.new_target(
     :app_extension,
     name,
     :ios,
@@ -89,6 +94,28 @@ def add_file_to_target(project, target, group, relative_path, build: :sources)
   ref
 end
 
+LOCALES = %w[en de es fr ja ko pt ru zh-Hans zh-Hant].freeze
+
+# Adds `<locale>.lproj/<name>` files under a variant group in [group] and the
+# group to [target]'s resources.
+def add_localized_resource(target, group, name)
+  variant = group.children.find do |c|
+    c.is_a?(Xcodeproj::Project::Object::PBXVariantGroup) && c.name == name
+  end
+  variant ||= group.new_variant_group(name)
+  LOCALES.each do |locale|
+    path = "#{locale}.lproj/#{name}"
+    next if variant.files.any? { |f| f.path == path }
+
+    ref = variant.new_reference(path)
+    ref.name = locale
+    ref.last_known_file_type = 'text.plist.strings'
+  end
+  unless target.resources_build_phase.files_references.include?(variant)
+    target.resources_build_phase.add_file_reference(variant)
+  end
+end
+
 def embed_extension_in_host(project, host_target, ext_target)
   phase = host_target.copy_files_build_phases.find do |p|
     p.symbol_dst_subfolder_spec == :plug_ins
@@ -134,6 +161,10 @@ widget_target = add_app_extension_target(
 )
 
 add_file_to_target(project, widget_target, widget_group, 'CleartrayInboxWidget.swift', build: :sources)
+%w[TrayzeroWidgets.swift TrayzeroTodayWidget.swift TrayzeroCaptureControl.swift].each do |file|
+  add_file_to_target(project, widget_target, widget_group, file, build: :sources)
+end
+add_localized_resource(widget_target, widget_group, 'Localizable.strings')
 add_file_to_target(project, widget_target, widget_group, 'Info.plist', build: :none)
 add_file_to_target(project, widget_target, widget_group, 'CleartrayInboxWidget.entitlements', build: :none)
 
@@ -151,7 +182,7 @@ share_target = add_app_extension_target(
   project,
   'ShareExtension',
   'ShareExtension',
-  '14.0', # UTType API (used by ShareViewController.swift) requires iOS 14+
+  '15.0', # UTType API needs iOS 14+; App Store requires 15.0+ (ITMS-90068)
   DEV_TEAM
 )
 
@@ -166,7 +197,28 @@ end
 
 embed_extension_in_host(project, runner, share_target)
 
-# --- 5. Save -------------------------------------------------------------
+# --- 5. Capture anywhere (ADR 0009) ----------------------------------------
+
+# App Group store and the app-opening intents, compiled into both Runner and
+# the widget extension (the Control Center control runs them).
+shared_group = ensure_group(project, 'TrayzeroShared')
+%w[TrayzeroShared.swift TrayzeroOpenIntents.swift].each do |file|
+  [runner, widget_target].each do |target|
+    add_file_to_target(project, target, shared_group, file, build: :sources)
+  end
+end
+
+%w[LaunchLinkRelay.swift TrayzeroAppIntents.swift].each do |file|
+  add_file_to_target(project, runner, runner_group, file, build: :sources)
+end
+add_localized_resource(runner, runner_group, 'Localizable.strings')
+add_localized_resource(runner, runner_group, 'AppShortcuts.strings')
+
+LOCALES.each do |locale|
+  project.root_object.known_regions << locale unless project.root_object.known_regions.include?(locale)
+end
+
+# --- 6. Save -------------------------------------------------------------
 
 project.save
 puts "Wrote #{PROJECT_PATH}"

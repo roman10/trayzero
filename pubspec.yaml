@@ -1,7 +1,8 @@
+# Internal Dart package name; keep existing package:cleartray imports stable.
 name: cleartray
-description: "Cleartray — a GTD-method productivity app: capture, clarify, organize, reflect, engage."
+description: "Trayzero — a GTD-method productivity app: capture, clarify, organize, reflect, engage."
 publish_to: 'none'
-version: 1.0.2+34
+version: 1.0.8+54
 
 environment:
   sdk: ^3.11.4
@@ -31,6 +32,7 @@ dependencies:
   # Utilities
   uuid: ^4.5.1
   intl: ^0.20.1
+  crypto: ^3.0.7 # compare portable backup content without timestamp churn
   collection: ^1.18.0
   diacritic: ^0.1.5 # accent folding for search normalisation
 
@@ -77,9 +79,21 @@ dependencies:
 
   # backup import: pick a previously-exported .json file
   file_picker: ^11.0.2
-  purchases_flutter: ^10.2.0
+  # Import from other apps (ADR 0008): read Todoist backup ZIPs. Pure Dart.
+  archive: ^4.0.9
+  purchases_flutter: ^10.13.2
+  # Store rating prompt. Android pulls Google Play Core, so the FOSS transform
+  # (tool/foss/strip.sh) removes this line and stubs the adapter.
+  in_app_review: ^2.0.11
+  # Optional Microsoft To Do import: native OAuth/PKCE, Graph reads, HTML notes.
+  flutter_appauth: ^12.0.0
+  http: ^1.6.0
+  html: ^0.15.7
 
 dependency_overrides:
+  # Local sampling fix; see third_party/image_picker_android/PATCH.md.
+  image_picker_android:
+    path: third_party/image_picker_android
   # record 5.x pulls in record_linux 0.7.2 which is incompatible with the
   # newer record_platform_interface; pin to a compatible Linux build. We
   # don't ship Linux but Flutter compiles all platforms during build.
@@ -112,15 +126,17 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/icon/app-icons/
 
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   remove_alpha_ios: true # required by App Store
-  image_path: "assets/icon/cleartray-1024.png"
+  image_path: "assets/icon/trayzero-1024.png"
   # The icon is full-bleed; iOS rounds it for you. Android adaptive icons
   # need a background colour + foreground; we re-use the master with a
   # deepened sunrise amber as the fallback.
   adaptive_icon_background: "#C2531B"
-  adaptive_icon_foreground: "assets/icon/cleartray-1024.png"
+  adaptive_icon_foreground: "assets/icon/trayzero-1024.png"
   min_sdk_android: 23

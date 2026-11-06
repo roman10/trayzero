@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/notification_scheduler.dart';
 import '../../core/result.dart';
+import '../../l10n/gen/app_localizations.dart';
 import '../settings/settings_controller.dart';
 
 /// One place that owns notification-permission UX so Settings, item-edit,
@@ -30,31 +31,30 @@ class NotificationStatusUi {
   final IconData? actionIcon;
 }
 
-NotificationStatusUi notificationStatusUi(NotificationPermission s) =>
-    switch (s) {
-      NotificationPermission.granted => const NotificationStatusUi(
-          title: 'Reminders on',
-          body: 'Reminders will alert you on this device.',
-          icon: Icons.notifications_active_outlined,
-        ),
-      NotificationPermission.denied => const NotificationStatusUi(
-          title: 'Reminders off',
-          body: 'Reminders are scheduled but won’t alert you until you '
-              'allow notifications.',
-          icon: Icons.notifications_off_outlined,
-          actionLabel: 'Enable notifications',
-          actionIcon: Icons.notifications_active_outlined,
-        ),
-      NotificationPermission.permanentlyDenied => const NotificationStatusUi(
-          title: 'Reminders blocked',
-          body: 'Notifications are turned off for Trayzero in system '
-              'settings. Reminders won’t alert you until you turn them '
-              'back on there.',
-          icon: Icons.notifications_off_outlined,
-          actionLabel: 'Open Settings',
-          actionIcon: Icons.open_in_new,
-        ),
-    };
+NotificationStatusUi notificationStatusUi(
+  AppLocalizations l10n,
+  NotificationPermission s,
+) => switch (s) {
+  NotificationPermission.granted => NotificationStatusUi(
+    title: l10n.notificationStatusOnTitle,
+    body: l10n.notificationStatusOnBody,
+    icon: Icons.notifications_active_outlined,
+  ),
+  NotificationPermission.denied => NotificationStatusUi(
+    title: l10n.notificationStatusOffTitle,
+    body: l10n.notificationStatusOffBody,
+    icon: Icons.notifications_off_outlined,
+    actionLabel: l10n.notificationActionEnable,
+    actionIcon: Icons.notifications_active_outlined,
+  ),
+  NotificationPermission.permanentlyDenied => NotificationStatusUi(
+    title: l10n.notificationStatusBlockedTitle,
+    body: l10n.notificationStatusBlockedBody,
+    icon: Icons.notifications_off_outlined,
+    actionLabel: l10n.notificationActionOpenSettings,
+    actionIcon: Icons.open_in_new,
+  ),
+};
 
 /// The one-time pre-permission rationale. Marks [notificationPrimedProvider]
 /// the moment it is shown — on Continue *or* Not now — so it never re-nags.
@@ -64,6 +64,7 @@ Future<bool> showNotificationPrimer(
   WidgetRef ref,
 ) async {
   if (!context.mounted) return false;
+  final l10n = AppLocalizations.of(context);
   // Mark primed only once we know we'll actually show it (on Continue *or*
   // Not now), so an unmounted context never silently suppresses it.
   await ref.read(notificationPrimedProvider.notifier).set(true);
@@ -71,21 +72,16 @@ Future<bool> showNotificationPrimer(
   final go = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Turn on reminders?'),
-      content: const Text(
-        'Trayzero reminds you about due dates and your weekly review by '
-        'posting a notification on this device. Nothing is sent to a server '
-        '— reminders are scheduled locally.\n\n'
-        'Your device will now ask for permission to show notifications.',
-      ),
+      title: Text(l10n.notificationPrimerTitle),
+      content: Text(l10n.notificationPrimerBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Not now'),
+          child: Text(l10n.notificationPrimerNotNow),
         ),
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Continue'),
+          child: Text(l10n.notificationPrimerContinue),
         ),
       ],
     ),
@@ -102,6 +98,7 @@ Future<NotificationPermission> runNotificationPermissionRecovery(
   WidgetRef ref,
 ) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
 
   final statusRes =
       await ref.read(checkNotificationPermissionProvider).call();
@@ -110,21 +107,18 @@ Future<NotificationPermission> runNotificationPermissionRecovery(
     Err() => null,
   };
   if (status == null) {
-    _snack(messenger, 'Couldn’t open the notification prompt.');
+    _snack(messenger, l10n.notificationPromptFailed);
     return NotificationPermission.denied;
   }
 
   switch (status) {
     case NotificationPermission.granted:
-      _snack(messenger, 'Reminders are already on.');
+      _snack(messenger, l10n.notificationAlreadyOn);
       return status;
 
     case NotificationPermission.permanentlyDenied:
       await ref.read(openNotificationSettingsProvider).call();
-      _snack(
-        messenger,
-        'Opened system settings — turn on Notifications for Trayzero.',
-      );
+      _snack(messenger, l10n.notificationOpenedSettings);
       return status;
 
     case NotificationPermission.denied:
@@ -133,11 +127,7 @@ Future<NotificationPermission> runNotificationPermissionRecovery(
         if (!context.mounted) return status;
         final go = await showNotificationPrimer(context, ref);
         if (!go) {
-          _snack(
-            messenger,
-            'Reminders stay off. You can enable them anytime in '
-            'More → Reminders.',
-          );
+          _snack(messenger, l10n.notificationStayOff);
           return status;
         }
       }
@@ -147,7 +137,7 @@ Future<NotificationPermission> runNotificationPermissionRecovery(
         Ok(:final value) => value,
         Err() => null,
       };
-      _emitResult(messenger, ref, result);
+      _emitResult(messenger, l10n, ref, result);
       return result ?? status;
   }
 }
@@ -156,32 +146,29 @@ Future<NotificationPermission> runNotificationPermissionRecovery(
 /// errored (the underlying error still reaches logs/Sentry).
 void _emitResult(
   ScaffoldMessengerState messenger,
+  AppLocalizations l10n,
   WidgetRef ref,
   NotificationPermission? result,
 ) {
   switch (result) {
     case NotificationPermission.granted:
-      _snack(messenger, 'Reminders are on.');
+      _snack(messenger, l10n.notificationNowOn);
     case NotificationPermission.denied:
-      _snack(
-        messenger,
-        'Reminders stay off. You can enable them anytime in '
-        'More → Reminders.',
-      );
+      _snack(messenger, l10n.notificationStayOff);
     case NotificationPermission.permanentlyDenied:
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(
-          content: const Text('Notifications are blocked for Trayzero.'),
+          content: Text(l10n.notificationBlocked),
           duration: const Duration(seconds: 6),
           action: SnackBarAction(
-            label: 'Open Settings',
+            label: l10n.notificationActionOpenSettings,
             onPressed: () =>
                 ref.read(openNotificationSettingsProvider).call(),
           ),
         ));
     case null:
-      _snack(messenger, 'Couldn’t open the notification prompt.');
+      _snack(messenger, l10n.notificationPromptFailed);
   }
 }
 

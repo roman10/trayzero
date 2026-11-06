@@ -142,7 +142,7 @@ void main() {
       final i = itemsOf(out).single;
       expect(
         DateTime.parse(i['dueAt']! as String),
-        DateTime.utc(2025, 6, 1),
+        DateTime(2025, 6, 1),
       );
     });
 

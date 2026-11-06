@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/billing.dart';
+import '../core/billing_diagnostics.dart';
 import '../infrastructure/billing_providers.dart';
 
 /// Live supporter entitlement. Subscribes to store-reported changes first,
@@ -13,9 +14,9 @@ final supporterStatusProvider = StreamProvider<SupporterStatus>((ref) {
   final gateway = ref.watch(billingGatewayProvider);
   final controller = StreamController<SupporterStatus>();
   final sub = gateway.statusChanges().listen(
-        controller.add,
-        onError: controller.addError,
-      );
+    controller.add,
+    onError: controller.addError,
+  );
   gateway.currentStatus().then((s) {
     if (!controller.isClosed) controller.add(s);
   });
@@ -37,24 +38,76 @@ final billingOfferingsProvider = FutureProvider<BillingOfferings?>((ref) {
   return ref.watch(billingGatewayProvider).loadOfferings();
 });
 
-final billingControllerProvider =
-    Provider<BillingController>(BillingController.new);
+final billingControllerProvider = Provider<BillingController>(
+  BillingController.new,
+);
 
-/// Thin action layer over [BillingGateway]. Purchases push their result back
-/// through [supporterStatusProvider] via the gateway's status stream, so the
-/// UI only needs the returned [PurchaseOutcome] to show a toast.
+/// Shared across Support screen navigation. Null means no purchase/restore is
+/// running. A store operation keeps this lock until it actually returns.
+final billingOperationProvider = StateProvider<BillingOperation?>(
+  (ref) => null,
+);
+
+class BillingOperation {
+  BillingOperation({required this.productId, required this.trace});
+
+  final String? productId;
+  final BillingTrace trace;
+  bool get isRestoring => productId == null;
+}
+
+/// Owns the operation lock as well as the timing span, so even two taps before
+/// the next frame (or callers outside the screen) cannot launch two sheets.
 class BillingController {
-  BillingController(this._ref);
+  BillingController(this._ref) {
+    _ref.onDispose(() => _disposed = true);
+  }
 
   final Ref _ref;
+  bool _disposed = false;
 
   BillingGateway get _gateway => _ref.read(billingGatewayProvider);
 
-  Future<PurchaseOutcome> tip(TipTier tier) =>
-      _gateway.purchase(BillingIds.forTip(tier));
+  Future<PurchaseOutcome> tip(TipTier tier) => _run(BillingIds.forTip(tier));
 
   Future<PurchaseOutcome> becomeSupporter(SupporterPlan plan) =>
-      _gateway.purchase(BillingIds.forPlan(plan));
+      _run(BillingIds.forPlan(plan));
 
-  Future<PurchaseOutcome> restore() => _gateway.restore();
+  Future<PurchaseOutcome> restore() => _run(null);
+
+  Future<PurchaseOutcome> _run(String? productId) async {
+    final active = _ref.read(billingOperationProvider);
+    if (active != null) {
+      active.trace.mark('overlapping_action_ignored');
+      return const PurchaseCancelled();
+    }
+    final trace = BillingTrace(productId ?? 'restore');
+    final operation = BillingOperation(productId: productId, trace: trace);
+    _ref.read(billingOperationProvider.notifier).state = operation;
+    return trace.run(() async {
+      try {
+        final outcome = await (productId == null
+            ? _gateway.restore()
+            : _gateway.purchase(productId));
+        trace.mark(
+          'action_finished',
+          result: switch (outcome) {
+            PurchaseSucceeded() => 'success',
+            PurchaseCancelled() => 'cancelled',
+            PurchaseFailed(:final reason) => 'failure_${reason.name}',
+          },
+        );
+        return outcome;
+      } catch (error) {
+        // Configuration/bridge failures can throw before the gateway reaches
+        // its normal store-error mapping. Recover the UI without logging PII.
+        trace.mark('action_finished', result: 'exception_${error.runtimeType}');
+        return const PurchaseFailed(PurchaseFailure.unknown);
+      } finally {
+        if (!_disposed) {
+          _ref.read(billingOperationProvider.notifier).state = null;
+        }
+      }
+    });
+  }
 }

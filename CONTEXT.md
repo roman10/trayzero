@@ -4,6 +4,18 @@ Trayzero — a GTD (Getting Things Done) productivity app. Flutter + Riverpod,
 local-first (Drift/SQLite), with native calendar mirroring and notifications.
 (App store identifier and package id remain `app.cleartray`.)
 
+## Product name and compatibility
+
+Use **Trayzero** (one word, capital T) in visible copy, exported filenames,
+store listings, and documentation. The name was changed from Cleartray on
+2026-05-29.
+
+Keep the established identifiers unchanged: `app.cleartray` and its extension
+bundle IDs, `group.app.cleartray`, `cleartray://` deep links, native widget
+provider names and kinds, notification IDs, the `cleartray.sqlite` database
+filename, and the internal Dart package `cleartray`. Existing installs,
+widgets, reminders, links, and stored data depend on these identifiers.
+
 ## Domain language
 
 Use these terms exactly; they match the code.
@@ -20,6 +32,11 @@ Use these terms exactly; they match the code.
 - **GtdContext** — the "@context" an action can be done in (e.g. @home).
 - **Area** — an Area of Responsibility grouping projects/items.
 - **Review** — a reflection session. **ReviewType**: `daily`, `weekly`.
+  A Weekly Review stores a stable **WeeklyReviewStep** (`capture`, `inbox`,
+  `actions`, `waiting`, `projects`, `calendar`, `someday`). Leaving preserves
+  the incomplete session; only Finish sets `completedAt`. Review includes
+  deferred Next Actions, and Projects with waiting or scheduled work count
+  as moving; only active Projects without movement need repair.
 - **Attachment** — a file/link attached to an Item.
 - **Recurrence / RecurrenceRule / RecurrencePolicy** — repeating actions.
   `Recurrence` is the cadence (`daily`/`weekly`/`monthly`/`yearly`); the rule
@@ -71,6 +88,12 @@ core  ◄─ (ports) ◄─ infrastructure
 
 ## Conventions
 
+- User-visible UI copy belongs in the ARB localization files, including enum
+  labels and dates formatted for the selected app language. Keep domain enums
+  independent of Flutter; map them to localized labels in presentation code.
+- Preserve the system text scaler. Use wrapping and scrolling rather than a
+  global font-size cap. Check core flows on a compact phone at 2x–3x text,
+  including translated copy and forms with the keyboard open.
 - State management: Riverpod. No ad-hoc top-level `StateProvider`s in
   screen files and no filtering/grouping/sorting in `build()` — that
   derivation moves into a `<feature>_controller.dart` as a pure function

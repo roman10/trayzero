@@ -5,6 +5,8 @@ import '../../application/providers.dart';
 import '../../core/id_generator.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../common/error_view.dart';
+import '../settings/settings_tiles.dart';
 
 /// "Areas of Focus" — Horizons of Focus level 2.
 ///
@@ -28,7 +30,11 @@ class AreasScreen extends ConsumerWidget {
       ),
       body: areas.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, st) => ErrorView(
+          error: e,
+          stackTrace: st,
+          onRetry: () => ref.invalidate(areasProvider),
+        ),
         data: (list) {
           if (list.isEmpty) {
             return Center(
@@ -41,54 +47,21 @@ class AreasScreen extends ConsumerWidget {
               ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
-            itemCount: list.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-              final a = list[i];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.flag_outlined),
-                ),
-                title: Text(a.name),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (v) async {
-                    if (v == 'edit') {
-                      await _editArea(context, ref, area: a);
-                    } else if (v == 'delete') {
-                      final dialogL10n = AppLocalizations.of(context);
-                      final ok = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text(
-                              dialogL10n.deleteAreaConfirmTitle(a.name)),
-                          content: Text(dialogL10n.deleteAreaWarning),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: Text(dialogL10n.cancel),
-                            ),
-                            FilledButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: Text(dialogL10n.delete),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (ok == true) {
-                        await ref.read(areaRepositoryProvider).delete(a.id);
-                      }
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(value: 'edit', child: Text(l10n.rename)),
-                    PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
-                  ],
-                ),
-                onTap: () => _editArea(context, ref, area: a),
-              );
-            },
+          return ListView(
+            padding: const EdgeInsets.only(top: 8, bottom: 96),
+            children: [
+              SettingsGroup(
+                children: [
+                  for (final a in list)
+                    SettingsRow(
+                      icon: Icons.flag_outlined,
+                      title: a.name,
+                      chevron: false,
+                      onTap: () => _editArea(context, ref, area: a),
+                    ),
+                ],
+              ),
+            ],
           );
         },
       ),
@@ -100,39 +73,127 @@ class AreasScreen extends ConsumerWidget {
     WidgetRef ref, {
     Area? area,
   }) async {
-    final l10n = AppLocalizations.of(context);
-    final ctrl = TextEditingController(text: area?.name);
-    final name = await showDialog<String>(
+    final edit = await showModalBottomSheet<_AreaEdit>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(area == null ? l10n.newArea : l10n.renameArea),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: l10n.areaNameHint,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final v = ctrl.text.trim();
-              if (v.isEmpty) return;
-              Navigator.pop(context, v);
-            },
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (_) => _AreaSheet(existing: area),
     );
-    if (name == null) return;
+    if (edit == null || !context.mounted) return;
+    if (edit.delete) {
+      final ok = await _confirmDelete(context, area!);
+      if (ok == true) await ref.read(areaRepositoryProvider).delete(area.id);
+      return;
+    }
     final updated = area == null
-        ? Area(id: ref.read(idGeneratorProvider).newId(), name: name)
-        : Area(id: area.id, name: name);
+        ? Area(id: ref.read(idGeneratorProvider).newId(), name: edit.name)
+        : Area(id: area.id, name: edit.name);
     await ref.read(areaRepositoryProvider).upsert(updated);
   }
 }
+
+/// What the edit sheet returns: delete, or save with this name.
+typedef _AreaEdit = ({bool delete, String name});
+
+/// Name field for a new or existing area, with Delete when editing.
+class _AreaSheet extends StatefulWidget {
+  const _AreaSheet({this.existing});
+
+  final Area? existing;
+
+  @override
+  State<_AreaSheet> createState() => _AreaSheetState();
+}
+
+class _AreaSheetState extends State<_AreaSheet> {
+  late final _name = TextEditingController(text: widget.existing?.name);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _close({required bool delete}) => Navigator.pop<_AreaEdit>(context, (
+    delete: delete,
+    name: _name.text.trim(),
+  ));
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final valid = _name.text.trim().isNotEmpty;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.existing == null ? l10n.newArea : l10n.renameArea,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: InputDecoration(hintText: l10n.areaNameHint),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                if (widget.existing != null)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(l10n.delete),
+                    onPressed: () => _close(delete: true),
+                  ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: Text(l10n.save),
+                  onPressed: valid ? () => _close(delete: false) : null,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<bool?> _confirmDelete(BuildContext context, Area area) =>
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.deleteAreaConfirmTitle(area.name)),
+          content: Text(l10n.deleteAreaWarning),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
+    );

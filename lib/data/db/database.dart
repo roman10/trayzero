@@ -14,13 +14,16 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Items, Projects, Contexts, Areas, Attachments, Reviews])
+@DriftDatabase(tables: [
+  Items, Projects, Contexts, Areas, Attachments, Reviews, CalendarMirrors,
+  Tags, ItemTags, ImportBatches,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -28,6 +31,28 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
         },
         onUpgrade: (m, from, to) async {
+          // v13 → v14: local import history, committed with imported rows.
+          if (from < 14) {
+            await m.createTable(importBatches);
+            await m.createIndex(importBatchesFingerprint);
+          }
+          // v12 → v13: tags, people, and Agendas (ADR 0010). New tables
+          // only; no existing row changes.
+          if (from < 13) {
+            await m.createTable(tags);
+            await m.createTable(itemTags);
+            await m.createIndex(itemTagsTagId);
+          }
+          // v11 → v12: Today focus and per-project review (ADR 0007). Pure
+          // additive nullable columns, hoisted with the other column adds so
+          // the full-row item helpers below see every current column.
+          if (from < 12) {
+            await m.addColumn(items, items.focusedAt);
+            await m.addColumn(projects, projects.lastReviewedAt);
+          }
+          // v10 → v11: persist a resumable Weekly Review step.
+          if (from < 11) await m.addColumn(reviews, reviews.currentStep);
+          if (from < 10) await m.createTable(calendarMirrors);
           // v8 → v9: per-project manual action order. Pure additive column
           // with a `0` default — SQLite ADD COLUMN does not rewrite the
           // table, so every existing row is preserved and reads back `0`,
@@ -86,6 +111,16 @@ class AppDatabase extends _$AppDatabase {
           // existing next actions (moved to `deferUntil` when free).
           if (from < 8) {
             await migrateNextActionDueDates(this);
+          }
+          if (from < 10) {
+            // Bind legacy ownership to the saved selection before it can
+            // change; retain it even if its Item is deleted before syncing.
+            await customStatement(
+              'INSERT INTO calendar_mirrors '
+              '(calendar_id, event_id, item_id, is_current) '
+              "SELECT '', calendar_event_id, MIN(id), 1 FROM items "
+              'WHERE calendar_event_id IS NOT NULL GROUP BY calendar_event_id',
+            );
           }
         },
         beforeOpen: (details) async {

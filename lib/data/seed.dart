@@ -5,59 +5,67 @@ import 'repositories/context_repository.dart';
 import 'repositories/item_repository.dart';
 import 'repositories/project_repository.dart';
 
-/// Seeds the default GTD contexts on first launch.
+/// Seeds the default GTD contexts on first launch. Context display names are
+/// passed in already localized so the seed matches the app's UI language.
 Future<void> seedDefaultContextsIfEmpty(
   ContextRepository repo,
-  IdGenerator ids,
-) async {
+  IdGenerator ids, {
+  required String phoneLabel,
+  required String computerLabel,
+  required String errandsLabel,
+  required String homeLabel,
+  required String officeLabel,
+  required String anywhereLabel,
+  required String waitingLabel,
+}) async {
   final existing = await repo.all();
   if (existing.isNotEmpty) return;
   final defaults = <GtdContext>[
     GtdContext(
       id: ids.newId(),
-      name: '@phone',
+      name: phoneLabel,
       icon: 'phone',
       color: 0xFF1E88E5,
       sortOrder: 0,
     ),
     GtdContext(
       id: ids.newId(),
-      name: '@computer',
+      name: computerLabel,
       icon: 'computer',
       color: 0xFF6D4C41,
       sortOrder: 1,
     ),
     GtdContext(
       id: ids.newId(),
-      name: '@errands',
+      name: errandsLabel,
       icon: 'shopping_bag',
       color: 0xFFE53935,
       sortOrder: 2,
     ),
     GtdContext(
       id: ids.newId(),
-      name: '@home',
+      name: homeLabel,
       icon: 'home',
       color: 0xFF43A047,
       sortOrder: 3,
     ),
     GtdContext(
       id: ids.newId(),
-      name: '@office',
+      name: officeLabel,
       icon: 'business_center',
       color: 0xFF8E24AA,
       sortOrder: 4,
     ),
     GtdContext(
       id: ids.newId(),
-      name: '@anywhere',
+      name: anywhereLabel,
       icon: 'public',
       color: 0xFF00897B,
       sortOrder: 5,
     ),
     GtdContext(
       id: ids.newId(),
-      name: '@waiting',
+      name: waitingLabel,
       icon: 'hourglass_top',
       color: 0xFFFB8C00,
       sortOrder: 6,
@@ -68,28 +76,36 @@ Future<void> seedDefaultContextsIfEmpty(
   }
 }
 
-/// Optional sample data for first-run onboarding.
+/// Optional sample data for first-run onboarding. All display strings are
+/// passed in already localized. [computerLabel] must match the localized
+/// name of the seeded "@computer" context so the sample actions attach to it.
 Future<void> seedSampleProject({
   required ProjectRepository projects,
   required ItemRepository items,
   required ContextRepository contexts,
   required IdGenerator ids,
   required Clock clock,
+  required String computerLabel,
+  required String projectTitle,
+  required String projectOutcome,
+  required String readPrimerTitle,
+  required String emptyEmailTitle,
+  required String scheduleReviewTitle,
 }) async {
   final now = clock.now();
   final ctxs = await contexts.all();
-  final computer = ctxs.firstWhere(
-    (c) => c.name == '@computer',
-    orElse: () => ctxs.first,
-  );
+  // Prefer the localized @computer context, else any context; with none at
+  // all (user deleted them) the sample actions are simply context-less.
+  final computer =
+      ctxs.where((c) => c.name == computerLabel).firstOrNull ??
+      ctxs.firstOrNull;
 
   final projectId = ids.newId();
   await projects.upsert(
     Project(
       id: projectId,
-      title: 'Get the most out of GTD',
-      outcome:
-          'Capture inbox to zero daily and run a Weekly Review every Friday.',
+      title: projectTitle,
+      outcome: projectOutcome,
       status: ProjectStatus.active,
       createdAt: now,
       updatedAt: now,
@@ -99,10 +115,10 @@ Future<void> seedSampleProject({
   await items.upsert(
     Item(
       id: ids.newId(),
-      title: 'Read the GTD primer in Settings',
+      title: readPrimerTitle,
       status: ItemStatus.nextAction,
       projectId: projectId,
-      contextId: computer.id,
+      contextId: computer?.id,
       energy: Energy.low,
       timeEstimateMinutes: 10,
       createdAt: now,
@@ -113,7 +129,7 @@ Future<void> seedSampleProject({
   await items.upsert(
     Item(
       id: ids.newId(),
-      title: 'Empty my email inbox into here',
+      title: emptyEmailTitle,
       status: ItemStatus.inbox,
       createdAt: now,
       updatedAt: now,
@@ -123,10 +139,10 @@ Future<void> seedSampleProject({
   await items.upsert(
     Item(
       id: ids.newId(),
-      title: 'Schedule a recurring Friday Weekly Review',
+      title: scheduleReviewTitle,
       status: ItemStatus.nextAction,
       projectId: projectId,
-      contextId: computer.id,
+      contextId: computer?.id,
       energy: Energy.low,
       timeEstimateMinutes: 5,
       createdAt: now,

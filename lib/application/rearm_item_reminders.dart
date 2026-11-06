@@ -4,6 +4,7 @@ import '../data/repositories/item_repository.dart';
 import '../domain/item_invariants.dart';
 import 'calendar_sync_service.dart';
 import 'reconcile_item_reminders.dart';
+import 'pending_snoozed_reminders.dart';
 
 /// On app launch, re-schedule the Due:/Soon:/Ready: reminder for every
 /// active dated item.
@@ -18,6 +19,8 @@ import 'reconcile_item_reminders.dart';
 /// Idempotent: deterministic `notificationIdFor` ids, so a re-run just
 /// replaces the existing alarm, and the scheduler's past-time DROP guard
 /// skips items whose moment already passed — stale history never spams.
+/// Pending, unexpired Snoozes are the exception: preserve the explicit alert
+/// override from the OS payload while leaving the Item's dates untouched.
 ///
 /// Runs unawaited after launch, so the loop overlaps the first seconds of
 /// use. It therefore re-reads each candidate by id immediately before
@@ -38,11 +41,11 @@ final class RearmItemReminders {
     required Clock clock,
     required int leadTimeMinutes,
     required int deferSurfaceMinutes,
-  })  : _items = items,
-        _scheduler = scheduler,
-        _clock = clock,
-        _leadTimeMinutes = leadTimeMinutes,
-        _deferSurfaceMinutes = deferSurfaceMinutes;
+  }) : _items = items,
+       _scheduler = scheduler,
+       _clock = clock,
+       _leadTimeMinutes = leadTimeMinutes,
+       _deferSurfaceMinutes = deferSurfaceMinutes;
 
   final ItemRepository _items;
   final NotificationScheduler _scheduler;
@@ -52,6 +55,9 @@ final class RearmItemReminders {
 
   Future<void> call() async {
     final active = await _items.allActive(); // excludes done / trashed
+    final pendingByOwner = pendingSnoozesByOwner(
+      await _scheduler.getPendingNotifications(),
+    );
     for (final snapshot in active) {
       // Snapshot pre-filter — cheap, on fields that don't matter if stale:
       // skip the majority carrying no reminder anchor (a huge restore stays
@@ -75,6 +81,11 @@ final class RearmItemReminders {
         now: _clock.now(),
         leadTimeMinutes: _leadTimeMinutes,
         deferSurfaceMinutes: _deferSurfaceMinutes,
+        preserveNotificationIds: pendingSnoozedReminderIds(
+          pendingByOwner[item.id] ?? const [],
+          now: _clock.now(),
+          itemId: item.id,
+        ),
       );
     }
   }

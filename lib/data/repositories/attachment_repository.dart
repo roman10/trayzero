@@ -65,6 +65,30 @@ class AttachmentRepository {
     return rows.map((r) => r.toEntity()).toList();
   }
 
+  Future<List<Attachment>> allForItems(Iterable<String> itemIds) async {
+    final rows = await (_db.select(_db.attachments)
+          ..where((t) => t.itemId.isIn(itemIds)))
+        .get();
+    return rows.map((r) => r.toEntity()).toList();
+  }
+
+  Future<void> upsertAll(List<Attachment> rows) async {
+    if (rows.isEmpty) return;
+    await _db.batch(
+      (b) => b.insertAllOnConflictUpdate(
+        _db.attachments,
+        rows.map((r) => r.toCompanion()).toList(),
+      ),
+    );
+  }
+
+  Future<Attachment?> getById(String id) async {
+    final row = await (_db.select(_db.attachments)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    return row?.toEntity();
+  }
+
   /// Copies the source file into the app's documents `attachments/` folder
   /// and inserts a row. Returns the persisted [Attachment].
   Future<Attachment> attach({

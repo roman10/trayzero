@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Native surfaces follow the system language (ADR 0009). -->
     <string name="widget_description">Quick capture to your Trayzero inbox</string>
+    <string name="today_widget_name">Today</string>
+    <string name="today_widget_description">Your focused items for today. Tap a circle to complete.</string>
+    <string name="today_widget_title">Today</string>
+    <string name="today_widget_done">%1$d done</string>
+    <string name="today_widget_more">+%1$d more</string>
+    <string name="today_widget_empty">Nothing focused yet</string>
+    <string name="today_widget_all_done">All done for today</string>
+    <string name="today_widget_plan">Plan your day</string>
+    <string name="today_widget_complete">Complete %1$s</string>
+    <string name="tile_capture_label">Capture to Trayzero</string>
+    <string name="shortcut_capture_short">Capture</string>
+    <string name="shortcut_capture_long">Capture to Inbox</string>
+    <string name="shortcut_today_short">Today</string>
+    <string name="shortcut_today_long">Show Today</string>
+    <string name="shortcut_process_short">Process</string>
+    <string name="shortcut_process_long">Process Inbox</string>
 </resources>

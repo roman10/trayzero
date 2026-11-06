@@ -5,4 +5,5 @@ export 'gtd_context.dart';
 export 'item.dart';
 export 'project.dart';
 export 'review.dart';
+export 'tag.dart';
 export '../recurrence/recurrence_rule.dart';

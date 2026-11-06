@@ -6,6 +6,8 @@ import '../../application/providers.dart';
 import '../../core/id_generator.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../common/error_view.dart';
+import '../settings/settings_tiles.dart';
 
 const _iconChoices = <String, IconData>{
   'label': Icons.label_outline,
@@ -35,8 +37,9 @@ const _colorChoices = <int>[
   0xFF546E7A,
 ];
 
-IconData iconForName(String name) =>
-    _iconChoices[name] ?? Icons.label_outline;
+IconData iconForName(String name) => _iconChoices[name] ?? Icons.label_outline;
+
+enum _ContextEdit { save, delete }
 
 class ContextsScreen extends ConsumerWidget {
   const ContextsScreen({super.key});
@@ -55,7 +58,11 @@ class ContextsScreen extends ConsumerWidget {
       ),
       body: ctxs.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, st) => ErrorView(
+          error: e,
+          stackTrace: st,
+          onRetry: () => ref.invalidate(contextsProvider),
+        ),
         data: (list) {
           if (list.isEmpty) {
             return Center(
@@ -68,65 +75,22 @@ class ContextsScreen extends ConsumerWidget {
               ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
-            itemCount: list.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-              final c = list[i];
-              final tint = Color(c.color).onSurfaceOf(brightness);
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: tint.withValues(alpha: 0.18),
-                  foregroundColor: tint,
-                  child: Icon(iconForName(c.icon)),
-                ),
-                title: Text(c.name),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (v) async {
-                    if (v == 'edit') {
-                      await _editContext(context, ref, existing: c);
-                    } else if (v == 'delete') {
-                      final dialogL10n = AppLocalizations.of(context);
-                      final ok = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text(
-                              dialogL10n.deleteContextConfirmTitle(c.name)),
-                          content: Text(dialogL10n.deleteContextWarning),
-                          actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, false),
-                              child: Text(dialogL10n.cancel),
-                            ),
-                            FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.error,
-                              ),
-                              onPressed: () =>
-                                  Navigator.pop(context, true),
-                              child: Text(dialogL10n.delete),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (ok == true) {
-                        await ref
-                            .read(contextRepositoryProvider)
-                            .delete(c.id);
-                      }
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
-                    PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
-                  ],
-                ),
-                onTap: () => _editContext(context, ref, existing: c),
-              );
-            },
+          return ListView(
+            padding: const EdgeInsets.only(top: 8, bottom: 96),
+            children: [
+              SettingsGroup(
+                children: [
+                  for (final c in list)
+                    SettingsRow(
+                      icon: iconForName(c.icon),
+                      iconColor: Color(c.color).onSurfaceOf(brightness),
+                      title: c.name,
+                      chevron: false,
+                      onTap: () => _editContext(context, ref, existing: c),
+                    ),
+                ],
+              ),
+            ],
           );
         },
       ),
@@ -139,12 +103,11 @@ class ContextsScreen extends ConsumerWidget {
     GtdContext? existing,
   }) async {
     final l10n = AppLocalizations.of(context);
-    final ctrl =
-        TextEditingController(text: existing?.name ?? '@');
+    final ctrl = TextEditingController(text: existing?.name ?? '@');
     var icon = existing?.icon ?? 'label';
     var color = existing?.color ?? _colorChoices.first;
     final brightness = Theme.of(context).brightness;
-    final result = await showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<_ContextEdit>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -193,21 +156,25 @@ class ContextsScreen extends ConsumerWidget {
                             decoration: BoxDecoration(
                               color: icon == entry.key
                                   ? Color(color)
-                                      .onSurfaceOf(brightness)
-                                      .withValues(alpha: 0.2)
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHigh,
+                                        .onSurfaceOf(brightness)
+                                        .withValues(alpha: 0.2)
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHigh,
                               borderRadius: BorderRadius.circular(10),
                               border: icon == entry.key
                                   ? Border.all(
-                                      color: Color(color)
-                                          .onSurfaceOf(brightness),
-                                      width: 2)
+                                      color: Color(
+                                        color,
+                                      ).onSurfaceOf(brightness),
+                                      width: 2,
+                                    )
                                   : null,
                             ),
-                            child: Icon(entry.value,
-                                color: Color(color).onSurfaceOf(brightness)),
+                            child: Icon(
+                              entry.value,
+                              color: Color(color).onSurfaceOf(brightness),
+                            ),
                           ),
                         ),
                     ],
@@ -235,9 +202,9 @@ class ContextsScreen extends ConsumerWidget {
                               border: color == c
                                   ? Border.all(
                                       width: 3,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                     )
                                   : null,
                             ),
@@ -249,15 +216,29 @@ class ContextsScreen extends ConsumerWidget {
                   Row(
                     children: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context, false),
+                        onPressed: () => Navigator.pop(context),
                         child: Text(l10n.cancel),
                       ),
                       const Spacer(),
+                      if (existing != null) ...[
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
+                          ),
+                          icon: const Icon(Icons.delete_outline),
+                          label: Text(l10n.delete),
+                          onPressed: () =>
+                              Navigator.pop(context, _ContextEdit.delete),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       FilledButton.icon(
                         icon: const Icon(Icons.check),
                         label: Text(l10n.save),
                         onPressed: () =>
-                            Navigator.pop(context, true),
+                            Navigator.pop(context, _ContextEdit.save),
                       ),
                     ],
                   ),
@@ -268,17 +249,52 @@ class ContextsScreen extends ConsumerWidget {
         },
       ),
     );
-    if (result != true) return;
+    if (result == null) return;
+    if (result == _ContextEdit.delete) {
+      if (!context.mounted) return;
+      final confirmed = await _confirmDelete(context, existing!);
+      if (confirmed == true) {
+        await ref.read(contextRepositoryProvider).delete(existing.id);
+      }
+      return;
+    }
     final name = ctrl.text.trim();
     if (name.isEmpty) return;
-    final final_ = (existing ??
-            GtdContext(
-              id: ref.read(idGeneratorProvider).newId(),
-              name: name,
-              icon: icon,
-              color: color,
-            ))
-        .copyWith(name: name, icon: icon, color: color);
+    final final_ =
+        (existing ??
+                GtdContext(
+                  id: ref.read(idGeneratorProvider).newId(),
+                  name: name,
+                  icon: icon,
+                  color: color,
+                ))
+            .copyWith(name: name, icon: icon, color: color);
     await ref.read(contextRepositoryProvider).upsert(final_);
   }
 }
+
+Future<bool?> _confirmDelete(BuildContext context, GtdContext c) =>
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l10n.deleteContextConfirmTitle(c.name)),
+          content: Text(l10n.deleteContextWarning),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
+    );

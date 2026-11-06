@@ -32,6 +32,7 @@ class Item {
     this.recurrenceMonthlyWeek,
     this.recurrenceMonthlyWeekday,
     this.calendarEventId,
+    this.focusedAt,
   });
 
   final String id;
@@ -105,9 +106,15 @@ class Item {
   /// Set by calendar sync's mirror-out; null when the item is not mirrored.
   final String? calendarEventId;
 
+  /// When the user committed this Item to Today. In Today while it falls on
+  /// the current local day; an earlier day means carried over (see
+  /// `domain/today_focus.dart`). Null = not focused.
+  final DateTime? focusedAt;
+
   Item copyWith({
     String? title,
     String? notes,
+    bool clearNotes = false,
     ItemStatus? status,
     String? projectId,
     bool clearProject = false,
@@ -145,11 +152,13 @@ class Item {
     bool clearRecurrenceMonthlyNth = false,
     String? calendarEventId,
     bool clearCalendarEventId = false,
+    DateTime? focusedAt,
+    bool clearFocusedAt = false,
   }) {
     return Item(
       id: id,
       title: title ?? this.title,
-      notes: notes ?? this.notes,
+      notes: clearNotes ? null : (notes ?? this.notes),
       status: status ?? this.status,
       projectId: clearProject ? null : (projectId ?? this.projectId),
       contextId: clearContext ? null : (contextId ?? this.contextId),
@@ -193,6 +202,7 @@ class Item {
       calendarEventId: clearCalendarEventId
           ? null
           : (calendarEventId ?? this.calendarEventId),
+      focusedAt: clearFocusedAt ? null : (focusedAt ?? this.focusedAt),
     );
   }
 }

@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     as fln;
 import 'package:permission_handler/permission_handler.dart' as ph;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../core/appearance_preferences.dart';
 import '../core/notification_intent.dart';
+import 'method_channel_app_icon_gateway.dart';
 import '../core/notification_scheduler.dart';
 import 'pending_notification_intents.dart';
 
@@ -41,7 +45,7 @@ class LocalNotificationScheduler implements NotificationScheduler {
     // self-requesting during initialize(); permission_handler issues the
     // real UNUserNotificationCenter.requestAuthorization on iOS.
     final init = fln.InitializationSettings(
-      android: const fln.AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: const fln.AndroidInitializationSettings('ic_stat_trayzero'),
       iOS: fln.DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -171,7 +175,13 @@ class LocalNotificationScheduler implements NotificationScheduler {
         title,
         body,
         scheduled,
-        _detailsFor(payload, channelId, channelName, timeoutAfter),
+        _detailsFor(
+          payload,
+          channelId,
+          channelName,
+          timeoutAfter,
+          await _savedAccent(),
+        ),
         androidScheduleMode: mode,
         matchDateTimeComponents: matchComponents,
         uiLocalNotificationDateInterpretation:
@@ -201,6 +211,15 @@ class LocalNotificationScheduler implements NotificationScheduler {
     } catch (e, st) {
       debugPrint('Notification cancelAll failed: $e\n$st');
     }
+  }
+
+  @override
+  Future<List<PendingNotification>> getPendingNotifications() async {
+    await init();
+    // Let startup's existing best-effort guard abort re-arming on read errors:
+    // treating failure as an empty queue could erase a user-requested Snooze.
+    final pending = await _plugin.pendingNotificationRequests();
+    return [for (final n in pending) (id: n.id, payload: n.payload)];
   }
 
   @override
@@ -252,6 +271,32 @@ List<fln.DarwinNotificationCategory> _iosCategories() {
   return cats;
 }
 
+/// Android accents follow the OS-selected launcher icon. The custom channel
+/// belongs to the foreground engine, so headless Snooze falls back to the last
+/// confirmed selection. Never let appearance lookup prevent reminder delivery.
+Future<Color> _savedAccent() async {
+  if (defaultTargetPlatform != TargetPlatform.android) {
+    return Color(AppPalette.amber.seedArgb);
+  }
+  try {
+    final selected = await const MethodChannelAppIconGateway().load();
+    if (selected.supported) return Color(selected.palette.seedArgb);
+  } catch (_) {
+    // Expected for the headless engine: use the derived persisted fallback.
+  }
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    return Color(
+      AppPalette.fromId(
+        prefs.getString(androidNotificationIconPaletteKey),
+      ).seedArgb,
+    );
+  } catch (_) {
+    return Color(AppPalette.amber.seedArgb);
+  }
+}
+
 /// Builds the platform notification details, attaching the action buttons
 /// for the payload's kind. Shared by [LocalNotificationScheduler.schedule]
 /// and the background Snooze handler so a snoozed notification keeps its
@@ -267,6 +312,7 @@ fln.NotificationDetails _detailsFor(
   String channelId,
   String channelName,
   Duration? timeoutAfter,
+  Color accent,
 ) {
   final decoded = NotificationPayload.tryDecode(payload);
   final actions = decoded == null
@@ -277,6 +323,8 @@ fln.NotificationDetails _detailsFor(
       channelId,
       channelName,
       channelDescription: 'Trayzero reminders for tasks and reviews',
+      icon: 'ic_stat_trayzero',
+      color: accent,
       importance: fln.Importance.high,
       priority: fln.Priority.high,
       timeoutAfter: timeoutAfter?.inMilliseconds,
@@ -294,8 +342,7 @@ fln.NotificationDetails _detailsFor(
       ],
     ),
     iOS: fln.DarwinNotificationDetails(
-      categoryIdentifier:
-          decoded == null ? null : _iosCategoryId(decoded.kind),
+      categoryIdentifier: decoded == null ? null : _iosCategoryId(decoded.kind),
       // Group an item's Soon:/Due:/Ready: under one thread so iOS stacks
       // them as a single tray entry instead of separate banners. iOS can't
       // auto-expire a delivered Soon: when Due: fires (no timeoutAfter
@@ -316,12 +363,10 @@ fln.NotificationDetails _detailsFor(
       interruptionLevel: switch (decoded?.kind) {
         NotificationKind.due ||
         NotificationKind.soon ||
-        NotificationKind.ready =>
-          fln.InterruptionLevel.timeSensitive,
+        NotificationKind.ready => fln.InterruptionLevel.timeSensitive,
         NotificationKind.weeklyReview ||
         NotificationKind.backup ||
-        null =>
-          fln.InterruptionLevel.active,
+        null => fln.InterruptionLevel.active,
       },
     ),
   );
@@ -360,7 +405,13 @@ void notificationTapBackground(fln.NotificationResponse response) {
   switch (decision) {
     case RescheduleAt():
       unawaited(_rescheduleHeadless(response.id, decision));
-    case CompleteItemDecision():
+    case CompleteItemDecision(:final itemId):
+      // Done tapped while the app is dead. Journaling alone defers the
+      // completion to the next launch, but leaves this item's OTHER pending
+      // reminders armed: a Done on the "Soon:" banner would still let the
+      // later "Due:" fire while the app stays closed — the user marked it
+      // done but gets nagged anyway. So tear the reminders down now, here.
+      unawaited(_completeHeadless(itemId, response));
     case MoveToNextActionsDecision():
       unawaited(_journalHeadless(response));
     case OpenScreen():
@@ -373,13 +424,47 @@ void notificationTapBackground(fln.NotificationResponse response) {
 Future<void> _journalHeadless(fln.NotificationResponse r) async {
   try {
     final store = await PendingNotificationIntents.defaultLocation();
-    await store.append((
-      payload: r.payload,
-      actionId: r.actionId,
-      id: r.id,
-    ));
+    await store.append((payload: r.payload, actionId: r.actionId, id: r.id));
   } catch (e, st) {
     debugPrint('[notif] background journal FAILED id=${r.id}: $e\n$st');
+  }
+}
+
+/// Headless "Done": record the completion durably, then cancel the item's
+/// outstanding reminders so the later Due:/Ready: notifications don't fire
+/// while the app is still dead.
+///
+/// The journal write goes FIRST and is the source of truth — the actual
+/// completion (DB mutation + recurrence rollover) only runs when
+/// [DrainPendingNotificationIntents] replays it on the next launch. The
+/// cancel is best-effort nag-suppression layered on top: if this isolate is
+/// killed before it lands, the drained journal still completes the item and
+/// cancels these same ids on launch (and the cancel is idempotent if Due
+/// already fired). Salts 1/2/3 mirror [CompleteItem] (Due / Ready / Soon).
+Future<void> _completeHeadless(
+  String itemId,
+  fln.NotificationResponse r,
+) async {
+  await _journalHeadless(r);
+  try {
+    final plugin = fln.FlutterLocalNotificationsPlugin();
+    await plugin.initialize(
+      const fln.InitializationSettings(
+        android: fln.AndroidInitializationSettings('ic_stat_trayzero'),
+        iOS: fln.DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
+      ),
+    );
+    await plugin.cancel(notificationIdFor(itemId, 1));
+    await plugin.cancel(notificationIdFor(itemId, 2));
+    await plugin.cancel(notificationIdFor(itemId, 3));
+  } catch (e, st) {
+    debugPrint(
+      '[notif] background complete-cancel FAILED item=$itemId: $e\n$st',
+    );
   }
 }
 
@@ -390,7 +475,7 @@ Future<void> _rescheduleHeadless(int? id, RescheduleAt decision) async {
     final plugin = fln.FlutterLocalNotificationsPlugin();
     await plugin.initialize(
       const fln.InitializationSettings(
-        android: fln.AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: fln.AndroidInitializationSettings('ic_stat_trayzero'),
         iOS: fln.DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
@@ -411,6 +496,7 @@ Future<void> _rescheduleHeadless(int? id, RescheduleAt decision) async {
         'cleartray_reminders',
         'Reminders',
         null,
+        await _savedAccent(),
       ),
       androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:

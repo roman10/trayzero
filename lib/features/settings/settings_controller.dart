@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _kThemeMode = 'theme_mode';
+import '../../app/locale_resolution.dart';
+
+const _kAppLocale = 'app_locale';
 const _kOnboardingComplete = 'onboarding_complete_v1';
 const _kSeededSample = 'seeded_sample_v1';
 const _kWeeklyReviewReminder = 'weekly_review_reminder_enabled';
@@ -12,35 +14,33 @@ const _kHapticsEnabled = 'haptics_enabled';
 const _kCrashReportingEnabled = 'crash_reporting_enabled';
 const _kBackupReminderEnabled = 'backup_reminder_enabled';
 const _kNotificationPrimed = 'notification_primed_v1';
-const _kCalendarSyncEnabled = 'calendar_sync_enabled';
-const _kCalendarSyncCalendarId = 'calendar_sync_calendar_id';
+const _kBackupPromptDone = 'backup_prompt_done_v1';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('Must be overridden in ProviderScope');
 });
 
-class ThemeModeController extends StateNotifier<ThemeMode> {
-  ThemeModeController(this._prefs) : super(_load(_prefs));
+/// In-app language override. `null` means follow the system locale (the
+/// default and the behaviour before this setting existed). A non-null value is
+/// one of [AppLocalizations.supportedLocales]; [main] reads the same pref at
+/// bootstrap so first-run seed data lands in the chosen language.
+class LocaleController extends StateNotifier<Locale?> {
+  LocaleController(this._prefs) : super(localeFromTag(_prefs.getString(_kAppLocale)));
   final SharedPreferences _prefs;
 
-  static ThemeMode _load(SharedPreferences p) {
-    final s = p.getString(_kThemeMode);
-    return switch (s) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
-  }
-
-  Future<void> set(ThemeMode mode) async {
-    state = mode;
-    await _prefs.setString(_kThemeMode, mode.name);
+  Future<void> set(Locale? locale) async {
+    state = locale;
+    if (locale == null) {
+      await _prefs.remove(_kAppLocale);
+    } else {
+      await _prefs.setString(_kAppLocale, localeToTag(locale));
+    }
   }
 }
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
-  return ThemeModeController(ref.watch(sharedPreferencesProvider));
+final localeOverrideProvider =
+    StateNotifierProvider<LocaleController, Locale?>((ref) {
+  return LocaleController(ref.watch(sharedPreferencesProvider));
 });
 
 class OnboardingController extends StateNotifier<bool> {
@@ -147,35 +147,13 @@ final notificationPrimedProvider =
   );
 });
 
-final calendarSyncEnabledProvider =
-    StateNotifierProvider<_BoolPref, bool>((ref) {
+/// True once the one-time "turn on automatic backups" prompt was dismissed or
+/// accepted. Never reset: the prompt is shown at most once (ADR 0013).
+final backupPromptDoneProvider = StateNotifierProvider<_BoolPref, bool>((ref) {
   return _BoolPref(
     prefs: ref.watch(sharedPreferencesProvider),
-    key: _kCalendarSyncEnabled,
+    key: _kBackupPromptDone,
     defaultValue: false,
-  );
-});
-
-class _StringPref extends StateNotifier<String?> {
-  _StringPref({required this.prefs, required this.key})
-      : super(prefs.getString(key));
-  final SharedPreferences prefs;
-  final String key;
-  Future<void> set(String? v) async {
-    state = v;
-    if (v == null) {
-      await prefs.remove(key);
-    } else {
-      await prefs.setString(key, v);
-    }
-  }
-}
-
-final calendarSyncCalendarIdProvider =
-    StateNotifierProvider<_StringPref, String?>((ref) {
-  return _StringPref(
-    prefs: ref.watch(sharedPreferencesProvider),
-    key: _kCalendarSyncCalendarId,
   );
 });
 
@@ -210,29 +188,3 @@ class _IntPref extends StateNotifier<int> {
     await prefs.setInt(key, v);
   }
 }
-
-/// Per-section expand/collapse state for the Settings screen, persisted
-/// across launches. Defaults to expanded so first-time users see every
-/// option without hunting.
-class SettingsSectionExpandedController extends StateNotifier<bool> {
-  SettingsSectionExpandedController({
-    required this.prefs,
-    required this.section,
-  }) : super(prefs.getBool('settings_section_${section}_expanded') ?? true);
-
-  final SharedPreferences prefs;
-  final String section;
-
-  Future<void> set(bool v) async {
-    state = v;
-    await prefs.setBool('settings_section_${section}_expanded', v);
-  }
-}
-
-final settingsSectionExpandedProvider = StateNotifierProvider.family<
-    SettingsSectionExpandedController, bool, String>(
-  (ref, section) => SettingsSectionExpandedController(
-    prefs: ref.watch(sharedPreferencesProvider),
-    section: section,
-  ),
-);

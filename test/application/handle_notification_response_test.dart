@@ -100,6 +100,55 @@ void main() {
     expect(done.completedAt, isNotNull);
   });
 
+  test(
+    'Ready activation preserves a repeating action through completion and undo',
+    () async {
+      final c = env.container();
+      final repo = c.read(itemRepositoryProvider);
+      final anchor = DateTime(2026, 5, 19);
+      await repo.upsert(
+        anItem(
+          id: 'rec',
+          status: ItemStatus.nextAction,
+          recurrence: Recurrence.weekly,
+          recurrenceCount: 3,
+          deferUntil: anchor,
+        ),
+      );
+      final handler = HandleNotificationResponse(
+        scheduler: env.scheduler,
+        completeItem: c.read(completeItemProvider),
+        moveToNextActions: c.read(moveItemToNextActionsProvider),
+        clock: env.clock,
+        navigate: (_) {},
+      );
+      await handler.call(
+        event(
+          const NotificationPayload(
+            kind: NotificationKind.ready,
+            itemId: 'rec',
+            title: 'Ready',
+            body: '',
+          ),
+          actionId: NotificationAction.moveToNextActions.id,
+        ),
+      );
+      expect((await repo.getById('rec'))!.deferUntil, anchor);
+      expect((await repo.watchNextActions().first).single.id, 'rec');
+      final successor = await c.read(completeItemProvider).call('rec');
+      expect(successor, isNotNull);
+      final next = (await repo.allActive()).single;
+      expect(next.deferUntil, DateTime(2026, 5, 26));
+      expect(next.recurrenceCount, 3);
+      expect(next.recurrenceDoneCount, 1);
+      await c
+          .read(undoCompleteProvider)
+          .call('rec', spawnedRecurrenceId: successor);
+      expect((await repo.allActive()).single.id, 'rec');
+      expect((await repo.getById('rec'))!.deferUntil, anchor);
+    },
+  );
+
   test('Move to Next Actions triages a Ready item and clears its defer',
       () async {
     final c = env.container();

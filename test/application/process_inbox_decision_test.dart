@@ -1,12 +1,11 @@
 import 'package:cleartray/application/complete_item.dart';
 import 'package:cleartray/application/convert_to_project.dart';
-import 'package:cleartray/application/delete_item.dart';
 import 'package:cleartray/application/process_inbox_decision.dart';
 import 'package:cleartray/application/save_item.dart';
+import 'package:cleartray/application/trash_item.dart';
 import 'package:cleartray/core/clock.dart';
 import 'package:cleartray/core/id_generator.dart';
 import 'package:cleartray/data/db/database.dart';
-import 'package:cleartray/data/repositories/attachment_repository.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/data/repositories/project_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
@@ -27,7 +26,6 @@ void main() {
     final ids = FixedIdGenerator(['proj-1', 'roll-1']);
     items = ItemRepository(db, clock);
     projects = ProjectRepository(db);
-    final attachments = AttachmentRepository(db, clock, ids);
     final scheduler = FakeNotificationScheduler();
     final saveItem =
         SaveItem(items: items, scheduler: scheduler, clock: clock);
@@ -38,11 +36,8 @@ void main() {
       ids: ids,
       saveItem: saveItem,
     );
-    final deleteItem = DeleteItem(
-      items: items,
-      attachments: attachments,
-      scheduler: scheduler,
-    );
+    final trashItem =
+        TrashItem(items: items, scheduler: scheduler, clock: clock);
     final convertToProject = ConvertToProject(
       projects: projects,
       saveItem: saveItem,
@@ -51,7 +46,7 @@ void main() {
     );
     decide = ProcessInboxDecisionUseCase(
       saveItem: saveItem,
-      deleteItem: deleteItem,
+      trashItem: trashItem,
       completeItem: completeItem,
       convertToProject: convertToProject,
     );
@@ -71,10 +66,10 @@ void main() {
     return item;
   }
 
-  test('Trash removes the row', () async {
+  test('Trash soft-deletes the row', () async {
     final item = await seed();
     await decide(item, const TrashDecision());
-    expect(await items.getById('inbox-1'), isNull);
+    expect((await items.getById('inbox-1'))?.status, ItemStatus.trashed);
   });
 
   test('Reference moves the item to the reference list', () async {

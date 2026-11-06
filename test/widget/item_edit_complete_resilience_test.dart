@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cleartray/app/router.dart';
 import 'package:cleartray/app/theme.dart';
+import 'package:cleartray/features/item_edit/item_edit_screen.dart';
 import 'package:cleartray/l10n/gen/app_localizations.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
@@ -34,50 +37,117 @@ void main() {
   tearDown(() => env.dispose());
 
   testWidgets(
-      'Mark complete still completes + pops when reminder cancel throws',
-      (tester) async {
-    await items.upsert(anItem(
-      id: 'a',
-      title: 'Pay rent',
-      status: ItemStatus.inbox,
-      dueAt: DateTime(2026, 5, 20, 9),
-    ));
+    'Mark complete still completes + pops when reminder cancel throws',
+    (tester) async {
+      await items.upsert(
+        anItem(
+          id: 'a',
+          title: 'Pay rent',
+          status: ItemStatus.inbox,
+          dueAt: DateTime(2026, 5, 20, 9),
+        ),
+      );
 
-    final container = ProviderContainer(
-      overrides: env.overrides([
-        notificationSchedulerProvider
-            .overrideWithValue(ThrowingScheduler()),
-      ]),
+      final container = ProviderContainer(
+        overrides: env.overrides([
+          notificationSchedulerProvider.overrideWithValue(ThrowingScheduler()),
+        ]),
+      );
+      addTearDown(container.dispose);
+      final router = container.read(routerProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: AppTheme.light(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      router.go('/inbox');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pay rent'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Mark complete'),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byType(ItemEditScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.tap(find.text('Mark complete'));
+      await tester.pumpAndSettle();
+
+      final saved = await items.getById('a');
+      expect(
+        saved!.status,
+        ItemStatus.done,
+        reason: 'item must be completed even if reminder cancel fails',
+      );
+      expect(
+        find.text('Edit'),
+        findsNothing,
+        reason: 'screen must leave even if reminder cancel fails',
+      );
+    },
+  );
+
+  testWidgets('Mark complete shows Undo, which reopens the item', (
+    tester,
+  ) async {
+    await items.upsert(
+      anItem(id: 'a', title: 'Pay rent', status: ItemStatus.nextAction),
     );
+    final container = ProviderContainer(overrides: env.overrides());
     addTearDown(container.dispose);
     final router = container.read(routerProvider);
 
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp.router(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: router,
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          theme: AppTheme.light(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
-
     router.go('/inbox');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Pay rent'));
+    unawaited(router.push('/item/a'));
     await tester.pumpAndSettle();
-    expect(find.text('Edit'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Mark complete'), 300,
-        scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      find.text('Mark complete'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(ItemEditScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(find.text('Mark complete'));
     await tester.pumpAndSettle();
+    expect((await items.getById('a'))!.status, ItemStatus.done);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Completed'), findsOneWidget);
 
-    final saved = await items.getById('a');
-    expect(saved!.status, ItemStatus.done,
-        reason: 'item must be completed even if reminder cancel fails');
-    expect(find.text('Edit'), findsNothing,
-        reason: 'screen must leave even if reminder cancel fails');
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect((await items.getById('a'))!.status, ItemStatus.nextAction);
+    await tester.pump(const Duration(seconds: 6));
   });
 }

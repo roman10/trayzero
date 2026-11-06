@@ -3,7 +3,7 @@
   Flutter's default `release` build also turns on resource shrinking
   (FlutterPlugin sets `isShrinkResources = true` for app modules). The
   notification icon passed to flutter_local_notifications
-  (AndroidInitializationSettings('@mipmap/ic_launcher'), see
+  (AndroidInitializationSettings('ic_stat_trayzero'), see
   lib/infrastructure/local_notification_scheduler.dart) is resolved by NAME at
   runtime, so the shrinker cannot see the reference and may strip the drawable
   -> the system fails to find the icon and the notification is silently
@@ -11,4 +11,4 @@
   launcher mipmaps and any drawables so reminders can always render.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@mipmap/ic_launcher,@mipmap/*,@drawable/*" />
+    tools:keep="@drawable/ic_stat_trayzero,@mipmap/ic_launcher,@mipmap/*,@drawable/*" />

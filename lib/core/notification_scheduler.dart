@@ -26,13 +26,20 @@ extension NotificationPermissionX on NotificationPermission {
 /// - [payload] is the string the notification was scheduled with.
 /// - [actionId] is null when the body was tapped, else the action button id.
 /// - [id] is the OS notification id, needed to re-post it on a Snooze.
-typedef NotificationActionEvent = ({String? payload, String? actionId, int? id});
+typedef NotificationActionEvent = ({
+  String? payload,
+  String? actionId,
+  int? id,
+});
 
 /// One delivered notification currently visible in the OS tray, as returned
 /// by [NotificationScheduler.getActiveNotifications]. Only the bits the
 /// foreground sweep needs are surfaced — the id to cancel, and the payload
 /// it was scheduled with so the sweep can decide whether it's still fresh.
 typedef ActiveNotification = ({int id, String? payload});
+
+/// One future OS request. Its payload carries durable Snooze metadata.
+typedef PendingNotification = ({int id, String? payload});
 
 /// How often a scheduled notification re-fires.
 ///
@@ -112,6 +119,10 @@ abstract class NotificationScheduler {
   /// platforms the impl should return an empty list rather than throw, so
   /// the sweep silently no-ops.
   Future<List<ActiveNotification>> getActiveNotifications();
+
+  /// Snapshot of requests still scheduled by the OS, including headless
+  /// Snoozes. Startup healing uses this to preserve explicit user overrides.
+  Future<List<PendingNotification>> getPendingNotifications();
 
   /// Taps and action buttons received while the app is running (or was
   /// resumed by the interaction). Broadcast; a late listener misses nothing

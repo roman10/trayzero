@@ -1,0 +1,10 @@
+{
+  "kind": "tasks#taskLists",
+  "items": [{
+    "kind": "tasks#tasks", "id": "list-1", "title": "Home",
+    "items": [
+      {"id": "parent", "title": "Buy groceries", "status": "needsAction", "notes": "Bring bags", "updated": "2026-10-20T10:00:00Z", "due": "2026-11-05T00:00:00Z"},
+      {"id": "child", "title": "Buy milk", "status": "completed", "parent": "parent", "completed": "2026-10-21T12:30:00Z", "updated": "2026-10-21T12:30:00Z"}
+    ]
+  }]
+}

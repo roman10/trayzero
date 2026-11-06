@@ -10,6 +10,7 @@ class Project {
     this.outcome,
     this.areaId,
     this.dueAt,
+    this.lastReviewedAt,
   });
 
   final String id;
@@ -21,6 +22,9 @@ class Project {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Last time this Project was marked reviewed in the Weekly Review.
+  final DateTime? lastReviewedAt;
+
   Project copyWith({
     String? title,
     String? outcome,
@@ -31,6 +35,7 @@ class Project {
     DateTime? dueAt,
     bool clearDueAt = false,
     DateTime? updatedAt,
+    DateTime? lastReviewedAt,
   }) {
     return Project(
       id: id,
@@ -41,6 +46,7 @@ class Project {
       dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      lastReviewedAt: lastReviewedAt ?? this.lastReviewedAt,
     );
   }
 }

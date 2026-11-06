@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../core/billing.dart';
+import '../core/billing_diagnostics.dart';
 
 // RevenueCat *public* SDK keys. Unlike a secret key, these ship inside the app
 // binary by design, so baking them in as defaults is safe — and it means every
@@ -55,9 +56,7 @@ class RevenueCatBillingGateway implements BillingGateway {
     // switching to observer mode would leave tips unconsumed and unrepeatable.
     await Purchases.configure(PurchasesConfiguration(apiKey));
     _configured = true;
-    Purchases.addCustomerInfoUpdateListener(
-      (info) => _emit(_statusFrom(info)),
-    );
+    Purchases.addCustomerInfoUpdateListener((info) => _emit(_statusFrom(info)));
   }
 
   @override
@@ -77,10 +76,7 @@ class RevenueCatBillingGateway implements BillingGateway {
     }
 
     final tips = <BillingProduct>[];
-    for (final id in const [
-      BillingIds.tipSmall,
-      BillingIds.tipLarge,
-    ]) {
+    for (final id in const [BillingIds.tipSmall, BillingIds.tipLarge]) {
       final p = find(id);
       if (p != null) tips.add(p);
     }
@@ -108,13 +104,14 @@ class RevenueCatBillingGateway implements BillingGateway {
 
   @override
   Future<PurchaseOutcome> purchase(String productId) async {
+    final trace = BillingTrace.current;
+    trace?.mark('gateway_entered');
     await configure();
-    if (!_configured) return const PurchaseFailed(_unavailable);
+    trace?.mark('configuration_ready');
+    if (!_configured) return const PurchaseFailed(PurchaseFailure.unavailable);
     final off = _offering ?? await _resolveOffering();
     if (off == null) {
-      return const PurchaseFailed(
-        'Could not load products. Check your connection and try again.',
-      );
+      return const PurchaseFailed(PurchaseFailure.productsUnavailable);
     }
     Package? pkg;
     for (final p in off.availablePackages) {
@@ -125,28 +122,38 @@ class RevenueCatBillingGateway implements BillingGateway {
       }
     }
     if (pkg == null) {
-      return const PurchaseFailed('That option is not available right now.');
+      return const PurchaseFailed(PurchaseFailure.optionUnavailable);
     }
+    trace?.mark('package_ready');
     try {
+      trace?.mark('sdk_call_started');
       final result = await Purchases.purchase(PurchaseParams.package(pkg));
       final status = _statusFrom(result.customerInfo);
       _emit(status);
       return PurchaseSucceeded(status);
     } on PlatformException catch (e) {
       return _outcomeFor(e);
+    } finally {
+      trace?.mark('sdk_returned');
     }
   }
 
   @override
   Future<PurchaseOutcome> restore() async {
+    final trace = BillingTrace.current;
+    trace?.mark('gateway_entered');
     await configure();
-    if (!_configured) return const PurchaseFailed(_unavailable);
+    trace?.mark('configuration_ready');
+    if (!_configured) return const PurchaseFailed(PurchaseFailure.unavailable);
     try {
+      trace?.mark('sdk_call_started');
       final status = _statusFrom(await Purchases.restorePurchases());
       _emit(status);
       return PurchaseSucceeded(status);
     } on PlatformException catch (e) {
       return _outcomeFor(e);
+    } finally {
+      trace?.mark('sdk_returned');
     }
   }
 
@@ -174,12 +181,12 @@ class RevenueCatBillingGateway implements BillingGateway {
   }
 
   BillingProduct _product(StoreProduct p) => BillingProduct(
-        id: p.identifier,
-        title: p.title,
-        priceString: p.priceString,
-        rawPrice: p.price,
-        currencyCode: p.currencyCode,
-      );
+    id: p.identifier,
+    title: p.title,
+    priceString: p.priceString,
+    rawPrice: p.price,
+    currencyCode: p.currencyCode,
+  );
 
   SupporterStatus _statusFrom(CustomerInfo info) {
     final ent = info.entitlements.all[BillingIds.supporterEntitlement];
@@ -207,19 +214,13 @@ class RevenueCatBillingGateway implements BillingGateway {
       return const PurchaseCancelled();
     }
     return PurchaseFailed(switch (code) {
-      PurchasesErrorCode.networkError =>
-        'Network error. Check your connection and try again.',
-      PurchasesErrorCode.purchaseNotAllowedError =>
-        'Purchases are not allowed on this device.',
-      PurchasesErrorCode.paymentPendingError =>
-        'Your purchase is pending approval.',
+      PurchasesErrorCode.networkError => PurchaseFailure.network,
+      PurchasesErrorCode.purchaseNotAllowedError => PurchaseFailure.notAllowed,
+      PurchasesErrorCode.paymentPendingError => PurchaseFailure.pending,
       PurchasesErrorCode.productAlreadyPurchasedError =>
-        'You already own this — try Restore Purchases.',
-      PurchasesErrorCode.storeProblemError =>
-        'The store is having trouble. Please try again later.',
-      _ => 'Something went wrong with the purchase. Please try again.',
+        PurchaseFailure.alreadyOwned,
+      PurchasesErrorCode.storeProblemError => PurchaseFailure.storeProblem,
+      _ => PurchaseFailure.unknown,
     });
   }
-
-  static const _unavailable = 'Purchases are not available right now.';
 }

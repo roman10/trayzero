@@ -1,0 +1,22 @@
+/* Widgets and controls (ADR 0009). Follows the system language. */
+
+"Today" = "오늘";
+"%lld done" = "%lld개 완료";
+"+%lld more" = "+%lld개 더";
+"Complete %@" = "%@ 완료";
+"All done for today" = "오늘 할 일을 모두 마쳤습니다";
+"Nothing focused yet" = "아직 집중한 항목이 없습니다";
+"Plan your day" = "하루 계획하기";
+"Your focused items for today. Tap a circle to complete." = "오늘 집중할 항목입니다. 원을 탭하면 완료됩니다.";
+"Complete Item" = "항목 완료";
+"Item" = "항목";
+"Capture to Trayzero" = "Trayzero에 수집";
+"Open Quick Capture" = "빠른 수집 열기";
+"Opens Trayzero's quick capture sheet." = "Trayzero 빠른 수집 화면을 엽니다.";
+"Show Today" = "오늘 보기";
+"Opens the items you focused for today." = "오늘 집중할 항목을 엽니다.";
+"item in Inbox" = "개 항목(받은함)";
+"items in Inbox" = "개 항목(받은함)";
+"+ Capture" = "+ 수집";
+"Trayzero Inbox" = "Trayzero 받은함";
+"See your unprocessed inbox count and capture in one tap." = "처리하지 않은 받은함 개수를 보고 한 번에 수집하세요.";

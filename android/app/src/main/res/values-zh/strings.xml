@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">快速收集到 Trayzero 收件箱</string>
+    <string name="today_widget_name">今天</string>
+    <string name="today_widget_description">今天聚焦的事项。点按圆圈即可完成。</string>
+    <string name="today_widget_title">今天</string>
+    <string name="today_widget_done">已完成 %1$d 项</string>
+    <string name="today_widget_more">还有 %1$d 项</string>
+    <string name="today_widget_empty">尚未聚焦任何事项</string>
+    <string name="today_widget_all_done">今天的事项都完成了</string>
+    <string name="today_widget_plan">规划今天</string>
+    <string name="today_widget_complete">完成“%1$s”</string>
+    <string name="tile_capture_label">收集到 Trayzero</string>
+    <string name="shortcut_capture_short">收集</string>
+    <string name="shortcut_capture_long">收集到收件箱</string>
+    <string name="shortcut_today_short">今天</string>
+    <string name="shortcut_today_long">查看今天</string>
+    <string name="shortcut_process_short">处理</string>
+    <string name="shortcut_process_long">处理收件箱</string>
+</resources>

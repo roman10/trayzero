@@ -195,4 +195,14 @@ void main() {
       );
     });
   });
+
+  test('tagIdsMatchingQuery folds case and accents', () {
+    const tags = [
+      Tag(id: 'a', name: 'Café'),
+      Tag(id: 'b', name: 'Kitchen'),
+    ];
+    expect(tagIdsMatchingQuery(tags, 'CAFE'), ['a']);
+    expect(tagIdsMatchingQuery(tags, 'itch'), ['b']);
+    expect(tagIdsMatchingQuery(tags, '  '), isEmpty);
+  });
 }

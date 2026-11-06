@@ -96,7 +96,9 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
   void _submit() {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      setState(() => _titleError = AppLocalizations.of(context).projectNameRequired);
+      setState(
+        () => _titleError = AppLocalizations.of(context).projectNameRequired,
+      );
       return;
     }
     Navigator.pop(
@@ -114,10 +116,8 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
     final l10n = AppLocalizations.of(context);
     final areas = widget.areas;
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -148,13 +148,16 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
               minLines: 2,
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Outcome — what does "done" look like?',
+              decoration: InputDecoration(
+                labelText: l10n.outcomeSection,
+                hintText: l10n.projectOutcomeHint,
               ),
             ),
             if (areas.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
+                isExpanded: true,
+                itemHeight: null,
                 initialValue: _areaId,
                 decoration: InputDecoration(
                   labelText: l10n.areaOfFocusOptional,
@@ -165,25 +168,24 @@ class _NewProjectSheetState extends State<_NewProjectSheet> {
                     child: Text(l10n.unfiledOption),
                   ),
                   for (final a in areas)
-                    DropdownMenuItem<String?>(
-                      value: a.id,
-                      child: Text(a.name),
-                    ),
+                    DropdownMenuItem<String?>(value: a.id, child: Text(a.name)),
                 ],
                 onChanged: (v) => setState(() => _areaId = v),
               ),
             ],
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 12,
+              runSpacing: 8,
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(l10n.cancel),
                 ),
-                const Spacer(),
                 FilledButton.icon(
                   icon: const Icon(Icons.add),
-                  label: const Text('Create'),
+                  label: Text(l10n.createProject),
                   onPressed: _submit,
                 ),
               ],
@@ -212,10 +214,11 @@ Future<void> pickAndMoveToProject(
   };
   await ref.read(moveItemToProjectProvider).call(item, projectId);
   if (!context.mounted) return;
+  final l10n = AppLocalizations.of(context);
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
-        projectId == null ? 'Removed from project.' : 'Moved to project.',
+        projectId == null ? l10n.projectDetached : l10n.projectMoved,
       ),
     ),
   );
@@ -239,22 +242,30 @@ Future<ProjectPick?> showProjectPicker(
     showDragHandle: true,
     builder: (sheetContext) {
       final scheme = Theme.of(sheetContext).colorScheme;
+      final l10n = AppLocalizations.of(sheetContext);
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 8),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: Row(
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text(
-                    'Move to project',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  Text(
+                    l10n.projectPickerTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  const Spacer(),
                   TextButton.icon(
                     icon: const Icon(Icons.add),
-                    label: const Text('New'),
+                    label: Text(l10n.newProject),
                     onPressed: () async {
                       final created = await showNewProjectSheet(
                         sheetContext,
@@ -267,48 +278,37 @@ Future<ProjectPick?> showProjectPicker(
                 ],
               ),
             ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.only(bottom: 8),
-                children: [
-                  if (allowNone)
-                    ListTile(
-                      leading: const Icon(Icons.not_interested),
-                      title: const Text('No project'),
-                      trailing: currentId == null
-                          ? Icon(Icons.check, color: scheme.primary)
-                          : null,
-                      onTap: () =>
-                          Navigator.pop(sheetContext, const ProjectPickNone()),
-                    ),
-                  if (projects.isEmpty && !allowNone)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      child: Text(
-                        'No active projects yet. Use "New" to create one.',
-                      ),
-                    ),
-                  for (final p in projects)
-                    ListTile(
-                      leading: const Icon(Icons.folder_outlined),
-                      title: Text(p.title),
-                      subtitle: (p.outcome != null && p.outcome!.isNotEmpty)
-                          ? Text(
-                              p.outcome!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          : null,
-                      trailing: currentId == p.id
-                          ? Icon(Icons.check, color: scheme.primary)
-                          : null,
-                      onTap: () =>
-                          Navigator.pop(sheetContext, ProjectPickId(p.id)),
-                    ),
-                ],
+            if (allowNone)
+              ListTile(
+                leading: const Icon(Icons.not_interested),
+                title: Text(l10n.noProject),
+                trailing: currentId == null
+                    ? Icon(Icons.check, color: scheme.primary)
+                    : null,
+                onTap: () =>
+                    Navigator.pop(sheetContext, const ProjectPickNone()),
               ),
-            ),
+            if (projects.isEmpty && !allowNone)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Text(l10n.noActiveProjects),
+              ),
+            for (final p in projects)
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: Text(p.title),
+                subtitle: (p.outcome != null && p.outcome!.isNotEmpty)
+                    ? Text(
+                        p.outcome!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : null,
+                trailing: currentId == p.id
+                    ? Icon(Icons.check, color: scheme.primary)
+                    : null,
+                onTap: () => Navigator.pop(sheetContext, ProjectPickId(p.id)),
+              ),
           ],
         ),
       );

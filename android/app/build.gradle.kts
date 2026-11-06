@@ -36,6 +36,8 @@ android {
 
     defaultConfig {
         applicationId = "app.cleartray"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testProguardFiles("native-test-proguard-rules.pro")
         // flutter_local_notifications + permission_handler need 21+; we bump to 23 for safety.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
@@ -46,6 +48,7 @@ android {
         // debug build is distinguishable from the internal-testing release
         // when both are installed side by side.
         manifestPlaceholders["appLabel"] = "Trayzero"
+        manifestPlaceholders["appAuthRedirectScheme"] = "app.cleartray.microsoft"
     }
 
     signingConfigs {
@@ -66,10 +69,14 @@ android {
             // internal-testing release (app.cleartray) on one device, with a
             // fully separate data sandbox and independent uninstall.
             applicationIdSuffix = ".debug"
+            manifestPlaceholders["appAuthRedirectScheme"] = "app.cleartray.microsoft.debug"
             versionNameSuffix = "-debug"
             manifestPlaceholders["appLabel"] = "Trayzero Debug"
         }
         release {
+            if (providers.gradleProperty("nativeTestBuildType").orNull == "release") {
+                proguardFiles("native-test-proguard-rules.pro")
+            }
             // Use release keystore when key.properties exists, else fall back to
             // debug so contributors without the keystore can still build.
             signingConfig = if (keystoreProperties.containsKey("storeFile")) {
@@ -79,6 +86,10 @@ android {
             }
         }
     }
+
+    // Native CI opts into the minified release variant to catch R8 failures.
+    // Ordinary builds/tests retain Gradle's debug test variant.
+    testBuildType = providers.gradleProperty("nativeTestBuildType").getOrElse("debug")
 
     // F-Droid only: drop AGP's Google "Dependency Info" block so F-Droid's
     // source scanner passes. Gated on -Pfdroid; ABSENT by default so Play (AAB)
@@ -109,7 +120,19 @@ android {
 }
 
 dependencies {
+    implementation("androidx.core:core-splashscreen:1.2.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // AGP requires the tested APK and instrumentation APK to resolve the same
+    // AndroidX test libraries. Override the SDK bridge's older versions only
+    // in an explicitly selected test variant; ordinary builds are unchanged.
+    val nativeTestVariant = providers.gradleProperty("nativeTestBuildType").orNull
+    if (nativeTestVariant != null) {
+        require(nativeTestVariant in listOf("debug", "release"))
+        add("${nativeTestVariant}Implementation", "androidx.test:runner:1.6.2")
+        add("${nativeTestVariant}Implementation", "androidx.test:rules:1.6.1")
+    }
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
 }
 
 flutter {

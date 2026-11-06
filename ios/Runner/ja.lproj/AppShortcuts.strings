@@ -1,0 +1,6 @@
+/* Siri and Shortcuts phrases (ADR 0009). Follows the system language. */
+
+"Add to ${applicationName} inbox" = "${applicationName} の受信箱に追加";
+"Capture in ${applicationName}" = "${applicationName} に取り込む";
+"Open ${applicationName} quick capture" = "${applicationName} のクイック取り込みを開く";
+"Show ${applicationName} Today" = "${applicationName} の今日を表示";

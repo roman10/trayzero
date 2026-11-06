@@ -5,32 +5,39 @@ import 'package:intl/intl.dart';
 import '../../core/clock.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../common/localized_entity_labels.dart';
+import '../common/localized_dates.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader(this.label, {super.key});
   final String label;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11.5,
-            letterSpacing: 0.6,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      label.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11.5,
+        letterSpacing: 0.6,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
 }
 
 class StatusSelector extends StatelessWidget {
-  const StatusSelector({required this.current, required this.onChanged, super.key});
+  const StatusSelector({
+    required this.current,
+    required this.onChanged,
+    super.key,
+  });
   final ItemStatus current;
   final ValueChanged<ItemStatus> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     const visible = [
       ItemStatus.inbox,
       ItemStatus.nextAction,
@@ -45,7 +52,7 @@ class StatusSelector extends StatelessWidget {
       children: [
         for (final s in visible)
           ChoiceChip(
-            label: Text(s.label),
+            label: Text(s.localizedLabel(l10n)),
             selected: current == s,
             onSelected: (_) => onChanged(s),
           ),
@@ -161,14 +168,44 @@ Future<DateTime?> pickDateTime(
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }
 
+/// Date-only counterpart of [pickDateTime] (the GTD tickler): returns local
+/// start-of-day, or null if cancelled. Same range clamping as [pickDateTime].
+Future<DateTime?> pickDateOnly(
+  BuildContext context,
+  WidgetRef ref, {
+  DateTime? initial,
+}) async {
+  final now = ref.read(clockProvider).now();
+  final firstDate = now.subtract(const Duration(days: 1));
+  final lastDate = now.add(const Duration(days: 365 * 5));
+  final seed = initial ?? now;
+  final initialDate = seed.isBefore(firstDate)
+      ? now
+      : (seed.isAfter(lastDate) ? lastDate : seed);
+  final date = await showDatePicker(
+    context: context,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    initialDate: initialDate,
+  );
+  if (date == null) return null;
+  return DateTime(date.year, date.month, date.day);
+}
+
 class DateTile extends ConsumerWidget {
   const DateTile({
     required this.label,
     required this.icon,
     required this.value,
     required this.onChange,
+    this.dateOnly = false,
+    this.allowClear = true,
     super.key,
   });
+
+  /// When true the tile only asks for a day (stored as local start-of-day).
+  final bool dateOnly;
+  final bool allowClear;
   final String label;
   final IconData icon;
   final DateTime? value;
@@ -184,15 +221,26 @@ class DateTile extends ConsumerWidget {
       title: Text(label),
       subtitle: value == null
           ? Text(l10n.notSet)
-          : Text(DateFormat.yMMMd().add_jm().format(value!)),
+          : Text(
+              dateOnly
+                  ? localizedDeferLabel(value!, l10n)
+                  : DateFormat.yMMMd(
+                      l10n.dateLocaleName,
+                    ).add_jm().format(value!),
+            ),
       trailing: value == null
           ? const Icon(Icons.add)
+          : !allowClear
+          ? null
           : IconButton(
+              tooltip: l10n.clearDate,
               icon: const Icon(Icons.close),
               onPressed: () => onChange(null),
             ),
       onTap: () async {
-        final picked = await pickDateTime(context, ref, initial: value);
+        final picked = dateOnly
+            ? await pickDateOnly(context, ref, initial: value)
+            : await pickDateTime(context, ref, initial: value);
         if (picked != null) onChange(picked);
       },
     );

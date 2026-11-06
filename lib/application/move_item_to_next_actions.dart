@@ -9,8 +9,8 @@ import 'save_item.dart';
 ///
 /// Goes through [SaveItem] (not a raw status write) so the now-spent
 /// "Ready:" reminder is reconciled away and the status/date invariant is
-/// enforced. [deferUntil] is cleared: the defer has done its job (it fired),
-/// and a Next Action must not carry a future defer.
+/// enforced. One-off items clear their defer. Repeating items retain their
+/// elapsed anchor so activating a Ready item cannot silently end its series.
 final class MoveItemToNextActions {
   MoveItemToNextActions({
     required ItemRepository items,
@@ -25,7 +25,10 @@ final class MoveItemToNextActions {
     final item = await _items.getById(id);
     if (item == null) return;
     await _saveItem(
-      item.copyWith(status: ItemStatus.nextAction, clearDeferUntil: true),
+      item.copyWith(
+        status: ItemStatus.nextAction,
+        clearDeferUntil: item.recurrence == null,
+      ),
     );
   }
 }

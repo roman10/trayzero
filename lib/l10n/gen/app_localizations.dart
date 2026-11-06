@@ -12,6 +12,7 @@ import 'app_localizations_fr.dart';
 import 'app_localizations_ja.dart';
 import 'app_localizations_ko.dart';
 import 'app_localizations_pt.dart';
+import 'app_localizations_ru.dart';
 import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
@@ -107,6 +108,7 @@ abstract class AppLocalizations {
     Locale('ja'),
     Locale('ko'),
     Locale('pt'),
+    Locale('ru'),
     Locale('zh'),
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
@@ -134,12 +136,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get delete;
-
-  /// No description provided for @edit.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit'**
-  String get edit;
 
   /// No description provided for @add.
   ///
@@ -176,6 +172,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get done;
+
+  /// No description provided for @undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
 
   /// No description provided for @retry.
   ///
@@ -231,23 +233,11 @@ abstract class AppLocalizations {
   /// **'None'**
   String get selectNone;
 
-  /// No description provided for @rename.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename'**
-  String get rename;
-
   /// GTD term — the universal capture bucket.
   ///
   /// In en, this message translates to:
   /// **'Inbox'**
   String get inbox;
-
-  /// Bottom-nav label for the Engage tab — the imperative verb 'do', not the auxiliary 'do you'.
-  ///
-  /// In en, this message translates to:
-  /// **'Do'**
-  String get doVerb;
 
   /// No description provided for @projects.
   ///
@@ -471,6 +461,96 @@ abstract class AppLocalizations {
   /// **'Adds a starter project plus a few items so the app isn\'t empty.'**
   String get onboardingSeedSampleSubtitle;
 
+  /// Projects screen: header for the active-projects section
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get projectSectionActive;
+
+  /// Projects screen: header for projects not filed under any area of focus
+  ///
+  /// In en, this message translates to:
+  /// **'Unfiled'**
+  String get projectSectionUnfiled;
+
+  /// Projects screen: header for the on-hold projects section
+  ///
+  /// In en, this message translates to:
+  /// **'On hold'**
+  String get projectSectionOnHold;
+
+  /// Title of the sample onboarding project
+  ///
+  /// In en, this message translates to:
+  /// **'Get the most out of GTD'**
+  String get sampleProjectTitle;
+
+  /// Outcome statement of the sample onboarding project
+  ///
+  /// In en, this message translates to:
+  /// **'Capture inbox to zero daily and run a Weekly Review every Friday.'**
+  String get sampleProjectOutcome;
+
+  /// Sample onboarding next action: read the GTD primer
+  ///
+  /// In en, this message translates to:
+  /// **'Read the GTD primer in Settings'**
+  String get sampleItemReadPrimer;
+
+  /// Sample onboarding next action: empty the email inbox
+  ///
+  /// In en, this message translates to:
+  /// **'Empty my email inbox into here'**
+  String get sampleItemEmptyEmail;
+
+  /// Sample onboarding next action: schedule the weekly review
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule a recurring Friday Weekly Review'**
+  String get sampleItemScheduleReview;
+
+  /// Default GTD context: phone. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@phone'**
+  String get seedContextPhone;
+
+  /// Default GTD context: computer. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@computer'**
+  String get seedContextComputer;
+
+  /// Default GTD context: errands. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@errands'**
+  String get seedContextErrands;
+
+  /// Default GTD context: home. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@home'**
+  String get seedContextHome;
+
+  /// Default GTD context: office. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@office'**
+  String get seedContextOffice;
+
+  /// Default GTD context: anywhere. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@anywhere'**
+  String get seedContextAnywhere;
+
+  /// Default GTD context: waiting. Keep the leading @.
+  ///
+  /// In en, this message translates to:
+  /// **'@waiting'**
+  String get seedContextWaiting;
+
   /// No description provided for @onboardingFinish.
   ///
   /// In en, this message translates to:
@@ -524,6 +604,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Deleted 1 item.} other{Deleted {count} items.}}'**
   String deletedItemsSnackbar(int count);
+
+  /// No description provided for @completedItemsSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Completed 1 item.} other{Completed {count} items.}}'**
+  String completedItemsSnackbar(int count);
 
   /// No description provided for @filedItemsSnackbar.
   ///
@@ -584,6 +670,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stop dictation'**
   String get stopDictation;
+
+  /// No description provided for @dictationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Dictation is unavailable. You can still type your capture.'**
+  String get dictationUnavailable;
 
   /// No description provided for @processTitle.
   ///
@@ -675,12 +767,6 @@ abstract class AppLocalizations {
   /// **'Yes — I\'ll do it now'**
   String get twoMinYes;
 
-  /// No description provided for @twoMinNo.
-  ///
-  /// In en, this message translates to:
-  /// **'No'**
-  String get twoMinNo;
-
   /// No description provided for @delegateQuestion.
   ///
   /// In en, this message translates to:
@@ -698,12 +784,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name or system'**
   String get waitingOnPromptHint;
-
-  /// No description provided for @multiStepQuestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Does it need more than one step?'**
-  String get multiStepQuestion;
 
   /// No description provided for @recurrencePrompt.
   ///
@@ -759,16 +839,10 @@ abstract class AppLocalizations {
   /// **'Nothing matches'**
   String get engageNoMatchTitle;
 
-  /// No description provided for @engageNoMatchMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'No actions match the current filters. Try widening them or clear the filter.'**
-  String get engageNoMatchMessage;
-
   /// No description provided for @hardLandscape.
   ///
   /// In en, this message translates to:
-  /// **'Hard landscape'**
+  /// **'Calendar'**
   String get hardLandscape;
 
   /// No description provided for @hardLandscapeSubtitle.
@@ -872,12 +946,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No next action defined'**
   String get projectMissingNextAction;
-
-  /// No description provided for @projectActionCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 action} other{{count} actions}}'**
-  String projectActionCount(int count);
 
   /// No description provided for @organizeActionsTitle.
   ///
@@ -1017,12 +1085,6 @@ abstract class AppLocalizations {
   /// **'No next actions yet.'**
   String get noNextActionsMessage;
 
-  /// No description provided for @projectMissingNextActionError.
-  ///
-  /// In en, this message translates to:
-  /// **'No next action defined. Every active project should own at least one.'**
-  String get projectMissingNextActionError;
-
   /// No description provided for @statusTooltip.
   ///
   /// In en, this message translates to:
@@ -1158,7 +1220,7 @@ abstract class AppLocalizations {
   /// No description provided for @reviewStep5Body.
   ///
   /// In en, this message translates to:
-  /// **'Each project should be active, on hold, or done — and each active project must own at least one next action.'**
+  /// **'Review each outcome. Give stalled projects a next action, put them on hold, or mark them done. Waiting and scheduled work count as movement.'**
   String get reviewStep5Body;
 
   /// No description provided for @reviewStep6Title.
@@ -1323,11 +1385,17 @@ abstract class AppLocalizations {
   /// **'Haptic feedback'**
   String get hapticFeedback;
 
-  /// No description provided for @organizationSection.
+  /// No description provided for @languageLabel.
   ///
   /// In en, this message translates to:
-  /// **'Organization'**
-  String get organizationSection;
+  /// **'Language'**
+  String get languageLabel;
+
+  /// No description provided for @languageFollowSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get languageFollowSystem;
 
   /// No description provided for @contextsLabel.
   ///
@@ -1341,23 +1409,11 @@ abstract class AppLocalizations {
   /// **'Areas of focus'**
   String get areasOfFocusLabel;
 
-  /// No description provided for @areasOfFocusDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Group projects by ongoing spheres of responsibility.'**
-  String get areasOfFocusDescription;
-
   /// No description provided for @calendarSyncLabel.
   ///
   /// In en, this message translates to:
   /// **'Calendar sync'**
   String get calendarSyncLabel;
-
-  /// No description provided for @calendarSyncDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Mirror items with due dates to your system calendar.'**
-  String get calendarSyncDescription;
 
   /// No description provided for @remindersSection.
   ///
@@ -1413,30 +1469,6 @@ abstract class AppLocalizations {
   /// **'Checking notification status…'**
   String get checkingNotificationStatus;
 
-  /// No description provided for @dataSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Data'**
-  String get dataSection;
-
-  /// No description provided for @exportBackup.
-  ///
-  /// In en, this message translates to:
-  /// **'Export backup'**
-  String get exportBackup;
-
-  /// No description provided for @exportBackupDescriptionIos.
-  ///
-  /// In en, this message translates to:
-  /// **'Share a JSON copy. Save it to a cloud drive (e.g. Files → iCloud Drive) for backup.'**
-  String get exportBackupDescriptionIos;
-
-  /// No description provided for @exportBackupDescriptionAndroid.
-  ///
-  /// In en, this message translates to:
-  /// **'Share a JSON copy. Save it to a cloud drive (e.g. Google Drive) for backup.'**
-  String get exportBackupDescriptionAndroid;
-
   /// No description provided for @exportBackupError.
   ///
   /// In en, this message translates to:
@@ -1454,18 +1486,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nudge me every Sunday morning to export and save.'**
   String get weeklyBackupReminderDescription;
-
-  /// No description provided for @importBackup.
-  ///
-  /// In en, this message translates to:
-  /// **'Import backup'**
-  String get importBackup;
-
-  /// No description provided for @importBackupDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore a Trayzero backup, or import a Google Tasks (Takeout) export.'**
-  String get importBackupDescription;
 
   /// No description provided for @importConfirmTitle.
   ///
@@ -1485,24 +1505,6 @@ abstract class AppLocalizations {
   /// **'Import'**
   String get importButton;
 
-  /// No description provided for @importSourceSheetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Import backup'**
-  String get importSourceSheetTitle;
-
-  /// No description provided for @importFromFileTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a backup file'**
-  String get importFromFileTitle;
-
-  /// No description provided for @importFromFileDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Recommended — a Trayzero .json backup or a Google Takeout Tasks.json.'**
-  String get importFromFileDescription;
-
   /// No description provided for @importFromPasteTitle.
   ///
   /// In en, this message translates to:
@@ -1520,12 +1522,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Paste backup JSON…'**
   String get pasteBackupHint;
-
-  /// No description provided for @privacySection.
-  ///
-  /// In en, this message translates to:
-  /// **'Privacy'**
-  String get privacySection;
 
   /// No description provided for @crashReports.
   ///
@@ -1551,12 +1547,6 @@ abstract class AppLocalizations {
   /// **'Crash reporting disabled'**
   String get crashReportsDisabled;
 
-  /// No description provided for @aboutSection.
-  ///
-  /// In en, this message translates to:
-  /// **'About'**
-  String get aboutSection;
-
   /// No description provided for @showOnboardingAgain.
   ///
   /// In en, this message translates to:
@@ -1580,6 +1570,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get editTitle;
+
+  /// No description provided for @saveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save your changes. Please try again.'**
+  String get saveError;
 
   /// No description provided for @savedIndicator.
   ///
@@ -2145,18 +2141,6 @@ abstract class AppLocalizations {
   /// **'Support Trayzero'**
   String get supportTitle;
 
-  /// Collapsed summary for non-supporters.
-  ///
-  /// In en, this message translates to:
-  /// **'Tip the developer or become a supporter'**
-  String get supportSummaryDefault;
-
-  /// Collapsed summary for supporters.
-  ///
-  /// In en, this message translates to:
-  /// **'Thanks for supporting Trayzero 💙'**
-  String get supportSummarySupporter;
-
   /// Intro paragraph in the Support section.
   ///
   /// In en, this message translates to:
@@ -2196,7 +2180,7 @@ abstract class AppLocalizations {
   /// Subtitle for yearly supporter; price is store-localized.
   ///
   /// In en, this message translates to:
-  /// **'{price} / year · best value · unlocks supporter perks'**
+  /// **'{price} / year · best value · supports development'**
   String supportSupporterYearlySubtitle(String price);
 
   /// Title for the monthly supporter subscription.
@@ -2210,6 +2194,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{price} / month · cancel anytime'**
   String supportSupporterMonthlySubtitle(String price);
+
+  /// Progress while waiting for the native purchase sheet. Store is App Store or Google Play.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening {store}…'**
+  String supportOpeningStore(String store);
+
+  /// Progress while restoring store purchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring purchases…'**
+  String get supportRestoring;
 
   /// Title for the restore purchases row.
   ///
@@ -2288,6 +2284,3030 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thank you for keeping Trayzero independent.'**
   String get supportBadgeSubtitle;
+
+  /// No description provided for @calendarLookupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your device calendars. Open your system Calendar app and check that your account is syncing, then return here and retry.'**
+  String get calendarLookupFailed;
+
+  /// No description provided for @calendarPermissionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'If the permission prompt does not appear, open app settings and allow Calendar access, then return here.'**
+  String get calendarPermissionHelp;
+
+  /// No description provided for @calendarOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app settings'**
+  String get calendarOpenSettings;
+
+  /// No description provided for @calendarSettingsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open app settings. Open your device Settings, find Trayzero, and allow Calendar access.'**
+  String get calendarSettingsFailed;
+
+  /// No description provided for @calendarSelectionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Your previously selected calendar is no longer available. Choose a calendar to continue.'**
+  String get calendarSelectionUnavailable;
+
+  /// No description provided for @appIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'App icon'**
+  String get appIcon;
+
+  /// No description provided for @appIconAndroidDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a Home screen icon independently of App color. Your launcher may take a moment to update or apply its own tint.'**
+  String get appIconAndroidDescription;
+
+  /// No description provided for @appIconDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an icon independently of App color. Your device may apply its own tint. iOS shows a confirmation alert when the icon changes.'**
+  String get appIconDescription;
+
+  /// No description provided for @appIconChangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change the app icon. Try again while Trayzero is open.'**
+  String get appIconChangeFailed;
+
+  /// No description provided for @appColor.
+  ///
+  /// In en, this message translates to:
+  /// **'App color'**
+  String get appColor;
+
+  /// No description provided for @appColorDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Works in light and dark mode. GTD list colors keep their meaning.'**
+  String get appColorDescription;
+
+  /// No description provided for @paletteAmber.
+  ///
+  /// In en, this message translates to:
+  /// **'Trayzero amber — Default'**
+  String get paletteAmber;
+
+  /// No description provided for @paletteBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get paletteBlue;
+
+  /// No description provided for @paletteCyan.
+  ///
+  /// In en, this message translates to:
+  /// **'Cyan'**
+  String get paletteCyan;
+
+  /// No description provided for @paletteTeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Teal'**
+  String get paletteTeal;
+
+  /// No description provided for @paletteGreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get paletteGreen;
+
+  /// No description provided for @paletteViolet.
+  ///
+  /// In en, this message translates to:
+  /// **'Violet'**
+  String get paletteViolet;
+
+  /// No description provided for @paletteRose.
+  ///
+  /// In en, this message translates to:
+  /// **'Rose'**
+  String get paletteRose;
+
+  /// No description provided for @appIconNotificationNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Android notification accents use your selected app icon color when reminders are scheduled. Existing notifications update when rescheduled. Some devices may display the original app icon.'**
+  String get appIconNotificationNote;
+
+  /// No description provided for @appearanceSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your appearance. Your previous setting has been restored.'**
+  String get appearanceSaveFailed;
+
+  /// Calendar sync result when native event deletion failed and will be retried.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} calendar events still need cleanup. Sync again to retry.'**
+  String mirrorOutPendingCleanup(int count);
+
+  /// No description provided for @weeklyReviewResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume weekly review'**
+  String get weeklyReviewResume;
+
+  /// No description provided for @weeklyReviewProgressSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your place is saved when you leave.'**
+  String get weeklyReviewProgressSaved;
+
+  /// No description provided for @weeklyReviewSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your progress. Please try again.'**
+  String get weeklyReviewSaveError;
+
+  /// No description provided for @weeklyReviewActionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save this change. Please try again.'**
+  String get weeklyReviewActionError;
+
+  /// No description provided for @weeklyReviewListEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to review here.'**
+  String get weeklyReviewListEmpty;
+
+  /// No description provided for @weeklyReviewProjectAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting or scheduled work is moving this project forward.'**
+  String get weeklyReviewProjectAwaiting;
+
+  /// No description provided for @weeklyReviewProjectMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Next action defined'**
+  String get weeklyReviewProjectMoving;
+
+  /// No description provided for @weeklyReviewOpenProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Open project'**
+  String get weeklyReviewOpenProject;
+
+  /// No description provided for @processTwoMinNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No — keep clarifying'**
+  String get processTwoMinNo;
+
+  /// No description provided for @twoMinRule.
+  ///
+  /// In en, this message translates to:
+  /// **'The Two-Minute Rule: if it takes less time to do than to track, just do it.'**
+  String get twoMinRule;
+
+  /// No description provided for @delegateYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes — delegate & wait for them'**
+  String get delegateYes;
+
+  /// No description provided for @delegateNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No — it\'s on me'**
+  String get delegateNo;
+
+  /// No description provided for @singleStepQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Is this a single physical action?'**
+  String get singleStepQuestion;
+
+  /// No description provided for @singleStepYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes — single next action'**
+  String get singleStepYes;
+
+  /// No description provided for @singleStepProject.
+  ///
+  /// In en, this message translates to:
+  /// **'No — this is a project'**
+  String get singleStepProject;
+
+  /// No description provided for @projectRule.
+  ///
+  /// In en, this message translates to:
+  /// **'A project is any outcome that needs more than one action step and can finish within a year.'**
+  String get projectRule;
+
+  /// No description provided for @deferQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Does it have a specific day or time?'**
+  String get deferQuestion;
+
+  /// No description provided for @deferAsap.
+  ///
+  /// In en, this message translates to:
+  /// **'No — do it as soon as I can'**
+  String get deferAsap;
+
+  /// No description provided for @deferCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes — put it on the calendar'**
+  String get deferCalendar;
+
+  /// No description provided for @deferChooseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Defer until a date'**
+  String get deferChooseDate;
+
+  /// No description provided for @processDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add details'**
+  String get processDetailsTitle;
+
+  /// No description provided for @processFileNextAction.
+  ///
+  /// In en, this message translates to:
+  /// **'File as next action'**
+  String get processFileNextAction;
+
+  /// Short duration label for a number of minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String minutesShort(int minutes);
+
+  /// Clarify detail summary with a date formatted in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Deferred until {date}'**
+  String deferredUntilSummary(String date);
+
+  /// Clarify detail summary with a localized date and recurrence cadence.
+  ///
+  /// In en, this message translates to:
+  /// **'Deferred until {date} · Repeat: {recurrence}'**
+  String deferredRepeatingSummary(String date, String recurrence);
+
+  /// No description provided for @recurrenceDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get recurrenceDaily;
+
+  /// No description provided for @recurrenceWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get recurrenceWeekly;
+
+  /// No description provided for @recurrenceMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get recurrenceMonthly;
+
+  /// No description provided for @recurrenceYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get recurrenceYearly;
+
+  /// No description provided for @createProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get createProject;
+
+  /// No description provided for @projectPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to project'**
+  String get projectPickerTitle;
+
+  /// No description provided for @projectMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to project.'**
+  String get projectMoved;
+
+  /// No description provided for @projectDetached.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from project.'**
+  String get projectDetached;
+
+  /// No description provided for @noProject.
+  ///
+  /// In en, this message translates to:
+  /// **'No project'**
+  String get noProject;
+
+  /// No description provided for @decreaseRepeatInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease repeat interval'**
+  String get decreaseRepeatInterval;
+
+  /// No description provided for @increaseRepeatInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase repeat interval'**
+  String get increaseRepeatInterval;
+
+  /// No description provided for @decreaseRepeatCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease repeat count'**
+  String get decreaseRepeatCount;
+
+  /// No description provided for @increaseRepeatCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase repeat count'**
+  String get increaseRepeatCount;
+
+  /// No description provided for @repeatOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat on'**
+  String get repeatOn;
+
+  /// No description provided for @repeatMonthlyOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get repeatMonthlyOn;
+
+  /// No description provided for @repeatDayOfMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Day of month'**
+  String get repeatDayOfMonth;
+
+  /// No description provided for @repeatDayOfWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Day of week'**
+  String get repeatDayOfWeek;
+
+  /// No description provided for @repeatFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'First'**
+  String get repeatFirst;
+
+  /// No description provided for @repeatSecond.
+  ///
+  /// In en, this message translates to:
+  /// **'Second'**
+  String get repeatSecond;
+
+  /// No description provided for @repeatThird.
+  ///
+  /// In en, this message translates to:
+  /// **'Third'**
+  String get repeatThird;
+
+  /// No description provided for @repeatFourth.
+  ///
+  /// In en, this message translates to:
+  /// **'Fourth'**
+  String get repeatFourth;
+
+  /// No description provided for @repeatFifth.
+  ///
+  /// In en, this message translates to:
+  /// **'Fifth'**
+  String get repeatFifth;
+
+  /// No description provided for @repeatLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last'**
+  String get repeatLast;
+
+  /// No description provided for @repeatEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends'**
+  String get repeatEnds;
+
+  /// No description provided for @repeatNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get repeatNever;
+
+  /// No description provided for @repeatOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'On date'**
+  String get repeatOnDate;
+
+  /// No description provided for @repeatAfterCount.
+  ///
+  /// In en, this message translates to:
+  /// **'After N times'**
+  String get repeatAfterCount;
+
+  /// No description provided for @weekdayListSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **', '**
+  String get weekdayListSeparator;
+
+  /// No description provided for @dueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get dueToday;
+
+  /// No description provided for @reschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule'**
+  String get reschedule;
+
+  /// No description provided for @complete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get complete;
+
+  /// No description provided for @drop.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop'**
+  String get drop;
+
+  /// No description provided for @trash.
+  ///
+  /// In en, this message translates to:
+  /// **'Trash'**
+  String get trash;
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{energy} energy'**
+  String itemEnergyLabel(String energy);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting on {person}'**
+  String waitingOnPerson(String person);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue · {days}d'**
+  String dueOverdueDays(int days);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today, {time}'**
+  String dueTodayAt(String time);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Select {title}'**
+  String selectItem(String title);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark {title} done'**
+  String markItemDone(String title);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Last on {date}'**
+  String repeatLastOnDate(String date);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{After 1 occurrence} other{After {count} occurrences}}'**
+  String repeatAfterOccurrences(int count);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{pattern} · until {date}'**
+  String recurrenceUntilSummary(String pattern, String date);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{pattern} · 1 occurrence} other{{pattern} · {count} occurrences}}'**
+  String recurrenceCountSummary(String pattern, int count);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{cadence} on {weekdays}'**
+  String recurrenceOnWeekdays(String cadence, String weekdays);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{cadence} on the {ordinal, select, first{first} second{second} third{third} fourth{fourth} fifth{fifth} other{last}} {weekday}'**
+  String recurrenceOnNthWeekday(String cadence, String ordinal, String weekday);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Every day} other{Every {count} days}}'**
+  String repeatEveryDays(int count);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Every week} other{Every {count} weeks}}'**
+  String repeatEveryWeeks(int count);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Every month} other{Every {count} months}}'**
+  String repeatEveryMonths(int count);
+
+  /// Localized recurrence or item-card label; format dates and weekday names in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Every year} other{Every {count} years}}'**
+  String repeatEveryYears(int count);
+
+  /// Save the current capture to the inbox and keep the sheet open for another item.
+  ///
+  /// In en, this message translates to:
+  /// **'Add & continue'**
+  String get captureAddContinue;
+
+  /// Confirmation counts only Items saved during this capture sheet session, excluding the current unsaved draft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item added to inbox} other{{count} items added to inbox}}'**
+  String captureAddedCount(int count);
+
+  /// No description provided for @folderBackupChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose backup folder'**
+  String get folderBackupChoose;
+
+  /// No description provided for @folderBackupSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Backing up…'**
+  String get folderBackupSaving;
+
+  /// No description provided for @folderBackupOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backups are off.'**
+  String get folderBackupOff;
+
+  /// No description provided for @folderBackupNever.
+  ///
+  /// In en, this message translates to:
+  /// **'No successful backup yet.'**
+  String get folderBackupNever;
+
+  /// No description provided for @folderBackupLastSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup: {date}'**
+  String folderBackupLastSuccess(String date);
+
+  /// No description provided for @folderBackupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup failed. Check folder access and free space, then try again.'**
+  String get folderBackupFailed;
+
+  /// No description provided for @folderBackupHistoryWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved, but older backups could not be removed.'**
+  String get folderBackupHistoryWarning;
+
+  /// No description provided for @folderBackupNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up now'**
+  String get folderBackupNow;
+
+  /// Do tab segment: today's committed focus list.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get doViewToday;
+
+  /// Do tab segment: all available next actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Next actions'**
+  String get doViewNextActions;
+
+  /// Card on Today inviting the daily plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan your day'**
+  String get todayPlanCardTitle;
+
+  /// Body of the plan-your-day card.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what you’ll focus on today. It takes about two minutes.'**
+  String get todayPlanCardBody;
+
+  /// Button that opens the daily plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan today'**
+  String get todayPlanAction;
+
+  /// Line on the Today plan card: focused items left over from an earlier day need a keep-or-clear decision.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 from earlier needs a decision} other{{count} from earlier need a decision}}'**
+  String todayCarryOverLine(int count);
+
+  /// Heading of the focused items on Today.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get todayFocusHeader;
+
+  /// Progress line: focused items completed today.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 done today} other{{count} done today}}'**
+  String todayDoneCount(int count);
+
+  /// Empty Today list title.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing focused yet'**
+  String get todayEmptyTitle;
+
+  /// Empty Today list message.
+  ///
+  /// In en, this message translates to:
+  /// **'Star next actions to commit to them today, or plan your day.'**
+  String get todayEmptyMessage;
+
+  /// Tooltip: star an item for Today.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Today'**
+  String get focusAddTooltip;
+
+  /// Tooltip: unstar an item from Today.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Today'**
+  String get focusRemoveTooltip;
+
+  /// Screen-reader label for starring an item.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {title} to Today'**
+  String focusAddItem(String title);
+
+  /// Screen-reader label for unstarring an item.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {title} from Today'**
+  String focusRemoveItem(String title);
+
+  /// Error when a Today focus change fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t update Today. Try again.'**
+  String get focusError;
+
+  /// Intro text on the daily plan screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Star what you’ll commit to today. Keep it short — everything else stays on your lists.'**
+  String get planTodayIntro;
+
+  /// Plan section: items focused on an earlier day.
+  ///
+  /// In en, this message translates to:
+  /// **'From earlier'**
+  String get planSectionCarryOver;
+
+  /// Explains what happens to carried-over items that are not kept.
+  ///
+  /// In en, this message translates to:
+  /// **'Items you don’t keep go back to their lists when you start your day.'**
+  String get planCarryOverHint;
+
+  /// Keep every carried-over item for today.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep all'**
+  String get planKeepAll;
+
+  /// Plan section: calendar items due today or overdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get planSectionCalendar;
+
+  /// Trailing label on a calendar item in the daily plan: it is on Today automatically.
+  ///
+  /// In en, this message translates to:
+  /// **'On Today'**
+  String get planOnToday;
+
+  /// Plan section: waiting-for items whose follow-up date has arrived.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting follow-ups'**
+  String get planSectionWaiting;
+
+  /// Plan section: deferred next actions that became available today.
+  ///
+  /// In en, this message translates to:
+  /// **'Available from today'**
+  String get planSectionAvailable;
+
+  /// Daily plan with nothing to choose from.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to plan yet. Process your inbox to build your next actions.'**
+  String get planEmpty;
+
+  /// Count of items focused for today on the plan screen.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing focused yet} =1{1 focused for today} other{{count} focused for today}}'**
+  String planFocusedCount(int count);
+
+  /// Finishes the daily plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Start my day'**
+  String get planStartDay;
+
+  /// Snackbar after finishing the daily plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Today is planned'**
+  String get planDoneSnackbar;
+
+  /// Snackbar: carried-over items not kept were returned to their lists.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Day planned · 1 item back on its list} other{Day planned · {count} items back on their lists}}'**
+  String planClearedSnackbar(int count);
+
+  /// Error when finishing the daily plan fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t save your plan. Try again.'**
+  String get planSaveError;
+
+  /// Capture helper (English UI): quick-capture syntax.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: add @context, #project, +tag, or a date like “tomorrow” or “due fri”.'**
+  String get captureTipDates;
+
+  /// Capture helper (non-English UI): context and project shortcuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: add @context, #project, or +tag.'**
+  String get captureTipSigils;
+
+  /// Chip: start (defer) date.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts {date}'**
+  String startsOnDate(String date);
+
+  /// Chip: due date recognized in capture.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String dueOnDate(String date);
+
+  /// Capture chip: recognized project.
+  ///
+  /// In en, this message translates to:
+  /// **'Project: {name}'**
+  String captureChipProject(String name);
+
+  /// Delete action on a recognized capture chip: keep the words in the title.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep as text'**
+  String get captureKeepAsText;
+
+  /// Screen-reader label for the row of recognized capture details.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognized details'**
+  String get captureRecognized;
+
+  /// Process Inbox: keep the start date typed at capture.
+  ///
+  /// In en, this message translates to:
+  /// **'Start on {date}'**
+  String deferUseStartDate(String date);
+
+  /// Process Inbox: put the item on the calendar on the due date typed at capture.
+  ///
+  /// In en, this message translates to:
+  /// **'On calendar {date}'**
+  String deferUseDueDate(String date);
+
+  /// Weekly review: active project without action activity for N days.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity in {days}+ days'**
+  String weeklyReviewProjectInactive(int days);
+
+  /// Button: mark a project reviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark reviewed'**
+  String get weeklyReviewMarkReviewed;
+
+  /// State after a project is marked reviewed this session.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed'**
+  String get weeklyReviewReviewed;
+
+  /// When the project was last reviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last reviewed {date}'**
+  String weeklyReviewLastReviewed(String date);
+
+  /// Project never marked reviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reviewed yet'**
+  String get weeklyReviewNeverReviewed;
+
+  /// Projects reviewed so far in this weekly review.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed {done} of {total}'**
+  String weeklyReviewReviewedProgress(int done, int total);
+
+  /// Settings tile and screen title: import tasks from another to-do app.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from another app'**
+  String get importFromApp;
+
+  /// Source tile for plain text or TaskPaper lists.
+  ///
+  /// In en, this message translates to:
+  /// **'Plain text / TaskPaper'**
+  String get importSourcePlainText;
+
+  /// How to export from Todoist. Menu names follow Todoist's English UI.
+  ///
+  /// In en, this message translates to:
+  /// **'Project menu › Export as a template › CSV, or a backup ZIP from Settings › Backups.'**
+  String get importHintTodoist;
+
+  /// How to export from TickTick.
+  ///
+  /// In en, this message translates to:
+  /// **'On the TickTick website: Settings › Account › Backup & Import › Generate Backup (CSV).'**
+  String get importHintTickTick;
+
+  /// How to export from Nirvana.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Nirvana web app, export your data as CSV or JSON.'**
+  String get importHintNirvana;
+
+  /// How to export from OmniFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Select projects, then Edit › Copy as TaskPaper. Paste here or save as a file.'**
+  String get importHintOmniFocus;
+
+  /// How to bring tasks from Things or another text list.
+  ///
+  /// In en, this message translates to:
+  /// **'Things: copy to-dos and paste here, one task per line. Basic text import only; Things database exports are not supported.'**
+  String get importHintPlainText;
+
+  /// Button: open the file picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
+  String get importChooseFile;
+
+  /// Button: paste exported text instead of choosing a file.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste text'**
+  String get importPasteText;
+
+  /// Title of the paste dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste tasks'**
+  String get importPasteTitle;
+
+  /// Hint in the paste text field.
+  ///
+  /// In en, this message translates to:
+  /// **'One task per line. Indent tasks under a line ending in “:” to make a project.'**
+  String get importPasteHint;
+
+  /// Paste dialog button that shows the import preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get importPasteContinue;
+
+  /// Preview reassurance that nothing is written yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been added yet.'**
+  String get importPreviewNothingYet;
+
+  /// Preview section: projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get importPreviewProjects;
+
+  /// Badge: this project will be created.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get importProjectNew;
+
+  /// Badge: actions go into a project the user already has.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds to existing'**
+  String get importProjectExisting;
+
+  /// Number of actions going into one project.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 action} other{{count} actions}}'**
+  String importProjectActions(int count);
+
+  /// Comma-separated names of contexts the import creates.
+  ///
+  /// In en, this message translates to:
+  /// **'New: {names}'**
+  String importContextsNew(String names);
+
+  /// Comma-separated names of the user's existing contexts the import reuses.
+  ///
+  /// In en, this message translates to:
+  /// **'Already yours: {names}'**
+  String importContextsExisting(String names);
+
+  /// Preview section listing what was skipped or changed.
+  ///
+  /// In en, this message translates to:
+  /// **'Good to know'**
+  String get importGoodToKnow;
+
+  /// Completed, dropped or cancelled tasks that are not imported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 completed or dropped task skipped} other{{count} completed or dropped tasks skipped}}'**
+  String importWarnCompleted(int count);
+
+  /// Open actions with a due date are placed in Calendar.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 action with a due date goes to Calendar} other{{count} actions with a due date go to Calendar}}'**
+  String importWarnCalendar(int count);
+
+  /// Dates that could not be read are kept as text in notes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 date could not be read and is kept in notes} other{{count} dates could not be read and are kept in notes}}'**
+  String importWarnDates(int count);
+
+  /// Repeat rules that could not be mapped are kept in notes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 repeat rule is kept in notes} other{{count} repeat rules are kept in notes}}'**
+  String importWarnRepeats(int count);
+
+  /// Subtasks become separate actions.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 subtask becomes a separate action} other{{count} subtasks become separate actions}}'**
+  String importWarnSubtasks(int count);
+
+  /// Section, heading or folder names kept in notes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task notes its section or heading} other{{count} tasks note their section or heading}}'**
+  String importWarnSections(int count);
+
+  /// Priority, flag or assignee have no equivalent and are dropped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task had a priority, flag or assignee that is not imported} other{{count} tasks had a priority, flag or assignee that is not imported}}'**
+  String importWarnNotImported(int count);
+
+  /// Rows without a title are skipped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row without a title skipped} other{{count} rows without a title skipped}}'**
+  String importWarnUnreadable(int count);
+
+  /// Result after importing.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task added} other{{count} tasks added}}'**
+  String importDoneTitle(int count);
+
+  /// Result explanation of Undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed your mind? Undo removes exactly what this import added, and nothing else.'**
+  String get importDoneBody;
+
+  /// Button: remove everything the import added.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo import'**
+  String get importUndo;
+
+  /// Button: close the import screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get importFinish;
+
+  /// Result after undoing an import.
+  ///
+  /// In en, this message translates to:
+  /// **'Import undone'**
+  String get importUndoneTitle;
+
+  /// Explanation after undoing an import.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything this import added has been removed.'**
+  String get importUndoneBody;
+
+  /// Some reminders could not be scheduled yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Some reminders could not be scheduled yet. They will be set the next time the app opens.'**
+  String get importRemindersFailed;
+
+  /// The chosen file is not an export of the selected app. {source} is the app name.
+  ///
+  /// In en, this message translates to:
+  /// **'This does not look like a {source} export. Check the steps and try again.'**
+  String importErrorUnrecognized(String source);
+
+  /// The file has no open task.
+  ///
+  /// In en, this message translates to:
+  /// **'No open tasks found to import.'**
+  String get importErrorNoTasks;
+
+  /// The file is binary, corrupt or too large.
+  ///
+  /// In en, this message translates to:
+  /// **'This file cannot be read. Choose a text, CSV or ZIP export.'**
+  String get importErrorUnreadable;
+
+  /// Writing the import failed; nothing was added.
+  ///
+  /// In en, this message translates to:
+  /// **'The import failed. Nothing was added.'**
+  String get importErrorWrite;
+
+  /// Undoing the import failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not undo the import. Try again.'**
+  String get importErrorUndo;
+
+  /// Settings row and screen title for managing tags and people (ADR 0010).
+  ///
+  /// In en, this message translates to:
+  /// **'Tags & people'**
+  String get tagsAndPeopleLabel;
+
+  /// Empty state of the Tags & people screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags label items across lists. Mark a tag as a person to keep an agenda of things to discuss with them. Tip: type +tag when capturing.'**
+  String get tagsEmptyMessage;
+
+  /// Button/sheet title: create a tag.
+  ///
+  /// In en, this message translates to:
+  /// **'New tag'**
+  String get newTag;
+
+  /// Sheet title: edit a tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit tag'**
+  String get editTag;
+
+  /// Switch: this tag is a person.
+  ///
+  /// In en, this message translates to:
+  /// **'Person'**
+  String get tagPersonSwitch;
+
+  /// Explains what marking a tag as a person does.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps an agenda of things to discuss'**
+  String get tagPersonSwitchHint;
+
+  /// Number of open items carrying a tag.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No open items} =1{1 open item} other{{count} open items}}'**
+  String tagOpenItems(int count);
+
+  /// Confirm deleting a tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String deleteTagConfirmTitle(String name);
+
+  /// Deleting a tag keeps the items.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No open item uses it.} =1{1 open item uses it. It stays; only the tag is removed.} other{{count} open items use it. They stay; only the tag is removed.}}'**
+  String deleteTagConfirmBody(int count);
+
+  /// Dialog title when a rename collides with another tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge tags?'**
+  String get tagMergeTitle;
+
+  /// Rename collides: offer to merge source into the existing target.
+  ///
+  /// In en, this message translates to:
+  /// **'“{target}” already exists. Merge “{source}” into it?'**
+  String tagMergeBody(String source, String target);
+
+  /// Button: merge tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get tagMergeAction;
+
+  /// Chip/button: add a tag to an item.
+  ///
+  /// In en, this message translates to:
+  /// **'Add tag'**
+  String get addTag;
+
+  /// Tag picker search field hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search or create a tag'**
+  String get tagPickerHint;
+
+  /// Picker row: create a tag with the typed name.
+  ///
+  /// In en, this message translates to:
+  /// **'Create “{name}”'**
+  String tagCreate(String name);
+
+  /// Picker row: create a person tag with the typed name.
+  ///
+  /// In en, this message translates to:
+  /// **'Create person “{name}”'**
+  String tagCreatePerson(String name);
+
+  /// Section header: tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get tagsSection;
+
+  /// Screen-reader label of a tag chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag: {name}'**
+  String tagChipSemantics(String name);
+
+  /// Screen-reader label of a person tag chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Person: {name}'**
+  String personChipSemantics(String name);
+
+  /// Tooltip: remove a tag from the item.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}'**
+  String removeTagTooltip(String name);
+
+  /// Screen-reader label of the +N chip on a card.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 more tag} other{{count} more tags}}'**
+  String moreTags(int count);
+
+  /// Do filter chip when no tag is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get filterTag;
+
+  /// Tag filter option: no tag constraint.
+  ///
+  /// In en, this message translates to:
+  /// **'Any tag'**
+  String get filterAnyTag;
+
+  /// Review list: things to discuss per person (GTD Agendas).
+  ///
+  /// In en, this message translates to:
+  /// **'Agendas'**
+  String get agendasTitle;
+
+  /// Agendas bucket subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 person} other{{count} people}}'**
+  String agendasPeopleCount(int count);
+
+  /// Agenda screen: add a talking point.
+  ///
+  /// In en, this message translates to:
+  /// **'Add something to discuss with {name}'**
+  String agendaAddHint(String name);
+
+  /// Button: add to the agenda.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to agenda'**
+  String get agendaAddTooltip;
+
+  /// Agenda screen empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to discuss with {name} yet.'**
+  String agendaEmpty(String name);
+
+  /// Agenda screen for a deleted person.
+  ///
+  /// In en, this message translates to:
+  /// **'This person no longer exists.'**
+  String get agendaNotFound;
+
+  /// Capture chip: a +word that creates a new tag.
+  ///
+  /// In en, this message translates to:
+  /// **'New tag: {name}'**
+  String captureChipNewTag(String name);
+
+  /// How to export Google Tasks, and the list/completion mapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Takeout › select Tasks › export JSON. Unzip the download and choose Tasks.json. Lists stay in notes; completed tasks go to Done.'**
+  String get importHintGoogleTasks;
+
+  /// Non-blocking warning for previously committed identical import input on this device.
+  ///
+  /// In en, this message translates to:
+  /// **'This exact input was imported before on this device. Importing again will add duplicate tasks. Cancel unless you want another copy.'**
+  String get importDuplicateWarning;
+
+  /// No description provided for @importHintThings.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose main.sqlite or a ZIP of an exported Things 3 database folder. iPhone/iPad: Settings › General › Diagnostics › Enter Code › 491348 › Send Things Database. Save to Files, unpack .aar, then compress the database folder to ZIP. On Mac, quit Things before copying its database. Recreate repeats and reminders after importing.'**
+  String get importHintThings;
+
+  /// No description provided for @importWarnDetailsInNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task keeps checklist or Area details in notes} other{{count} tasks keep checklist or Area details in notes}}'**
+  String importWarnDetailsInNotes(int count);
+
+  /// No description provided for @importWarnThingsRecurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Things repeat schedules are not imported. Recurring templates are skipped; recreate repeats for imported tasks.'**
+  String get importWarnThingsRecurrence;
+
+  /// No description provided for @importWarnSourceReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 source reminder setting is not imported} other{{count} source reminder settings are not imported}}'**
+  String importWarnSourceReminders(int count);
+
+  /// No description provided for @importAppleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose reminder lists on this device. Only open reminders are imported.'**
+  String get importAppleHint;
+
+  /// No description provided for @importAppleChooseLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose lists'**
+  String get importAppleChooseLists;
+
+  /// No description provided for @importAppleReloadLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload lists'**
+  String get importAppleReloadLists;
+
+  /// No description provided for @importAppleNoLists.
+  ///
+  /// In en, this message translates to:
+  /// **'No reminder lists are available on this device.'**
+  String get importAppleNoLists;
+
+  /// No description provided for @importAppleDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders access is off. Allow Trayzero to access Reminders in iOS Settings, then try again.'**
+  String get importAppleDenied;
+
+  /// No description provided for @importAppleUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read Apple Reminders. Try again.'**
+  String get importAppleUnavailable;
+
+  /// No description provided for @importAppleListsChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'A selected list is no longer available. Reload lists and select again.'**
+  String get importAppleListsChanged;
+
+  /// No description provided for @importAppleLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Apple reminders stay unchanged. Apple tags, flags, attachments and subtask structure are not copied. Priorities and original alerts are not copied. Importing again can add duplicate tasks.'**
+  String get importAppleLimits;
+
+  /// No description provided for @importHintMicrosoftTodo.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to copy your lists and open tasks. Review before importing; importing again can create duplicates.'**
+  String get importHintMicrosoftTodo;
+
+  /// No description provided for @importMicrosoftUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Microsoft To Do import is unavailable in this build.'**
+  String get importMicrosoftUnavailable;
+
+  /// No description provided for @importMicrosoftSignInError.
+  ///
+  /// In en, this message translates to:
+  /// **'Microsoft sign-in failed or expired. Please sign in again.'**
+  String get importMicrosoftSignInError;
+
+  /// No description provided for @importMicrosoftPermissionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Microsoft did not allow access to your tasks. Check account permissions or contact your organization.'**
+  String get importMicrosoftPermissionError;
+
+  /// No description provided for @importMicrosoftNetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read all Microsoft tasks. Nothing was imported. Check your connection and try again.'**
+  String get importMicrosoftNetworkError;
+
+  /// Tasks whose attachments, reminder settings or source statuses cannot be migrated.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task has attachments, reminder settings or a status that are not imported} other{{count} tasks have attachments, reminder settings or statuses that are not imported}}'**
+  String importWarnSourceDetails(int count);
+
+  /// No description provided for @moreGroupOrganize.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize'**
+  String get moreGroupOrganize;
+
+  /// No description provided for @moreGroupPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get moreGroupPreferences;
+
+  /// No description provided for @moreGroupData.
+  ///
+  /// In en, this message translates to:
+  /// **'Data'**
+  String get moreGroupData;
+
+  /// No description provided for @moreOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get moreOn;
+
+  /// No description provided for @moreOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get moreOff;
+
+  /// No description provided for @moreAppearanceSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{theme} · {palette}'**
+  String moreAppearanceSummary(String theme, String palette);
+
+  /// No description provided for @moreRemindersBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are blocked'**
+  String get moreRemindersBlockedTitle;
+
+  /// No description provided for @moreRemindersBlockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off, so reminders can\'t alert you.'**
+  String get moreRemindersBlockedBody;
+
+  /// No description provided for @moreBackupFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup failed'**
+  String get moreBackupFailedTitle;
+
+  /// No description provided for @moreBackupFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backup couldn\'t save. Check the folder and free space.'**
+  String get moreBackupFailedBody;
+
+  /// No description provided for @moreFix.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix'**
+  String get moreFix;
+
+  /// No description provided for @moreBackupRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & restore'**
+  String get moreBackupRestore;
+
+  /// No description provided for @moreBackupSubtitleOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backup is off'**
+  String get moreBackupSubtitleOff;
+
+  /// No description provided for @moreBackupSubtitleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup failed'**
+  String get moreBackupSubtitleFailed;
+
+  /// No description provided for @moreImportSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Todoist, TickTick, OmniFocus and more'**
+  String get moreImportSources;
+
+  /// No description provided for @moreSupportTrailing.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get moreSupportTrailing;
+
+  /// No description provided for @moreSupportTrailingSupporter.
+  ///
+  /// In en, this message translates to:
+  /// **'Supporter'**
+  String get moreSupportTrailingSupporter;
+
+  /// No description provided for @moreAboutPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'About & privacy'**
+  String get moreAboutPrivacy;
+
+  /// No description provided for @moreHowGtdWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'How GTD works'**
+  String get moreHowGtdWorks;
+
+  /// No description provided for @moreNudgesGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Nudges'**
+  String get moreNudgesGroup;
+
+  /// No description provided for @moreTimingGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing'**
+  String get moreTimingGroup;
+
+  /// No description provided for @moreLeadOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get moreLeadOff;
+
+  /// No description provided for @moreLead10.
+  ///
+  /// In en, this message translates to:
+  /// **'10 minutes before'**
+  String get moreLead10;
+
+  /// No description provided for @moreLead30.
+  ///
+  /// In en, this message translates to:
+  /// **'30 minutes before'**
+  String get moreLead30;
+
+  /// No description provided for @moreLead60.
+  ///
+  /// In en, this message translates to:
+  /// **'1 hour before'**
+  String get moreLead60;
+
+  /// No description provided for @moreLead1440.
+  ///
+  /// In en, this message translates to:
+  /// **'1 day before'**
+  String get moreLead1440;
+
+  /// No description provided for @moreLeadOther.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes before'**
+  String moreLeadOther(int minutes);
+
+  /// No description provided for @moreRestoredEntries.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored {count, plural, =1{1 entry} other{{count} entries}}.'**
+  String moreRestoredEntries(int count);
+
+  /// No description provided for @moreBackupEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup has no entries to restore.'**
+  String get moreBackupEmpty;
+
+  /// No description provided for @moreCouldntOpenLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open link'**
+  String get moreCouldntOpenLink;
+
+  /// No description provided for @moreVersionBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'{version} (build {build})'**
+  String moreVersionBuild(String version, String build);
+
+  /// No description provided for @supportBestValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Best value'**
+  String get supportBestValue;
+
+  /// Intro above the list of import sources.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick where your tasks live now. You will see a preview before anything is added.'**
+  String get importListIntro;
+
+  /// Group label: sources read directly.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect directly'**
+  String get importGroupDirect;
+
+  /// Group label: sources imported from an export file.
+  ///
+  /// In en, this message translates to:
+  /// **'From an export file'**
+  String get importGroupFile;
+
+  /// Group label: other sources such as plain text.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything else'**
+  String get importGroupOther;
+
+  /// Subtitle of the Google Tasks source row.
+  ///
+  /// In en, this message translates to:
+  /// **'Takeout · Tasks.json'**
+  String get importSubGoogleTasks;
+
+  /// Subtitle of the Todoist source row.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV template or backup ZIP'**
+  String get importSubTodoist;
+
+  /// Subtitle of the Things 3 source row.
+  ///
+  /// In en, this message translates to:
+  /// **'Database ZIP or main.sqlite'**
+  String get importSubThings;
+
+  /// Subtitle of the TickTick source row.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup CSV'**
+  String get importSubTickTick;
+
+  /// Subtitle of the Nirvana source row.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV or JSON export'**
+  String get importSubNirvana;
+
+  /// Subtitle of the OmniFocus source row.
+  ///
+  /// In en, this message translates to:
+  /// **'TaskPaper file or paste'**
+  String get importSubOmniFocus;
+
+  /// Subtitle of the plain text source row.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a list, one task per line'**
+  String get importSubPlainText;
+
+  /// Subtitle of the Apple Reminders source row.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick lists on this device'**
+  String get importSubApple;
+
+  /// Subtitle of the Microsoft To Do source row.
+  ///
+  /// In en, this message translates to:
+  /// **'Lists and open tasks'**
+  String get importSubMicrosoft;
+
+  /// Chip on a source that is read on this device.
+  ///
+  /// In en, this message translates to:
+  /// **'On device'**
+  String get importChipOnDevice;
+
+  /// Chip on a source that needs a sign-in.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get importChipSignIn;
+
+  /// Footer text before the Backup & restore link.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring a Trayzero backup?'**
+  String get importBackupFooter;
+
+  /// Link to the Backup & restore screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & restore'**
+  String get importBackupFooterLink;
+
+  /// Things device toggle: iPhone or iPad.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone / iPad'**
+  String get importThingsDeviceIos;
+
+  /// Things device toggle: Mac.
+  ///
+  /// In en, this message translates to:
+  /// **'Mac'**
+  String get importThingsDeviceMac;
+
+  /// Tooltip of the copyable code chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy code'**
+  String get importCopyCode;
+
+  /// Snackbar after copying a code.
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied'**
+  String get importCodeCopied;
+
+  /// Primary button: connect to a sign-in source.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get importConnect;
+
+  /// Google Tasks step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Google Takeout and select only Tasks.'**
+  String get importStepGoogleTasks1;
+
+  /// Google Tasks step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Export it as JSON and unzip the download.'**
+  String get importStepGoogleTasks2;
+
+  /// Google Tasks step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Tasks.json below.'**
+  String get importStepGoogleTasks3;
+
+  /// Google Tasks good-to-know note.
+  ///
+  /// In en, this message translates to:
+  /// **'Lists stay in notes; completed tasks go to Done.'**
+  String get importNoteGoogleTasks;
+
+  /// Todoist step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a project menu and choose Export as a template (CSV).'**
+  String get importStepTodoist1;
+
+  /// Todoist step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Or save a backup ZIP from Settings › Backups.'**
+  String get importStepTodoist2;
+
+  /// Todoist step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the file below.'**
+  String get importStepTodoist3;
+
+  /// TickTick step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'On the TickTick website, open Settings › Account.'**
+  String get importStepTickTick1;
+
+  /// TickTick step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Backup & Import and tap Generate Backup (CSV).'**
+  String get importStepTickTick2;
+
+  /// TickTick step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the CSV below.'**
+  String get importStepTickTick3;
+
+  /// Nirvana step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'In the Nirvana web app, export your data as CSV or JSON.'**
+  String get importStepNirvana1;
+
+  /// Nirvana step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the file below.'**
+  String get importStepNirvana2;
+
+  /// OmniFocus step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'In OmniFocus, select your projects.'**
+  String get importStepOmniFocus1;
+
+  /// OmniFocus step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Edit › Copy as TaskPaper.'**
+  String get importStepOmniFocus2;
+
+  /// OmniFocus step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the text below, or save it as a file and choose it.'**
+  String get importStepOmniFocus3;
+
+  /// Plain text step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy your tasks from any app, one task per line.'**
+  String get importStepPlainText1;
+
+  /// Plain text step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Paste text below and paste them.'**
+  String get importStepPlainText2;
+
+  /// Plain text good-to-know note.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic text import only. Database exports from other apps are not supported.'**
+  String get importNotePlainText;
+
+  /// Apple Reminders step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Choose lists below.'**
+  String get importStepApple1;
+
+  /// Apple Reminders step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow access to Reminders when asked.'**
+  String get importStepApple2;
+
+  /// Apple Reminders step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick the lists you want to import.'**
+  String get importStepApple3;
+
+  /// Apple Reminders good-to-know note.
+  ///
+  /// In en, this message translates to:
+  /// **'Only open reminders are imported. Your Apple reminders stay unchanged.'**
+  String get importNoteApple;
+
+  /// Microsoft To Do step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Connect and sign in to Microsoft.'**
+  String get importStepMicrosoft1;
+
+  /// Microsoft To Do step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Trayzero copies your lists and open tasks.'**
+  String get importStepMicrosoft2;
+
+  /// Microsoft To Do step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the preview before importing.'**
+  String get importStepMicrosoft3;
+
+  /// Microsoft To Do good-to-know note.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing again can create duplicates.'**
+  String get importNoteMicrosoft;
+
+  /// Things on iPhone/iPad step 1; code chip follows.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings › General › Diagnostics › Enter Code in Things, then enter:'**
+  String get importStepThingsIos1;
+
+  /// Things on iPhone/iPad step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Send Things Database and save it to Files.'**
+  String get importStepThingsIos2;
+
+  /// Things on iPhone/iPad step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'In Files, unpack the .aar, then compress the database folder to ZIP.'**
+  String get importStepThingsIos3;
+
+  /// Things on iPhone/iPad step 4.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose that ZIP below.'**
+  String get importStepThingsIos4;
+
+  /// Things on Mac step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Quit Things on your Mac.'**
+  String get importStepThingsMac1;
+
+  /// Things on Mac step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Things Database.thingsdatabase from the Things folder, then compress the copy to ZIP.'**
+  String get importStepThingsMac2;
+
+  /// Things on Mac step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the ZIP (or its main.sqlite) to this device and choose it below.'**
+  String get importStepThingsMac3;
+
+  /// Things good-to-know note.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeats and reminders don\'t carry over. Recreate them after importing.'**
+  String get importNoteThings;
+
+  /// App bar title of the import preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review import'**
+  String get importReviewTitle;
+
+  /// Preview header: which app the import comes from.
+  ///
+  /// In en, this message translates to:
+  /// **'From {source}'**
+  String importFromSource(String source);
+
+  /// Preview header: total tasks to import.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task} other{{count} tasks}}'**
+  String importTotalTasks(int count);
+
+  /// Confirm button that writes the import, with the task count.
+  ///
+  /// In en, this message translates to:
+  /// **'Import {count, plural, =1{1 task} other{{count} tasks}}'**
+  String importActionCount(int count);
+
+  /// Collapsed card summary: how many items are new vs already the user's.
+  ///
+  /// In en, this message translates to:
+  /// **'{newCount} new · {existingCount} existing'**
+  String importNewExistingSummary(int newCount, int existingCount);
+
+  /// Button expanding a truncated list to all items.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all {count}'**
+  String importShowAll(int count);
+
+  /// Preview card title combining contexts and tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Contexts & tags'**
+  String get importContextsAndTags;
+
+  /// Collapsed Good to know summary: number of notes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 note} other{{count} notes}}'**
+  String importNotesCount(int count);
+
+  /// No description provided for @notificationStatusOnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders on'**
+  String get notificationStatusOnTitle;
+
+  /// No description provided for @notificationStatusOnBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders will alert you on this device.'**
+  String get notificationStatusOnBody;
+
+  /// No description provided for @notificationStatusOffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders off'**
+  String get notificationStatusOffTitle;
+
+  /// No description provided for @notificationStatusOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are scheduled but won’t alert you until you allow notifications.'**
+  String get notificationStatusOffBody;
+
+  /// No description provided for @notificationStatusBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders blocked'**
+  String get notificationStatusBlockedTitle;
+
+  /// No description provided for @notificationStatusBlockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are turned off for Trayzero in system settings. Reminders won’t alert you until you turn them back on there.'**
+  String get notificationStatusBlockedBody;
+
+  /// No description provided for @notificationActionEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable notifications'**
+  String get notificationActionEnable;
+
+  /// No description provided for @notificationActionOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get notificationActionOpenSettings;
+
+  /// No description provided for @notificationPrimerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on reminders?'**
+  String get notificationPrimerTitle;
+
+  /// No description provided for @notificationPrimerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Trayzero reminds you about due dates and your weekly review by posting a notification on this device. Nothing is sent to a server — reminders are scheduled locally.\n\nYour device will now ask for permission to show notifications.'**
+  String get notificationPrimerBody;
+
+  /// No description provided for @notificationPrimerNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get notificationPrimerNotNow;
+
+  /// No description provided for @notificationPrimerContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get notificationPrimerContinue;
+
+  /// No description provided for @notificationPromptFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t open the notification prompt.'**
+  String get notificationPromptFailed;
+
+  /// No description provided for @notificationAlreadyOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are already on.'**
+  String get notificationAlreadyOn;
+
+  /// No description provided for @notificationOpenedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened system settings — turn on Notifications for Trayzero.'**
+  String get notificationOpenedSettings;
+
+  /// No description provided for @notificationStayOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders stay off. You can enable them anytime in More → Reminders.'**
+  String get notificationStayOff;
+
+  /// No description provided for @notificationNowOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders are on.'**
+  String get notificationNowOn;
+
+  /// No description provided for @notificationBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked for Trayzero.'**
+  String get notificationBlocked;
+
+  /// No description provided for @exactAlarmSettingsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t open exact alarm settings.'**
+  String get exactAlarmSettingsFailed;
+
+  /// No description provided for @exactAlarmAlreadyOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise reminder timing is already on.'**
+  String get exactAlarmAlreadyOn;
+
+  /// No description provided for @exactAlarmNowOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise reminder timing is on.'**
+  String get exactAlarmNowOn;
+
+  /// No description provided for @exactAlarmStaysOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise reminder timing stays off. Short reminders may be delayed.'**
+  String get exactAlarmStaysOff;
+
+  /// Snackbar after removing an attachment, with Undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment removed.'**
+  String get attachmentRemoved;
+
+  /// Dialog title when closing the capture sheet with unsaved text.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this capture?'**
+  String get discardCaptureTitle;
+
+  /// Dialog body for discarding unsaved capture text.
+  ///
+  /// In en, this message translates to:
+  /// **'What you typed will be lost.'**
+  String get discardCaptureBody;
+
+  /// Dialog button: go back to the capture sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get keepEditing;
+
+  /// Dialog button: throw away unsaved text.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discard;
+
+  /// Snackbar after Process inbox files an item, with Undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed.'**
+  String get processFiledSnackbar;
+
+  /// Shared error state title when a list or screen fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this'**
+  String get errorLoadTitle;
+
+  /// Shared error state body; reassures the user and suggests retrying.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data is safe. Try again.'**
+  String get errorLoadBody;
+
+  /// Snackbar after text shared into the app was added to the Inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Added 1 item to Inbox} other{Added {count} items to Inbox}}'**
+  String sharedAddedToInbox(int count);
+
+  /// Title of the project filter bottom sheet in Search.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by project'**
+  String get filterByProject;
+
+  /// Project status: active.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get projectStatusActive;
+
+  /// Project status: on hold.
+  ///
+  /// In en, this message translates to:
+  /// **'On hold'**
+  String get projectStatusOnHold;
+
+  /// Project status: someday/maybe.
+  ///
+  /// In en, this message translates to:
+  /// **'Someday'**
+  String get projectStatusSomeday;
+
+  /// Project status: done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get projectStatusDone;
+
+  /// Project status: dropped.
+  ///
+  /// In en, this message translates to:
+  /// **'Dropped'**
+  String get projectStatusDropped;
+
+  /// Project overflow menu item and dialog title for changing the project status.
+  ///
+  /// In en, this message translates to:
+  /// **'Change status'**
+  String get projectChangeStatus;
+
+  /// Tooltip on a project that is moving only through waiting/scheduled items.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting — in motion via waiting or scheduled items'**
+  String get projectAwaitingTooltip;
+
+  /// Tooltip on a project with no next action, waiting, or scheduled item.
+  ///
+  /// In en, this message translates to:
+  /// **'Stalled — no next action, waiting, or scheduled item'**
+  String get projectStalledTooltip;
+
+  /// Banner on a stalled project detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Stalled — no next action, waiting, or scheduled item defined. Add a next action to get this moving.'**
+  String get projectStalledBanner;
+
+  /// Banner on a project detail screen that moves only through waiting/scheduled items.
+  ///
+  /// In en, this message translates to:
+  /// **'This project is moving through waiting or scheduled items only. Consider adding a follow-up next action so it doesn\'t stall when those clear.'**
+  String get projectAwaitingBanner;
+
+  /// Project tile chip: number of next actions.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 next action} other{{count} next actions}}'**
+  String projectNextActionCount(int count);
+
+  /// Project tile chip: number of waiting-for items.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 waiting} other{{count} waiting}}'**
+  String projectWaitingCount(int count);
+
+  /// Do tab: shown when filters hide every next action.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 next action is hidden by your filters} other{{count} next actions are hidden by your filters}}'**
+  String engageHiddenByFilters(int count);
+
+  /// Do tab: chip that clears all active filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get filterReset;
+
+  /// Onboarding replay: shown under the sample-project switch when the user already has projects.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You already have 1 project.} other{You already have {count} projects.}}'**
+  String onboardingSeedExisting(int count);
+
+  /// Purchase error: billing not configured/available.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases are not available right now.'**
+  String get purchaseErrUnavailable;
+
+  /// Purchase error: products could not be loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load products. Check your connection and try again.'**
+  String get purchaseErrProducts;
+
+  /// Purchase error: the chosen product is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'That option is not available right now.'**
+  String get purchaseErrOption;
+
+  /// Purchase error: network problem.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error. Check your connection and try again.'**
+  String get purchaseErrNetwork;
+
+  /// Purchase error: purchases disabled on the device.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases are not allowed on this device.'**
+  String get purchaseErrNotAllowed;
+
+  /// Purchase error: payment pending approval.
+  ///
+  /// In en, this message translates to:
+  /// **'Your purchase is pending approval.'**
+  String get purchaseErrPending;
+
+  /// Purchase error: product already owned.
+  ///
+  /// In en, this message translates to:
+  /// **'You already own this — try Restore Purchases.'**
+  String get purchaseErrAlreadyOwned;
+
+  /// Purchase error: store service problem.
+  ///
+  /// In en, this message translates to:
+  /// **'The store is having trouble. Please try again later.'**
+  String get purchaseErrStore;
+
+  /// Purchase error: generic.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong with the purchase. Please try again.'**
+  String get purchaseErrUnknown;
+
+  /// Backup import error: empty input.
+  ///
+  /// In en, this message translates to:
+  /// **'The backup is empty — nothing to import.'**
+  String get backupErrEmpty;
+
+  /// Backup import error: not valid JSON.
+  ///
+  /// In en, this message translates to:
+  /// **'This isn\'t valid JSON. Make sure you selected a complete, unedited Trayzero backup file.'**
+  String get backupErrInvalidJson;
+
+  /// Backup import error: JSON is not a backup object.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is not a Trayzero backup.'**
+  String get backupErrNotBackup;
+
+  /// Backup import error: backup made by a newer app version.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup was created by a newer version of the app. Update Trayzero, then try importing again.'**
+  String get backupErrNewerVersion;
+
+  /// Backup import error: file has none of the backup sections.
+  ///
+  /// In en, this message translates to:
+  /// **'This file doesn\'t look like a Trayzero backup.'**
+  String get backupErrUnrecognized;
+
+  /// Backup import error: backup contains invalid data (technical detail is logged, not shown).
+  ///
+  /// In en, this message translates to:
+  /// **'This backup contains invalid data and can\'t be imported.'**
+  String get backupErrInvalidData;
+
+  /// Backup restore: data restored but reminders could not be refreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data was restored, but some reminders could not be refreshed. Retry the import to refresh them.'**
+  String get backupErrReminders;
+
+  /// Backup restore: generic failure (technical detail is logged, not shown).
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while restoring. Your existing data was not changed by this attempt.'**
+  String get backupErrRestoreFailed;
+
+  /// Backup preview: number of items.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String backupCountItems(int count);
+
+  /// Backup preview: number of projects.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 project} other{{count} projects}}'**
+  String backupCountProjects(int count);
+
+  /// Backup preview: number of contexts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 context} other{{count} contexts}}'**
+  String backupCountContexts(int count);
+
+  /// Backup preview: number of areas.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 area} other{{count} areas}}'**
+  String backupCountAreas(int count);
+
+  /// Backup preview: number of attachments.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
+  String backupCountAttachments(int count);
+
+  /// Backup preview: number of reviews.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 review} other{{count} reviews}}'**
+  String backupCountReviews(int count);
+
+  /// No description provided for @restoreFolderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from backup folder'**
+  String get restoreFolderTitle;
+
+  /// No description provided for @restoreFolderIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the folder where Trayzero saves backups, for example one kept by iCloud Drive, Google Drive or Syncthing. Restoring merges the backup into this device; it doesn\'t delete anything already here.'**
+  String get restoreFolderIntro;
+
+  /// No description provided for @restoreFolderChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose backup folder'**
+  String get restoreFolderChoose;
+
+  /// No description provided for @restoreFolderChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a different folder'**
+  String get restoreFolderChange;
+
+  /// No description provided for @restoreFolderFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder: {name}'**
+  String restoreFolderFrom(String name);
+
+  /// No description provided for @restoreFolderEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Trayzero backups found in this folder.'**
+  String get restoreFolderEmpty;
+
+  /// No description provided for @restoreFolderFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this folder. Check that it\'s still available, or choose it again.'**
+  String get restoreFolderFailed;
+
+  /// No description provided for @restoreFolderItemCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String restoreFolderItemCount(int count);
+
+  /// No description provided for @restoreFolderUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read this file'**
+  String get restoreFolderUnreadable;
+
+  /// No description provided for @restoreFolderReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading…'**
+  String get restoreFolderReading;
+
+  /// No description provided for @onboardingRestoreAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming from another device? Restore a backup'**
+  String get onboardingRestoreAction;
+
+  /// No description provided for @folderBackupStale.
+  ///
+  /// In en, this message translates to:
+  /// **'No fresh backup for {days, plural, =1{1 day} other{{days} days}}.'**
+  String folderBackupStale(int days);
+
+  /// No description provided for @folderBackupRepairHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the folder again if backups have stopped working.'**
+  String get folderBackupRepairHint;
+
+  /// No description provided for @moreBackupSubtitleStale.
+  ///
+  /// In en, this message translates to:
+  /// **'No fresh backup for {days, plural, =1{1 day} other{{days} days}} · tap to repair'**
+  String moreBackupSubtitleStale(int days);
+
+  /// No description provided for @backupPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up your tasks automatically'**
+  String get backupPromptTitle;
+
+  /// No description provided for @backupPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve captured a lot. Pick a folder in your own cloud or sync app and Trayzero will keep the latest 10 backups there. It\'s backup, not sync.'**
+  String get backupPromptBody;
+
+  /// No description provided for @backupPromptAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose folder'**
+  String get backupPromptAction;
+
+  /// No description provided for @backupPromptDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get backupPromptDismiss;
+
+  /// No description provided for @backupCardHealthy.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up {date}'**
+  String backupCardHealthy(String date);
+
+  /// No description provided for @backupCardOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on to save a copy to a folder after every change.'**
+  String get backupCardOffBody;
+
+  /// No description provided for @backupCardTurnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get backupCardTurnOn;
+
+  /// No description provided for @backupCardChooseAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose folder again'**
+  String get backupCardChooseAgain;
+
+  /// No description provided for @backupCardTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get backupCardTryAgain;
+
+  /// No description provided for @backupGroupBackUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up'**
+  String get backupGroupBackUp;
+
+  /// No description provided for @backupGroupRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get backupGroupRestore;
+
+  /// No description provided for @backupAutoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up automatically'**
+  String get backupAutoTitle;
+
+  /// No description provided for @backupAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'After each change'**
+  String get backupAutoSubtitle;
+
+  /// No description provided for @backupFolderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup folder'**
+  String get backupFolderTitle;
+
+  /// No description provided for @backupExportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export a copy'**
+  String get backupExportTitle;
+
+  /// No description provided for @backupExportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a backup file once'**
+  String get backupExportSubtitle;
+
+  /// No description provided for @backupRestoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore a backup'**
+  String get backupRestoreTitle;
+
+  /// No description provided for @backupRestoreRowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'From your folder or a file'**
+  String get backupRestoreRowSubtitle;
+
+  /// No description provided for @backupRestoreSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose where your backup is. You\'ll see what\'s inside before anything changes.'**
+  String get backupRestoreSheetBody;
+
+  /// No description provided for @backupRestoreFromFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'From backup folder'**
+  String get backupRestoreFromFolder;
+
+  /// No description provided for @backupRestoreFromFolderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended — pick a saved backup'**
+  String get backupRestoreFromFolderHint;
+
+  /// No description provided for @backupRestoreFromFile.
+  ///
+  /// In en, this message translates to:
+  /// **'From a file'**
+  String get backupRestoreFromFile;
+
+  /// No description provided for @backupRestoreFromFileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A Trayzero backup (.json)'**
+  String get backupRestoreFromFileHint;
+
+  /// No description provided for @backupRestorePaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste backup text'**
+  String get backupRestorePaste;
+
+  /// No description provided for @backupFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup, not sync — your cloud or sync app carries the folder between devices.'**
+  String get backupFootnote;
+
+  /// No description provided for @backupCardJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up just now'**
+  String get backupCardJustNow;
+
+  /// No description provided for @backupCardMinutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up {minutes, plural, =1{1 minute} other{{minutes} minutes}} ago'**
+  String backupCardMinutesAgo(int minutes);
+
+  /// No description provided for @backupCardHoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up {hours, plural, =1{1 hour} other{{hours} hours}} ago'**
+  String backupCardHoursAgo(int hours);
+
+  /// No description provided for @backupCardYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up yesterday'**
+  String get backupCardYesterday;
+
+  /// No description provided for @backupHowItWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get backupHowItWorks;
+
+  /// No description provided for @backupHowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How backup works'**
+  String get backupHowTitle;
+
+  /// No description provided for @backupHowSaves.
+  ///
+  /// In en, this message translates to:
+  /// **'After you make changes, Trayzero saves a JSON copy of your data to the folder you choose, and keeps the latest 10 copies.'**
+  String get backupHowSaves;
+
+  /// No description provided for @backupHowSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Your cloud or sync app (for example iCloud Drive, Google Drive or Syncthing) carries that folder to your other devices. Trayzero itself never uploads or syncs anything.'**
+  String get backupHowSync;
+
+  /// No description provided for @backupHowMove.
+  ///
+  /// In en, this message translates to:
+  /// **'To move to another device, choose Restore a backup, then From backup folder.'**
+  String get backupHowMove;
+
+  /// No description provided for @microphoneAccessDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone access is off. Allow it in Settings to record a voice memo.'**
+  String get microphoneAccessDenied;
+
+  /// No description provided for @filterTimeEnergy.
+  ///
+  /// In en, this message translates to:
+  /// **'Time & energy'**
+  String get filterTimeEnergy;
+
+  /// No description provided for @clearDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear date'**
+  String get clearDate;
+
+  /// No description provided for @reorderHandle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to reorder'**
+  String get reorderHandle;
+
+  /// No description provided for @calendarConnectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar connection'**
+  String get calendarConnectionTitle;
+
+  /// No description provided for @calendarTogether.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plans, together.'**
+  String get calendarTogether;
+
+  /// No description provided for @calendarConnectionIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'See your Trayzero commitments alongside the rest of your day.'**
+  String get calendarConnectionIntro;
+
+  /// No description provided for @calendarConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect calendar'**
+  String get calendarConnect;
+
+  /// No description provided for @calendarScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Only scheduled items in Trayzero’s Calendar are published. Ordinary task deadlines stay in Trayzero.'**
+  String get calendarScope;
+
+  /// No description provided for @calendarAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic updates'**
+  String get calendarAutomatic;
+
+  /// No description provided for @calendarAutomaticHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates while you use Trayzero and when you reopen it.'**
+  String get calendarAutomaticHelp;
+
+  /// No description provided for @calendarPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get calendarPaused;
+
+  /// No description provided for @calendarConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get calendarConnected;
+
+  /// No description provided for @calendarNeedsAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get calendarNeedsAttention;
+
+  /// No description provided for @calendarPauseHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing calendar events stay in place. Changes will wait until you resume updates or choose Update now.'**
+  String get calendarPauseHelp;
+
+  /// No description provided for @calendarLinkedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} linked events'**
+  String calendarLinkedCount(int count);
+
+  /// No description provided for @calendarLastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated: {when}'**
+  String calendarLastUpdated(String when);
+
+  /// No description provided for @calendarChangesWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes waiting to update'**
+  String get calendarChangesWaiting;
+
+  /// No description provided for @calendarUpdateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update now'**
+  String get calendarUpdateNow;
+
+  /// No description provided for @calendarManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage connection'**
+  String get calendarManage;
+
+  /// No description provided for @calendarWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating calendar connection…'**
+  String get calendarWorking;
+
+  /// No description provided for @calendarRestoreAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore access'**
+  String get calendarRestoreAccess;
+
+  /// No description provided for @calendarUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Some changes could not be applied. Your last successful update is shown above. Try again to finish updating.'**
+  String get calendarUpdateFailed;
+
+  /// No description provided for @calendarRemovalPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Removal pending'**
+  String get calendarRemovalPending;
+
+  /// No description provided for @calendarRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} events could not be removed. Automatic updates are stopped. Retry removal, or disconnect and keep the remaining events.'**
+  String calendarRemoveFailed(int count);
+
+  /// No description provided for @calendarSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save this change. Check the connection settings and try again.'**
+  String get calendarSaveFailed;
+
+  /// No description provided for @calendarNoWritable.
+  ///
+  /// In en, this message translates to:
+  /// **'No writable calendars are available. Add a calendar in your device’s calendar settings, then try again.'**
+  String get calendarNoWritable;
+
+  /// No description provided for @calendarChangeDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Change destination'**
+  String get calendarChangeDestination;
+
+  /// No description provided for @calendarChooseDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your calendar'**
+  String get calendarChooseDestination;
+
+  /// No description provided for @calendarMoveHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked events will move to the new calendar. Other calendar events stay where they are. Automatic updates keep your current setting.'**
+  String get calendarMoveHelp;
+
+  /// No description provided for @calendarSetupCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} scheduled items will be published. Previously linked events are reused where available.'**
+  String calendarSetupCount(int count);
+
+  /// No description provided for @calendarMoveEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Move linked events'**
+  String get calendarMoveEvents;
+
+  /// No description provided for @calendarConnectAndAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect and add events'**
+  String get calendarConnectAndAdd;
+
+  /// No description provided for @calendarDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect calendar'**
+  String get calendarDisconnect;
+
+  /// No description provided for @calendarDisconnectQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect calendar?'**
+  String get calendarDisconnectQuestion;
+
+  /// No description provided for @calendarDisconnectHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what happens to linked calendar events. Your Trayzero items and unrelated calendar events will remain.'**
+  String get calendarDisconnectHelp;
+
+  /// No description provided for @calendarKeepEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep events in my calendar'**
+  String get calendarKeepEvents;
+
+  /// No description provided for @calendarKeepHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop updates and leave events in place. Reconnecting can reuse these links.'**
+  String get calendarKeepHelp;
+
+  /// No description provided for @calendarRemoveEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {count} linked events'**
+  String calendarRemoveEvents(int count);
+
+  /// No description provided for @calendarRemoveHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove only events linked to this connection. Failed removals remain available to retry.'**
+  String get calendarRemoveHelp;
+
+  /// No description provided for @calendarHowItWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'How linked events work'**
+  String get calendarHowItWorks;
+
+  /// No description provided for @calendarRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Trayzero publishes scheduled Calendar items to your chosen device calendar. Ordinary task deadlines are excluded.\n\nEdit linked titles, notes, times and recurrence in Trayzero. Updating can overwrite edits made in your calendar app. Events currently use a one-hour duration.\n\nCompleting, trashing or moving an item off Calendar removes its linked event on the next update. A recurring series advances to the next occurrence.\n\nPausing keeps events and their links. Disconnecting lets you keep or remove linked events. Trayzero items are never deleted by disconnecting.'**
+  String get calendarRules;
+
+  /// No description provided for @calendarBringEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring events into Trayzero'**
+  String get calendarBringEvents;
+
+  /// No description provided for @calendarImportCopies.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose events to copy into your Inbox or Calendar. Copies do not follow later changes to the original events. Originals stay unchanged.'**
+  String get calendarImportCopies;
+
+  /// No description provided for @calendarChooseEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose events'**
+  String get calendarChooseEvents;
+
+  /// No description provided for @calendarImportSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a source calendar'**
+  String get calendarImportSource;
+
+  /// No description provided for @calendarImportDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Add selected events to'**
+  String get calendarImportDestination;
+
+  /// No description provided for @calendarAddSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {count} events'**
+  String calendarAddSelected(int count);
+
+  /// No description provided for @calendarNoImportEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No new events to import. Events already added or linked to Trayzero are excluded. The range is the past 7 days and the next year.'**
+  String get calendarNoImportEvents;
+
+  /// No description provided for @calendarImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import calendar events. Check calendar access and try again.'**
+  String get calendarImportFailed;
+
+  /// No description provided for @calendarDeviceHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses your device’s calendar. No Trayzero account needed. A shared calendar may be visible to other people with access to it.'**
+  String get calendarDeviceHelp;
 }
 
 class _AppLocalizationsDelegate
@@ -2308,6 +5328,7 @@ class _AppLocalizationsDelegate
     'ja',
     'ko',
     'pt',
+    'ru',
     'zh',
   ].contains(locale.languageCode);
 
@@ -2344,6 +5365,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsKo();
     case 'pt':
       return AppLocalizationsPt();
+    case 'ru':
+      return AppLocalizationsRu();
     case 'zh':
       return AppLocalizationsZh();
   }

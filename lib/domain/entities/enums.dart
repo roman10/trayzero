@@ -58,6 +58,17 @@ enum ProjectStatus {
 
 enum ReviewType { daily, weekly }
 
+/// Stable identifiers persisted for a resumable Weekly Review.
+enum WeeklyReviewStep {
+  capture,
+  inbox,
+  actions,
+  waiting,
+  projects,
+  calendar,
+  someday,
+}
+
 /// Recurrence cadence for repeating actions. `null` on the item means
 /// non-recurring. The instance is cloned with shifted dates on completion.
 enum Recurrence {

@@ -165,4 +165,39 @@ void main() {
       expect(scheduler.cancelled, contains(notificationIdFor('i1', 3)));
     });
   });
+  group('stale in-memory copy (ADR 0007 follow-up)', () {
+    test('saving an edit keeps a Today star made meanwhile', () async {
+      await saveItem(baseItem());
+      final stale = (await items.getById('i1'))!;
+      final starredAt = DateTime(2026, 5, 14, 12, 30);
+      await items.setFocusedAt({'i1': starredAt});
+
+      await saveItem(stale.copyWith(title: 'Email Alice today'));
+
+      final fetched = (await items.getById('i1'))!;
+      expect(fetched.title, 'Email Alice today');
+      expect(fetched.focusedAt, starredAt);
+    });
+
+    test('saving an edit keeps an unstar made meanwhile', () async {
+      await saveItem(baseItem().copyWith(focusedAt: DateTime(2026, 5, 14, 9)));
+      final stale = (await items.getById('i1'))!;
+      expect(stale.focusedAt, isNotNull);
+      await items.setFocusedAt({'i1': null});
+
+      await saveItem(stale.copyWith(notes: 'agenda'));
+
+      expect((await items.getById('i1'))!.focusedAt, isNull);
+    });
+
+    test('moving to Someday still clears focus', () async {
+      await saveItem(baseItem());
+      await items.setFocusedAt({'i1': DateTime(2026, 5, 14, 12, 30)});
+      final stale = (await items.getById('i1'))!;
+
+      await saveItem(stale.copyWith(status: ItemStatus.someday));
+
+      expect((await items.getById('i1'))!.focusedAt, isNull);
+    });
+  });
 }

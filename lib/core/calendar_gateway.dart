@@ -2,9 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// A calendar known to the device.
 class CalendarInfo {
-  const CalendarInfo({required this.id, required this.name});
+  const CalendarInfo({
+    required this.id,
+    required this.name,
+    this.accountName,
+    this.writable = true,
+  });
   final String id;
   final String name;
+  final String? accountName;
+  final bool writable;
+  String get displayName => accountName == null || accountName!.isEmpty
+      ? name
+      : '$name · $accountName';
 }
 
 enum CalendarFrequency { daily, weekly, monthly, yearly }
@@ -85,6 +95,12 @@ class CalendarEventView {
 /// keeps `device_calendar`'s `TZDateTime` types out of the feature code.
 abstract class CalendarGateway {
   Future<bool> requestPermissions();
+
+  /// Read-only permission check. Automatic runs must never prompt.
+  Future<bool> hasPermissions();
+
+  /// Returns an empty list only when the device query succeeds with no
+  /// calendars. Provider failures throw so callers can offer recovery.
   Future<List<CalendarInfo>> listCalendars();
 
   /// Create or update [draft]. Returns the platform event id (the existing
@@ -92,6 +108,8 @@ abstract class CalendarGateway {
   /// one when it was null), or null if the write failed.
   Future<String?> upsertEvent(CalendarEventDraft draft);
 
+  /// True only when deletion or absence is confirmed. False retains local
+  /// ownership so transient permission/provider failures can be retried.
   Future<bool> deleteEvent({
     required String calendarId,
     required String eventId,

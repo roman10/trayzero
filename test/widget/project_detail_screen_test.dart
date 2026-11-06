@@ -357,4 +357,58 @@ void main() {
     expect(find.textContaining('NEEDS CLARIFYING'), findsNothing);
     expect(find.textContaining('COMPLETED'), findsNothing);
   });
+
+  testWidgets('AppBar has a single overflow menu with edit/status/delete',
+      (tester) async {
+    await projects.upsert(
+        _project(title: 'A fairly long project outcome title'));
+    await pumpApp(tester, const ProjectDetailScreen(projectId: 'p1'),
+        env: env);
+    await _settle(tester);
+
+    expect(find.byIcon(Icons.edit_outlined), findsNothing);
+    expect(find.byIcon(Icons.delete_outline), findsNothing);
+    expect(find.byIcon(Icons.flag_outlined), findsNothing);
+    expect(find.byKey(const Key('project-menu')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('project-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit project'), findsOneWidget);
+    expect(find.text('Change status'), findsOneWidget);
+    expect(find.text('Add existing actions'), findsOneWidget);
+    final delete = tester.widget<Text>(find.text('Delete'));
+    final scheme = Theme.of(tester.element(find.text('Delete'))).colorScheme;
+    expect(delete.style?.color, scheme.error);
+  });
+
+  testWidgets('Change status opens a picker and applies the choice',
+      (tester) async {
+    await projects.upsert(_project());
+    await pumpApp(tester, const ProjectDetailScreen(projectId: 'p1'),
+        env: env);
+    await _settle(tester);
+
+    await tester.tap(find.byKey(const Key('project-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change status'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('On hold'));
+    await tester.pumpAndSettle();
+
+    final saved = await projects.getById('p1');
+    expect(saved!.status, ProjectStatus.onHold);
+  });
+
+  test('due-date picker range includes an overdue due date', () {
+    final now = DateTime(2026, 5, 14, 9);
+    final overdue = DateTime(2026, 1, 2);
+    final r = projectDueDatePickerRange(now, overdue);
+    expect(r.first.isAfter(r.initial), isFalse);
+    expect(r.initial, overdue);
+
+    final future = projectDueDatePickerRange(now, DateTime(2026, 6, 1));
+    expect(future.first, now.subtract(const Duration(days: 1)));
+    final none = projectDueDatePickerRange(now, null);
+    expect(none.initial, now);
+  });
 }

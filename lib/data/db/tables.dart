@@ -118,6 +118,10 @@ class Items extends Table {
   /// title/notes, so they correctly leave this untouched.
   TextColumn get searchText => text().withDefault(const Constant(''))();
 
+  /// When the Item was committed to Today (ADR 0007). In Today while this
+  /// falls on the current local day; an earlier day means carried over.
+  DateTimeColumn get focusedAt => dateTime().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -134,6 +138,9 @@ class Projects extends Table {
   DateTimeColumn get dueAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+
+  /// Last time the Project was marked reviewed in the Weekly Review.
+  DateTimeColumn get lastReviewedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -183,6 +190,59 @@ class Reviews extends Table {
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get completedAt => dateTime().nullable()();
   TextColumn get notes => text().nullable()();
+  TextColumn get currentStep => text().withDefault(const Constant('capture'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Native calendar ownership, retained independently of the Item row.
+@DataClassName('CalendarMirrorRow')
+class CalendarMirrors extends Table {
+  TextColumn get calendarId => text()();
+  TextColumn get eventId => text()();
+  TextColumn get itemId => text()();
+  BoolColumn get isCurrent => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {calendarId, eventId};
+}
+
+/// Free-form labels (ADR 0010). Names are unique ignoring case; enforced by
+/// the repository with Unicode lowercase (SQLite NOCASE is ASCII-only).
+@DataClassName('TagRow')
+class Tags extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+
+  /// A person: the tag also keeps an Agenda.
+  BoolColumn get isPerson => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Item ↔ Tag links. Both sides cascade, so deleting an Item or a Tag never
+/// leaves a dangling link.
+@DataClassName('ItemTagRow')
+@TableIndex(name: 'item_tags_tag_id', columns: {#tagId})
+class ItemTags extends Table {
+  TextColumn get itemId =>
+      text().references(Items, #id, onDelete: KeyAction.cascade)();
+  TextColumn get tagId =>
+      text().references(Tags, #id, onDelete: KeyAction.cascade)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {itemId, tagId};
+}
+
+/// Device-local history of successful imports; omitted from portable backups.
+@DataClassName('ImportBatchRow')
+@TableIndex(name: 'import_batches_fingerprint', columns: {#fingerprint})
+class ImportBatches extends Table {
+  TextColumn get id => text()();
+  TextColumn get fingerprint => text()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

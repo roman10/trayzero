@@ -1,0 +1,22 @@
+/* Widgets and controls (ADR 0009). Follows the system language. */
+
+"Today" = "Hoje";
+"%lld done" = "%lld concluídos";
+"+%lld more" = "+%lld mais";
+"Complete %@" = "Concluir %@";
+"All done for today" = "Tudo feito por hoje";
+"Nothing focused yet" = "Nada em foco ainda";
+"Plan your day" = "Planejar o dia";
+"Your focused items for today. Tap a circle to complete." = "Seus itens em foco para hoje. Toque em um círculo para concluir.";
+"Complete Item" = "Concluir item";
+"Item" = "Item";
+"Capture to Trayzero" = "Capturar no Trayzero";
+"Open Quick Capture" = "Abrir captura rápida";
+"Opens Trayzero's quick capture sheet." = "Abre a captura rápida do Trayzero.";
+"Show Today" = "Mostrar Hoje";
+"Opens the items you focused for today." = "Abre seus itens em foco para hoje.";
+"item in Inbox" = "item na caixa de entrada";
+"items in Inbox" = "itens na caixa de entrada";
+"+ Capture" = "+ Capturar";
+"Trayzero Inbox" = "Caixa de entrada do Trayzero";
+"See your unprocessed inbox count and capture in one tap." = "Veja quantos itens aguardam na caixa de entrada e capture com um toque.";

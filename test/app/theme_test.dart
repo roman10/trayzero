@@ -99,16 +99,17 @@ void main() {
   });
 
   group('filled-chip foreground rule', () {
-    // item_card picks black/white from the fill's luminance via
-    // ThemeData.estimateBrightnessForColor; verify that primitive directly.
-    test('dark fill -> white content, light fill -> black content', () {
-      // A deep blue due/error fill is dark -> needs white content.
-      expect(ThemeData.estimateBrightnessForColor(const Color(0xFF1565C0)),
-          Brightness.dark);
-      // A pale fill is light -> needs black content (the old hardcoded
-      // white would have been invisible here).
-      expect(ThemeData.estimateBrightnessForColor(const Color(0xFFFFE082)),
-          Brightness.light);
+    test('chooses readable content for deep, pale and middle-tone fills', () {
+      for (final fill in [
+        const Color(0xFF1565C0),
+        const Color(0xFFFFE082),
+        // A brightness heuristic chooses white here, below 4.5:1 for text.
+        const Color(0xFFE64A19),
+      ]) {
+        expect(fill.contrastingForeground.contrastAgainst(fill),
+            greaterThanOrEqualTo(4.5));
+      }
+      expect(const Color(0xFFE64A19).contrastingForeground, Colors.black);
     });
   });
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today widget (ADR 0009): system light/dark surface with the brand accent. -->
+<resources>
+    <color name="today_widget_surface">#FFFFFFFF</color>
+    <color name="today_widget_text">#FF1F2937</color>
+    <color name="today_widget_text_muted">#801F2937</color>
+    <color name="today_widget_accent">#FFC2531B</color>
+    <color name="today_widget_on_accent">#FFFFFFFF</color>
+</resources>

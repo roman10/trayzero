@@ -1,14 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/maybe_request_app_review.dart';
 import '../../application/providers.dart';
 import '../../application/process_inbox_decision.dart';
 import '../../core/clock.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../common/adaptive_workspace.dart';
 import '../common/empty_state.dart';
+import '../common/localized_entity_labels.dart';
 import '../common/reminder_delivery_recovery.dart';
+import '../common/tag_picker.dart';
+import '../common/undo_snack_bar.dart';
 import '../projects/project_picker.dart';
 import '../settings/settings_controller.dart';
 import 'process_inbox_controller.dart';
@@ -25,7 +32,13 @@ class ProcessInboxScreen extends ConsumerStatefulWidget {
   ConsumerState<ProcessInboxScreen> createState() => _ProcessInboxScreenState();
 }
 
+/// Items a session must clarify before Inbox Zero counts as a success
+/// moment for the store-rating prompt (ADR 0007).
+const _reviewPromptMinProcessed = 5;
+
 class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
+  bool _askedForReview = false;
+
   void _haptic([HapticFeedbackKind k = HapticFeedbackKind.selection]) {
     final on = ref.read(hapticsEnabledProvider);
     if (!on) return;
@@ -47,8 +60,68 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
     controller.setSelectedProject(project.id);
   }
 
+  /// True while a decision is being saved: the step buttons ignore taps so a
+  /// double tap can't file (or trash) the same item twice.
+  bool _busy = false;
+
   Future<void> _decide(Item current, ProcessingDecision d) async {
-    await ref.read(processInboxControllerProvider.notifier).decide(current, d);
+    if (_busy) return;
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(processInboxControllerProvider.notifier);
+    final purge = ref.read(purgeTrashProvider);
+    setState(() => _busy = true);
+    final String? spawnedId;
+    try {
+      spawnedId = await controller.decide(current, d);
+    } catch (_) {
+      if (mounted) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.saveError)));
+        setState(() => _busy = false);
+      }
+      return;
+    }
+    if (!mounted) {
+      // Left the screen mid-save: no Undo to offer, so finish a trash now.
+      if (d is TrashDecision) await purge(ids: [current.id]);
+      return;
+    }
+    setState(() => _busy = false);
+    // Every decision but Convert-to-Project can be taken back: the item goes
+    // back to the inbox exactly as it was. (Undoing a Project conversion
+    // would also have to unwind the Project row it created.)
+    messenger.hideCurrentSnackBar();
+    final bar = messenger.showSnackBar(
+      undoSnackBar(
+        context,
+        message: switch (d) {
+          TrashDecision() => l10n.deletedItemsSnackbar(1),
+          DoItNowDecision() => l10n.completed,
+          _ => l10n.processFiledSnackbar,
+        },
+        onUndo: d.isUndoable
+            ? () => controller.undoDecision(
+                current,
+                d,
+                spawnedRecurrenceId: spawnedId,
+              )
+            : null,
+      ),
+    );
+    if (d is TrashDecision) {
+      // The trashed row is only hard-deleted once Undo is no longer possible.
+      unawaited(
+        bar.closed
+            .then((reason) async {
+              if (reason != SnackBarClosedReason.action) {
+                await purge(ids: [current.id]);
+              }
+            })
+            .catchError((Object _) {}),
+      );
+    }
     final now = ref.read(clockProvider).now();
     final needsReminderCheck = switch (d) {
       ToCalendarDecision(:final deferUntil) =>
@@ -67,8 +140,27 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
     });
   }
 
+  /// Inbox Zero after a real processing session is a success moment; the
+  /// policy decides whether to actually ask for a store rating (ADR 0007).
+  void _maybeAskForReview() {
+    if (_askedForReview) return;
+    final s = ref.read(processInboxControllerProvider);
+    final empty = ref.read(inboxItemsProvider).valueOrNull?.isEmpty ?? false;
+    if (!empty || s.filed + s.doneNow + s.trashed < _reviewPromptMinProcessed) {
+      return;
+    }
+    _askedForReview = true;
+    unawaited(
+      ref.read(maybeRequestAppReviewProvider).call(ReviewMoment.inboxZero),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // The inbox stream and the session tally update in either order, so
+    // check whenever either changes.
+    ref.listen(inboxItemsProvider, (_, _) => _maybeAskForReview());
+    ref.listen(processInboxControllerProvider, (_, _) => _maybeAskForReview());
     final items = ref.watch(inboxItemsProvider).valueOrNull ?? const [];
     final state = ref.watch(processInboxControllerProvider);
     final controller = ref.read(processInboxControllerProvider.notifier);
@@ -83,7 +175,10 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
           message: state.filed + state.doneNow + state.trashed == 0
               ? l10n.processCompleteNoItems
               : l10n.processCompleteStats(
-                  state.filed, state.doneNow, state.trashed),
+                  state.filed,
+                  state.doneNow,
+                  state.trashed,
+                ),
           action: FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.arrow_back),
@@ -104,20 +199,8 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
                 onPressed: controller.back,
               )
             : null,
-        title: Text(l10n.processStepCounter(stepNumber, processStepCount)),
+        title: Text(l10n.processTitle),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Center(
-              child: Text(
-                l10n.processItemsRemaining(items.length),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ),
           IconButton(
             tooltip: l10n.skipItemTooltip,
             icon: const Icon(Icons.skip_next),
@@ -136,14 +219,28 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: AdaptiveWorkbench(
+          key: ValueKey((current.id, state.step)),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
+          primary: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CapturedCard(item: current),
-              const SizedBox(height: 20),
-              Expanded(child: _buildStep(state, current)),
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 16,
+                runSpacing: 4,
+                children: [
+                  Text(l10n.processStepCounter(stepNumber, processStepCount)),
+                  Text(l10n.processItemsRemaining(items.length)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              CapturedCard(item: current, key: ValueKey(current.id)),
             ],
+          ),
+          detail: AbsorbPointer(
+            absorbing: _busy,
+            child: _buildStep(state, current),
           ),
         ),
       ),
@@ -184,7 +281,22 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
           onSingle: controller.advance,
         );
       case ProcessStep.defer:
+        final captured = current.deferUntil;
+        final capturedDue = current.dueAt;
         return StepDefer(
+          // Dates recognized at capture (ADR 0007) become one-tap choices.
+          capturedStart: captured,
+          capturedDue: capturedDue,
+          onUseCapturedStart: captured == null
+              ? null
+              : () {
+                  controller.setDefer(captured);
+                  controller.setRecurrence(null);
+                  controller.advance();
+                },
+          onUseCapturedDue: capturedDue == null
+              ? null
+              : () => _decide(current, const ToCalendarDecision()),
           onCalendar: () async {
             final when = await _pickDateTime();
             if (when == null) return;
@@ -209,7 +321,10 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
           // "Do it ASAP" files a next action with no date anchor, so any
           // cadence picked on the defer branch before backing out here can
           // never apply — drop it so it doesn't ride along into the file.
+          // It also drops a defer date, picked earlier or captured, because
+          // ASAP means available now.
           onSkip: () {
+            controller.setDefer(null);
             controller.setRecurrence(null);
             controller.advance();
           },
@@ -241,41 +356,18 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
             ),
           ),
           onBack: controller.back,
+          tags: (ref.watch(tagsProvider).valueOrNull ?? const []).isEmpty
+              ? null
+              : ItemTagsField(itemId: current.id),
         );
     }
   }
 
-  Future<String?> _askForText({required String title, required String hint}) {
-    final ctrl = TextEditingController();
-    return showDialog<String?>(
-      context: context,
-      builder: (dialogContext) {
-        final l10n = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            decoration: InputDecoration(hintText: hint),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                ctrl.text.trim().isEmpty ? null : ctrl.text.trim(),
-              ),
-              child: Text(l10n.ok),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  Future<String?> _askForText({required String title, required String hint}) =>
+      showDialog<String>(
+        context: context,
+        builder: (_) => _AskTextDialog(title: title, hint: hint),
+      );
 
   /// Date-only defer (GTD tickler). Returns local start-of-day so the item
   /// is visible in Next Actions for the whole target day; the "Ready:"
@@ -312,28 +404,30 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
               onTap: () => Navigator.pop(sheetContext, value),
             );
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l10n.recurrencePrompt,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      letterSpacing: 0.6,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.recurrencePrompt,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              option(l10n.recurrenceOff, Icons.block, null),
-              for (final r in Recurrence.values)
-                option(r.label, Icons.repeat, r),
-            ],
+                option(l10n.recurrenceOff, Icons.block, null),
+                for (final r in Recurrence.values)
+                  option(r.localizedLabel(l10n), Icons.repeat, r),
+              ],
+            ),
           ),
         );
       },
@@ -360,3 +454,57 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
 }
 
 enum HapticFeedbackKind { selection, light, medium, heavy }
+
+/// Single-field prompt. OK stays disabled until something is typed, so it
+/// never closes the dialog without a result.
+class _AskTextDialog extends StatefulWidget {
+  const _AskTextDialog({required this.title, required this.hint});
+
+  final String title;
+  final String hint;
+
+  @override
+  State<_AskTextDialog> createState() => _AskTextDialogState();
+}
+
+class _AskTextDialogState extends State<_AskTextDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    if (text.isNotEmpty) Navigator.pop(context, text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(hintText: widget.hint),
+        textCapitalization: TextCapitalization.sentences,
+        textInputAction: TextInputAction.done,
+        onChanged: (_) => setState(() {}),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: _controller.text.trim().isEmpty ? null : _submit,
+          child: Text(l10n.ok),
+        ),
+      ],
+    );
+  }
+}

@@ -5,6 +5,7 @@ import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/domain/recurrence/recurrence_policy.dart';
 import 'package:cleartray/application/calendar_sync_service.dart';
+import 'package:cleartray/data/repositories/calendar_mirror_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,7 +23,8 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     repo = ItemRepository(db, FakeClock(now));
     gateway = FakeCalendarGateway();
-    svc = CalendarSyncService(repo, FakeClock(now), gateway);
+    svc = CalendarSyncService(repo, FakeClock(now), gateway,
+      mirrors: CalendarMirrorRepository(db));
   });
 
   tearDown(() async => db.close());
@@ -248,4 +250,69 @@ void main() {
     gateway.permissionGranted = true;
     expect(await svc.requestPermissions(), isTrue);
   });
+  test(
+    'selected imports are scoped by source and occurrence, and never republished',
+    () async {
+      final first = CalendarEventView(
+        id: 'series',
+        title: 'Appointment',
+        start: now,
+      );
+      final next = CalendarEventView(
+        id: 'series',
+        title: 'Appointment',
+        start: now.add(const Duration(days: 7)),
+      );
+      gateway.importable = [first, next];
+      expect(
+        await svc.importSelected(
+          calendarId: 'source-a',
+          events: [first],
+          toInbox: true,
+        ),
+        1,
+      );
+      expect(
+        await svc.importSelected(
+          calendarId: 'source-a',
+          events: [first],
+          toInbox: true,
+        ),
+        0,
+      );
+      expect(
+        (await svc.importCandidates(calendarId: 'source-a')).single.start,
+        next.start,
+      );
+      expect(
+        await svc.importSelected(
+          calendarId: 'source-b',
+          events: [first],
+          toInbox: false,
+        ),
+        1,
+      );
+      expect(
+        (await repo.allActive()).map((i) => i.status),
+        containsAll([ItemStatus.inbox, ItemStatus.calendar]),
+      );
+      expect((await svc.mirrorOut(calendarId: 'cal-1')).written, 0);
+    },
+  );
+
+  test(
+    'import picker excludes events owned by the publishing connection',
+    () async {
+      await seed(dated('owned'));
+      await svc.mirrorOut(calendarId: 'cal-1');
+      gateway.importable = [
+        CalendarEventView(id: gateway.events.keys.single, title: 'Owned'),
+        CalendarEventView(id: 'external', title: 'Other', start: now),
+      ];
+      expect(
+        (await svc.importCandidates(calendarId: 'cal-1')).single.id,
+        'external',
+      );
+    },
+  );
 }

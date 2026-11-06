@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/clock.dart';
 import '../../domain/entities/entities.dart';
+import '../../l10n/gen/app_localizations.dart';
+import '../common/localized_recurrence.dart';
+import '../common/localized_dates.dart';
 
 /// Stepper for the recurrence interval ("every N days/weeks/…").
 ///
@@ -28,57 +31,32 @@ class IntervalStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final unit =
-        interval == 1 ? recurrence.unitNoun : '${recurrence.unitNoun}s';
-    return Row(
+    final l10n = AppLocalizations.of(context);
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runSpacing: 4,
       children: [
         Text(
-          'Every',
+          recurrence.localizedInterval(l10n, interval),
           style: TextStyle(fontSize: 14, color: scheme.onSurface),
         ),
         const SizedBox(width: 8),
         IconButton(
+          tooltip: l10n.decreaseRepeatInterval,
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.remove_circle_outline),
-          onPressed: interval <= _min
-              ? null
-              : () => onChanged(interval - 1),
-        ),
-        SizedBox(
-          width: 28,
-          child: Text(
-            '$interval',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
+          onPressed: interval <= _min ? null : () => onChanged(interval - 1),
         ),
         IconButton(
+          tooltip: l10n.increaseRepeatInterval,
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.add_circle_outline),
-          onPressed: interval >= _max
-              ? null
-              : () => onChanged(interval + 1),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          unit,
-          style: TextStyle(fontSize: 14, color: scheme.onSurface),
+          onPressed: interval >= _max ? null : () => onChanged(interval + 1),
         ),
       ],
     );
   }
 }
-
-/// Weekday labels indexed by `DateTime.monday`(1)..`DateTime.sunday`(7).
-const _weekdayShort = {
-  1: 'Mon',
-  2: 'Tue',
-  3: 'Wed',
-  4: 'Thu',
-  5: 'Fri',
-  6: 'Sat',
-  7: 'Sun',
-};
 
 /// Structured-pattern qualifier editor. Weekly → which weekdays; monthly →
 /// day-of-month vs Nth-weekday. Daily/yearly have no qualifier and render
@@ -104,35 +82,35 @@ class RecurrencePatternEditor extends StatelessWidget {
   final VoidCallback onDayOfMonth;
   final void Function(int week, int weekday) onNthWeekday;
 
-  static const _weeks = {1: 'First', 2: 'Second', 3: 'Third', 4: 'Fourth', -1: 'Last'};
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     Widget labelled(String label, Widget child) => Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 12.5, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 6),
-              child,
-            ],
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
           ),
-        );
+          const SizedBox(height: 6),
+          child,
+        ],
+      ),
+    );
 
     switch (recurrence) {
       case Recurrence.weekly:
         return labelled(
-          'Repeat on',
+          l10n.repeatOn,
           Wrap(
             spacing: 6,
             children: [
               for (var d = 1; d <= 7; d++)
                 FilterChip(
-                  label: Text(_weekdayShort[d]!),
+                  label: Text(localizedWeekday(d, l10n, short: true)),
                   selected: byWeekdays.contains(d),
                   onSelected: (sel) {
                     final next = [...byWeekdays];
@@ -147,7 +125,7 @@ class RecurrencePatternEditor extends StatelessWidget {
       case Recurrence.monthly:
         final isNth = monthlyWeek != null && monthlyWeekday != null;
         return labelled(
-          'On',
+          l10n.repeatMonthlyOn,
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -155,12 +133,12 @@ class RecurrencePatternEditor extends StatelessWidget {
                 spacing: 8,
                 children: [
                   ChoiceChip(
-                    label: const Text('Day of month'),
+                    label: Text(l10n.repeatDayOfMonth),
                     selected: !isNth,
                     onSelected: (_) => onDayOfMonth(),
                   ),
                   ChoiceChip(
-                    label: const Text('Day of week'),
+                    label: Text(l10n.repeatDayOfWeek),
                     selected: isNth,
                     onSelected: (_) => onNthWeekday(
                       monthlyWeek ?? 1,
@@ -172,26 +150,37 @@ class RecurrencePatternEditor extends StatelessWidget {
               if (isNth)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Row(
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       DropdownButton<int>(
+                        isExpanded: true,
+                        itemHeight: null,
                         value: monthlyWeek,
-                        onChanged: (v) =>
-                            onNthWeekday(v!, monthlyWeekday!),
+                        onChanged: (v) => onNthWeekday(v!, monthlyWeekday!),
                         items: [
-                          for (final e in _weeks.entries)
+                          for (final week in const [1, 2, 3, 4, 5, -1])
                             DropdownMenuItem(
-                                value: e.key, child: Text(e.value)),
+                              value: week,
+                              child: Text(localizedMonthlyOrdinal(week, l10n)),
+                            ),
                         ],
                       ),
-                      const SizedBox(width: 12),
                       DropdownButton<int>(
+                        isExpanded: true,
+                        itemHeight: null,
                         value: monthlyWeekday,
                         onChanged: (v) => onNthWeekday(monthlyWeek!, v!),
                         items: [
                           for (var d = 1; d <= 7; d++)
                             DropdownMenuItem(
-                                value: d, child: Text(_weekdayShort[d]!)),
+                              value: d,
+                              child: Text(
+                                localizedWeekday(d, l10n, short: true),
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -234,11 +223,15 @@ class RecurrenceEndPicker extends ConsumerWidget {
 
   Future<void> _pickDate(BuildContext context, WidgetRef ref) async {
     final now = ref.read(clockProvider).now();
+    final lastDate = now.add(const Duration(days: 365 * 10));
+    final seed = until ?? now.add(const Duration(days: 30));
     final picked = await showDatePicker(
       context: context,
       firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 10)),
-      initialDate: until ?? now.add(const Duration(days: 30)),
+      lastDate: lastDate,
+      initialDate: seed.isBefore(now)
+          ? now
+          : (seed.isAfter(lastDate) ? lastDate : seed),
     );
     if (picked != null) onUntil(picked);
   }
@@ -246,32 +239,30 @@ class RecurrenceEndPicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Ends',
-          style: TextStyle(
-            fontSize: 12.5,
-            color: scheme.onSurfaceVariant,
-          ),
+          l10n.repeatEnds,
+          style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
           children: [
             ChoiceChip(
-              label: const Text('Never'),
+              label: Text(l10n.repeatNever),
               selected: until == null && count == null,
               onSelected: (_) => onNever(),
             ),
             ChoiceChip(
-              label: const Text('On date'),
+              label: Text(l10n.repeatOnDate),
               selected: until != null,
               onSelected: (_) => _pickDate(context, ref),
             ),
             ChoiceChip(
-              label: const Text('After N times'),
+              label: Text(l10n.repeatAfterCount),
               selected: count != null,
               onSelected: (_) => onCount(count ?? _minCount),
             ),
@@ -286,9 +277,13 @@ class RecurrenceEndPicker extends ConsumerWidget {
                 children: [
                   Icon(Icons.event_busy, size: 18, color: scheme.primary),
                   const SizedBox(width: 8),
-                  Text(
-                    'Last on ${DateFormat.yMMMd().format(until!)}',
-                    style: const TextStyle(fontSize: 14),
+                  Expanded(
+                    child: Text(
+                      l10n.repeatLastOnDate(
+                        DateFormat.yMMMd(l10n.dateLocaleName).format(until!),
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ),
                 ],
               ),
@@ -297,38 +292,29 @@ class RecurrenceEndPicker extends ConsumerWidget {
         if (count != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Row(
+            child: Wrap(
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
-                  'After',
+                  l10n.repeatAfterOccurrences(count!),
                   style: TextStyle(fontSize: 14, color: scheme.onSurface),
                 ),
                 IconButton(
+                  tooltip: l10n.decreaseRepeatCount,
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.remove_circle_outline),
                   onPressed: count! <= _minCount
                       ? null
                       : () => onCount(count! - 1),
                 ),
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    '${count!}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
                 IconButton(
+                  tooltip: l10n.increaseRepeatCount,
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.add_circle_outline),
                   onPressed: count! >= _maxCount
                       ? null
                       : () => onCount(count! + 1),
-                ),
-                Text(
-                  'times',
-                  style: TextStyle(fontSize: 14, color: scheme.onSurface),
                 ),
               ],
             ),

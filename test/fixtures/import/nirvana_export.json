@@ -1,0 +1,36 @@
+[
+ {
+  "id": "p1",
+  "type": 1,
+  "state": 11,
+  "name": "Kitchen",
+  "note": "New cabinets"
+ },
+ {
+  "id": "t1",
+  "type": 0,
+  "state": 1,
+  "parentid": "p1",
+  "name": "Measure walls",
+  "tags": ",@home,",
+  "energy": 1,
+  "etime": 15,
+  "startdate": "",
+  "duedate": "",
+  "completed": 0
+ },
+ {
+  "id": "t2",
+  "type": 0,
+  "state": 6,
+  "name": "Trashed thing",
+  "completed": 0
+ },
+ {
+  "id": "t3",
+  "type": 0,
+  "state": "Someday",
+  "name": "Herb garden",
+  "completed": 0
+ }
+]

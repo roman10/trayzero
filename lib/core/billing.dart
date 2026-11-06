@@ -120,9 +120,23 @@ class PurchaseCancelled extends PurchaseOutcome {
   const PurchaseCancelled();
 }
 
+/// Why a purchase or restore failed. The UI layer maps each reason to a
+/// localized message; no user-facing English lives in core/infrastructure.
+enum PurchaseFailure {
+  unavailable,
+  productsUnavailable,
+  optionUnavailable,
+  network,
+  notAllowed,
+  pending,
+  alreadyOwned,
+  storeProblem,
+  unknown,
+}
+
 class PurchaseFailed extends PurchaseOutcome {
-  const PurchaseFailed(this.message);
-  final String message;
+  const PurchaseFailed(this.reason);
+  final PurchaseFailure reason;
 }
 
 /// Store-agnostic billing port. Implementations must degrade gracefully when
@@ -174,9 +188,9 @@ class DisabledBillingGateway implements BillingGateway {
 
   @override
   Future<PurchaseOutcome> purchase(String productId) async =>
-      const PurchaseFailed('Purchases are not available right now.');
+      const PurchaseFailed(PurchaseFailure.unavailable);
 
   @override
   Future<PurchaseOutcome> restore() async =>
-      const PurchaseFailed('Purchases are not available right now.');
+      const PurchaseFailed(PurchaseFailure.unavailable);
 }

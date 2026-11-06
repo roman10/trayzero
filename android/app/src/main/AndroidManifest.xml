@@ -43,11 +43,13 @@
         android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Keep all entrypoints' default application affinity, matching AppAuth's
+             receiver and singleTask authorization activity. An empty affinity
+             sends browser callbacks to a new task without the pending state. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -56,11 +58,21 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- cleartray:// links reach Dart through the home_widget launch
+                 funnel (ADR 0009). Flutter's own deep linking would also push
+                 the raw URI to go_router, whose empty path matches no route. -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="false"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <!-- PackageManager prefers INFO for getLaunchIntentForPackage.
+                     Notifications therefore always target this stable activity,
+                     even after a launcher entry has been disabled. -->
+                <category android:name="android.intent.category.INFO"/>
             </intent-filter>
-            <!-- Receive SEND text/plain (e.g. "Share to Cleartray" from any app) -->
+            <!-- Receive SEND text/plain (e.g. "Share to Trayzero" from any app) -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -77,6 +89,107 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="cleartray"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Launcher identity is separate from the always-enabled native entrypoint.
+             Keep these names stable: Android persists the selected component. -->
+        <activity
+            android:name="app.cleartray.LauncherAmber"
+            android:theme="@style/LaunchTheme.Amber"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="true"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="app.cleartray.LauncherBlue"
+            android:theme="@style/LaunchTheme.Blue"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="false"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher_blue">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="app.cleartray.LauncherCyan"
+            android:theme="@style/LaunchTheme.Cyan"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="false"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher_cyan">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="app.cleartray.LauncherTeal"
+            android:theme="@style/LaunchTheme.Teal"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="false"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher_teal">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="app.cleartray.LauncherGreen"
+            android:theme="@style/LaunchTheme.Green"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="false"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher_green">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="app.cleartray.LauncherViolet"
+            android:theme="@style/LaunchTheme.Violet"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="false"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher_violet">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="app.cleartray.LauncherRose"
+            android:theme="@style/LaunchTheme.Rose"
+            android:noHistory="true"
+            android:relinquishTaskIdentity="true"
+            android:enabled="false"
+            android:exported="true"
+            android:label="${appLabel}"
+            android:icon="@mipmap/ic_launcher_rose">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
@@ -122,6 +235,35 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/cleartray_inbox_widget_info"/>
         </receiver>
+
+        <!-- Today widget (ADR 0009): focused Items with a complete checkbox. -->
+        <receiver
+            android:name=".TodayWidgetProvider"
+            android:exported="true"
+            android:label="@string/today_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/trayzero_today_widget_info"/>
+        </receiver>
+        <!-- Not exported: only this app's widget PendingIntents complete Items. -->
+        <receiver
+            android:name=".TodayWidgetActionReceiver"
+            android:exported="false" />
+
+        <!-- Quick Settings tile "Capture to Trayzero" (ADR 0009). -->
+        <service
+            android:name=".CaptureTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_capture"
+            android:label="@string/tile_capture_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
 
         <meta-data
             android:name="flutterEmbedding"

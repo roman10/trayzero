@@ -27,6 +27,7 @@ class NotificationPayload {
     this.itemId,
     required this.title,
     required this.body,
+    this.snoozedUntil,
   });
 
   final NotificationKind kind;
@@ -37,12 +38,19 @@ class NotificationPayload {
   final String title;
   final String body;
 
+  /// User-requested alert override, persisted with the OS request so startup
+  /// healing can distinguish a Snooze from an obsolete original reminder.
+  /// Item dates and recurrence anchors remain unchanged.
+  final DateTime? snoozedUntil;
+
   String encode() => jsonEncode({
-        'k': _kindWire[kind],
-        if (itemId != null) 'id': itemId,
-        't': title,
-        'b': body,
-      });
+    'k': _kindWire[kind],
+    if (itemId != null) 'id': itemId,
+    't': title,
+    'b': body,
+    if (snoozedUntil != null)
+      'snoozedUntil': snoozedUntil!.toUtc().toIso8601String(),
+  });
 
   /// Decodes a payload string, returning null for anything malformed or
   /// produced by an older build with an unknown kind — callers treat a null
@@ -65,6 +73,9 @@ class NotificationPayload {
         itemId: decoded['id'] as String?,
         title: (decoded['t'] as String?) ?? '',
         body: (decoded['b'] as String?) ?? '',
+        snoozedUntil: decoded['snoozedUntil'] is String
+            ? DateTime.tryParse(decoded['snoozedUntil'] as String)
+            : null,
       );
     } catch (_) {
       return null;
@@ -251,7 +262,17 @@ NotificationDecision decideNotificationResponse({
 
   switch (action) {
     case NotificationAction.snooze:
-      return RescheduleAt(payload, snoozeTarget(now));
+      final at = snoozeTarget(now);
+      return RescheduleAt(
+        NotificationPayload(
+          kind: payload.kind,
+          itemId: payload.itemId,
+          title: payload.title,
+          body: payload.body,
+          snoozedUntil: at,
+        ),
+        at,
+      );
     case NotificationAction.done:
       return itemScoped(CompleteItemDecision.new);
     case NotificationAction.moveToNextActions:

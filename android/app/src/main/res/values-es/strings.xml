@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Captura rápida en tu bandeja de Trayzero</string>
+    <string name="today_widget_name">Hoy</string>
+    <string name="today_widget_description">Tus elementos en foco para hoy. Toca un círculo para completarlo.</string>
+    <string name="today_widget_title">Hoy</string>
+    <string name="today_widget_done">%1$d hechos</string>
+    <string name="today_widget_more">+%1$d más</string>
+    <string name="today_widget_empty">Nada en foco todavía</string>
+    <string name="today_widget_all_done">Todo hecho por hoy</string>
+    <string name="today_widget_plan">Planifica tu día</string>
+    <string name="today_widget_complete">Completar %1$s</string>
+    <string name="tile_capture_label">Capturar en Trayzero</string>
+    <string name="shortcut_capture_short">Capturar</string>
+    <string name="shortcut_capture_long">Capturar en la bandeja</string>
+    <string name="shortcut_today_short">Hoy</string>
+    <string name="shortcut_today_long">Ver Hoy</string>
+    <string name="shortcut_process_short">Procesar</string>
+    <string name="shortcut_process_long">Procesar bandeja</string>
+</resources>

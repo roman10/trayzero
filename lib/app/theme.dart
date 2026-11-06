@@ -5,6 +5,8 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
+import '../core/appearance_preferences.dart';
+
 /// Trayzero palette. Warm, focused, energizing.
 class AppColors {
   // Brand seed — a warm sunrise amber. This is the canonical brand colour,
@@ -12,10 +14,10 @@ class AppColors {
   // following must be updated by hand to match (#D2601F):
   //   • android/app/src/main/res/drawable/widget_background.xml  (#D2601F)
   //   • ios/CleartrayInboxWidget/CleartrayInboxWidget.swift       (RGB form)
-  //   • assets/icon/cleartray-source.svg + regenerate the 1024 PNG
+  //   • assets/icon/trayzero-source.svg + regenerate the 1024 PNG
   //   • pubspec.yaml flutter_launcher_icons.adaptive_icon_background
   //     (#C2531B, a deepened variant) then `dart run flutter_launcher_icons`
-  static const Color seed = Color(0xFFD2601F);
+  static const Color seed = Color(trayzeroSeedArgb);
 }
 
 /// Semantic colours for the GTD workflow (buckets, the workflow diagram,
@@ -148,13 +150,62 @@ extension SurfaceLegibleColor on Color {
   }
 }
 
-class AppTheme {
-  static ThemeData light() => _build(Brightness.light);
-  static ThemeData dark() => _build(Brightness.dark);
+extension AppearanceModeTheme on AppearanceMode {
+  ThemeMode get themeMode => switch (this) {
+    AppearanceMode.system => ThemeMode.system,
+    AppearanceMode.light => ThemeMode.light,
+    AppearanceMode.dark => ThemeMode.dark,
+  };
+}
 
-  static ThemeData _build(Brightness brightness) {
+extension AppPaletteColor on AppPalette {
+  Color get seed => Color(seedArgb);
+}
+
+/// Contrast against the actual rendered background, including alpha washes.
+/// Keep the hue of semantic/user colors and change only lightness when needed.
+extension ColorContrast on Color {
+  double contrastAgainst(Color background) {
+    final a = computeLuminance();
+    final b = background.computeLuminance();
+    return a > b ? (a + 0.05) / (b + 0.05) : (b + 0.05) / (a + 0.05);
+  }
+
+  Color get contrastingForeground =>
+      Colors.black.contrastAgainst(this) >= Colors.white.contrastAgainst(this)
+      ? Colors.black
+      : Colors.white;
+
+  Color foregroundOn(Color background, {double minimumContrast = 4.5}) {
+    if (contrastAgainst(background) >= minimumContrast) return this;
+    final hsl = HSLColor.fromColor(this);
+    final target = background.contrastingForeground == Colors.black ? 0.0 : 1.0;
+    var insufficient = hsl.lightness;
+    var sufficient = target;
+    // Find the closest readable tone. The passing endpoint is returned to
+    // avoid falling just below the threshold due to channel quantization.
+    for (var i = 0; i < 16; i++) {
+      final candidate = (insufficient + sufficient) / 2;
+      if (hsl.withLightness(candidate).toColor().contrastAgainst(background) >=
+          minimumContrast) {
+        sufficient = candidate;
+      } else {
+        insufficient = candidate;
+      }
+    }
+    return hsl.withLightness(sufficient).toColor();
+  }
+}
+
+class AppTheme {
+  static ThemeData light({AppPalette palette = AppPalette.amber}) =>
+      _build(Brightness.light, palette);
+  static ThemeData dark({AppPalette palette = AppPalette.amber}) =>
+      _build(Brightness.dark, palette);
+
+  static ThemeData _build(Brightness brightness, AppPalette palette) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seed,
+      seedColor: palette.seed,
       brightness: brightness,
     );
     final base = ThemeData(

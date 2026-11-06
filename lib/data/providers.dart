@@ -4,11 +4,13 @@ import '../core/clock.dart';
 import '../core/id_generator.dart' show idGeneratorProvider;
 import 'db/database.dart';
 import 'repositories/area_repository.dart';
+import 'repositories/calendar_mirror_repository.dart';
 import 'repositories/attachment_repository.dart';
 import 'repositories/context_repository.dart';
 import 'repositories/item_repository.dart';
 import 'repositories/project_repository.dart';
 import 'repositories/review_repository.dart';
+import 'repositories/tag_repository.dart';
 
 /// Database + repository wiring. Owned by the data layer; consumed by the
 /// application layer (and, via the application facade, by features).
@@ -29,6 +31,9 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
 final contextRepositoryProvider = Provider<ContextRepository>(
     (ref) => ContextRepository(ref.watch(databaseProvider)));
 
+final tagRepositoryProvider = Provider<TagRepository>(
+    (ref) => TagRepository(ref.watch(databaseProvider)));
+
 final reviewRepositoryProvider = Provider<ReviewRepository>(
     (ref) => ReviewRepository(ref.watch(databaseProvider)));
 
@@ -41,3 +46,7 @@ final attachmentRepositoryProvider =
           ref.watch(clockProvider),
           ref.watch(idGeneratorProvider),
         ));
+
+final calendarMirrorRepositoryProvider = Provider<CalendarMirrorRepository>(
+  (ref) => CalendarMirrorRepository(ref.watch(databaseProvider)),
+);

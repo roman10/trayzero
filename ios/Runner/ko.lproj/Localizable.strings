@@ -1,0 +1,14 @@
+/* App Intents (ADR 0009). Follows the system language. */
+
+"Add to Inbox" = "받은함에 추가";
+"Adds text to your Trayzero Inbox without opening the app." = "앱을 열지 않고 Trayzero 받은함에 텍스트를 추가합니다.";
+"Text" = "텍스트";
+"What do you want to capture?" = "무엇을 수집할까요?";
+"Add ${text} to Inbox" = "${text}을(를) 받은함에 추가";
+"Added to your Inbox." = "받은함에 추가했습니다.";
+"Open Quick Capture" = "빠른 수집 열기";
+"Opens Trayzero's quick capture sheet." = "Trayzero 빠른 수집 화면을 엽니다.";
+"Show Today" = "오늘 보기";
+"Opens the items you focused for today." = "오늘 집중할 항목을 엽니다.";
+"Quick Capture" = "빠른 수집";
+"Today" = "오늘";

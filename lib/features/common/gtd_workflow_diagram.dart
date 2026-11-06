@@ -76,6 +76,7 @@ class GtdWorkflowDiagram extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gtd = context.gtd;
+    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final stages = <Widget>[
       _StageCard(
@@ -125,12 +126,12 @@ class GtdWorkflowDiagram extends StatelessWidget {
         stage: GtdStage.reflect,
         highlight: highlight,
         icon: Icons.refresh,
-        accent: AppColors.seed,
+        accent: scheme.primary,
         title: l10n.reflect,
         body: l10n.gtdStage4Body,
         chips: [
           _Node(l10n.weeklyReviewCardTitle,
-              route: '/review', color: AppColors.seed),
+              route: '/review', color: scheme.primary),
         ],
       ),
       _StageCard(
@@ -186,10 +187,11 @@ class _StageCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final active = highlight == stage;
-    return Container(
+    final surface = active ? scheme.primaryContainer : scheme.surfaceContainerHigh;
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: active ? scheme.primaryContainer : scheme.surfaceContainerHigh,
+        color: surface,
         borderRadius: BorderRadius.circular(18),
         border: active
             ? Border.all(color: scheme.primary, width: 1.5)
@@ -207,7 +209,14 @@ class _StageCard extends StatelessWidget {
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 22, color: accent),
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: accent.foregroundOn(
+                    Color.alphaBlend(accent.withValues(alpha: 0.15), surface),
+                    minimumContrast: 3,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -278,6 +287,7 @@ class _StageCard extends StatelessWidget {
         ],
       ),
     );
+    return _StageSurface(color: surface, child: card);
   }
 }
 
@@ -337,6 +347,19 @@ class _DecisionTree extends StatelessWidget {
   }
 }
 
+/// Supplies the stage card's real surface for alpha-composited chip contrast.
+class _StageSurface extends InheritedWidget {
+  const _StageSurface({required this.color, required super.child});
+  final Color color;
+
+  @override
+  bool updateShouldNotify(_StageSurface oldWidget) => color != oldWidget.color;
+}
+
+Color _background(BuildContext context) =>
+    context.dependOnInheritedWidgetOfExactType<_StageSurface>()?.color ??
+    Theme.of(context).colorScheme.surface;
+
 /// A pill representing a GTD list. If [route] is set it is tappable: it
 /// closes the enclosing sheet and navigates there.
 class _Node extends StatelessWidget {
@@ -348,6 +371,9 @@ class _Node extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final foreground = color.foregroundOn(
+      Color.alphaBlend(color.withValues(alpha: 0.14), _background(context)),
+    );
     final pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -363,12 +389,12 @@ class _Node extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: color,
+              color: foreground,
             ),
           ),
           if (route != null) ...[
             const SizedBox(width: 4),
-            Icon(Icons.arrow_forward, size: 13, color: color),
+            Icon(Icons.arrow_forward, size: 13, color: foreground),
           ],
         ],
       ),

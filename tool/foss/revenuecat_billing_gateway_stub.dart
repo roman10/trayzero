@@ -22,33 +22,10 @@ String revenueCatApiKeyForPlatform() => '';
 /// at runtime (the empty key short-circuits to [DisabledBillingGateway]); it
 /// exists only so the static reference in `billing_providers.dart` compiles
 /// without pulling in the proprietary SDK.
-class RevenueCatBillingGateway implements BillingGateway {
+class RevenueCatBillingGateway extends DisabledBillingGateway {
   RevenueCatBillingGateway({required this.apiKey});
 
   final String apiKey;
-
-  @override
-  bool get isConfigured => false;
-
-  @override
-  Future<void> configure() async {}
-
-  @override
-  Future<BillingOfferings?> loadOfferings() async => null;
-
-  @override
-  Future<SupporterStatus> currentStatus() async => const SupporterStatus.none();
-
-  @override
-  Stream<SupporterStatus> statusChanges() => const Stream.empty();
-
-  @override
-  Future<PurchaseOutcome> purchase(String productId) async =>
-      const PurchaseFailed('Purchases are not available in this build.');
-
-  @override
-  Future<PurchaseOutcome> restore() async =>
-      const PurchaseFailed('Purchases are not available in this build.');
 
   void dispose() {}
 }

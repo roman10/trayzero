@@ -60,3 +60,8 @@
 # pruning any of it breaks JSON round-tripping — keep the whole package.
 -keep class com.dexterous.** { *; }
 -dontwarn com.dexterous.**
+
+# device_calendar documents retrieveCalendars() failures under release R8
+# shrinking unless its Android implementation is retained.
+# https://github.com/builttoroam/device_calendar#proguard--r8-exceptions
+-keep class com.builttoroam.devicecalendar.** { *; }

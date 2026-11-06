@@ -36,9 +36,16 @@ struct InboxProvider: TimelineProvider {
 struct CleartrayInboxWidgetEntryView: View {
     var entry: InboxEntry
 
+    private static let brand = Color(red: 0.824, green: 0.376, blue: 0.122) // #D2601F brand seed
+
+    /// iOS 17 adds system content margins around widget content.
+    private static var contentPadding: CGFloat {
+        if #available(iOSApplicationExtension 17.0, *) { return 0 }
+        return 14
+    }
+
     var body: some View {
         ZStack {
-            Color(red: 0.824, green: 0.376, blue: 0.122) // #D2601F brand seed
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(entry.count)")
                     .font(.system(size: 36, weight: .bold))
@@ -61,13 +68,26 @@ struct CleartrayInboxWidgetEntryView: View {
                     Spacer()
                 }
             }
-            .padding(14)
+            .padding(Self.contentPadding)
         }
+        .inboxWidgetBackground(Self.brand)
         .widgetURL(URL(string: "cleartray://inbox"))
     }
 }
 
-@main
+private extension View {
+    /// iOS 17 requires `containerBackground`; without it the widget shows
+    /// "Please adopt containerBackground API" instead of its content.
+    @ViewBuilder
+    func inboxWidgetBackground(_ color: Color) -> some View {
+        if #available(iOSApplicationExtension 17.0, *) {
+            containerBackground(for: .widget) { color }
+        } else {
+            background(color)
+        }
+    }
+}
+
 struct CleartrayInboxWidget: Widget {
     let kind: String = "CleartrayInboxWidget"
 
@@ -75,7 +95,7 @@ struct CleartrayInboxWidget: Widget {
         StaticConfiguration(kind: kind, provider: InboxProvider()) { entry in
             CleartrayInboxWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Cleartray Inbox")
+        .configurationDisplayName("Trayzero Inbox")
         .description("See your unprocessed inbox count and capture in one tap.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }

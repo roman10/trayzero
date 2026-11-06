@@ -307,6 +307,17 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, ItemRow> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _focusedAtMeta = const VerificationMeta(
+    'focusedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> focusedAt = GeneratedColumn<DateTime>(
+    'focused_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -337,6 +348,7 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, ItemRow> {
     recurrenceMonthlyWeekday,
     calendarEventId,
     searchText,
+    focusedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -532,6 +544,12 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, ItemRow> {
         searchText.isAcceptableOrUnknown(data['search_text']!, _searchTextMeta),
       );
     }
+    if (data.containsKey('focused_at')) {
+      context.handle(
+        _focusedAtMeta,
+        focusedAt.isAcceptableOrUnknown(data['focused_at']!, _focusedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -661,6 +679,10 @@ class $ItemsTable extends Items with TableInfo<$ItemsTable, ItemRow> {
         DriftSqlType.string,
         data['${effectivePrefix}search_text'],
       )!,
+      focusedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}focused_at'],
+      ),
     );
   }
 
@@ -741,6 +763,10 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
   /// partial updates (markCompleted/reopen/setCalendarEventId) don't touch
   /// title/notes, so they correctly leave this untouched.
   final String searchText;
+
+  /// When the Item was committed to Today (ADR 0007). In Today while this
+  /// falls on the current local day; an earlier day means carried over.
+  final DateTime? focusedAt;
   const ItemRow({
     required this.id,
     required this.title,
@@ -770,6 +796,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
     this.recurrenceMonthlyWeekday,
     this.calendarEventId,
     required this.searchText,
+    this.focusedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -848,6 +875,9 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
       map['calendar_event_id'] = Variable<String>(calendarEventId);
     }
     map['search_text'] = Variable<String>(searchText);
+    if (!nullToAbsent || focusedAt != null) {
+      map['focused_at'] = Variable<DateTime>(focusedAt);
+    }
     return map;
   }
 
@@ -915,6 +945,9 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
           ? const Value.absent()
           : Value(calendarEventId),
       searchText: Value(searchText),
+      focusedAt: focusedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(focusedAt),
     );
   }
 
@@ -962,6 +995,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
       ),
       calendarEventId: serializer.fromJson<String?>(json['calendarEventId']),
       searchText: serializer.fromJson<String>(json['searchText']),
+      focusedAt: serializer.fromJson<DateTime?>(json['focusedAt']),
     );
   }
   @override
@@ -998,6 +1032,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
       ),
       'calendarEventId': serializer.toJson<String?>(calendarEventId),
       'searchText': serializer.toJson<String>(searchText),
+      'focusedAt': serializer.toJson<DateTime?>(focusedAt),
     };
   }
 
@@ -1030,6 +1065,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
     Value<int?> recurrenceMonthlyWeekday = const Value.absent(),
     Value<String?> calendarEventId = const Value.absent(),
     String? searchText,
+    Value<DateTime?> focusedAt = const Value.absent(),
   }) => ItemRow(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1075,6 +1111,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
         ? calendarEventId.value
         : this.calendarEventId,
     searchText: searchText ?? this.searchText,
+    focusedAt: focusedAt.present ? focusedAt.value : this.focusedAt,
   );
   ItemRow copyWithCompanion(ItemsCompanion data) {
     return ItemRow(
@@ -1136,6 +1173,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
       searchText: data.searchText.present
           ? data.searchText.value
           : this.searchText,
+      focusedAt: data.focusedAt.present ? data.focusedAt.value : this.focusedAt,
     );
   }
 
@@ -1169,7 +1207,8 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
           ..write('recurrenceMonthlyWeek: $recurrenceMonthlyWeek, ')
           ..write('recurrenceMonthlyWeekday: $recurrenceMonthlyWeekday, ')
           ..write('calendarEventId: $calendarEventId, ')
-          ..write('searchText: $searchText')
+          ..write('searchText: $searchText, ')
+          ..write('focusedAt: $focusedAt')
           ..write(')'))
         .toString();
   }
@@ -1204,6 +1243,7 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
     recurrenceMonthlyWeekday,
     calendarEventId,
     searchText,
+    focusedAt,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -1236,7 +1276,8 @@ class ItemRow extends DataClass implements Insertable<ItemRow> {
           other.recurrenceMonthlyWeek == this.recurrenceMonthlyWeek &&
           other.recurrenceMonthlyWeekday == this.recurrenceMonthlyWeekday &&
           other.calendarEventId == this.calendarEventId &&
-          other.searchText == this.searchText);
+          other.searchText == this.searchText &&
+          other.focusedAt == this.focusedAt);
 }
 
 class ItemsCompanion extends UpdateCompanion<ItemRow> {
@@ -1268,6 +1309,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
   final Value<int?> recurrenceMonthlyWeekday;
   final Value<String?> calendarEventId;
   final Value<String> searchText;
+  final Value<DateTime?> focusedAt;
   final Value<int> rowid;
   const ItemsCompanion({
     this.id = const Value.absent(),
@@ -1298,6 +1340,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
     this.recurrenceMonthlyWeekday = const Value.absent(),
     this.calendarEventId = const Value.absent(),
     this.searchText = const Value.absent(),
+    this.focusedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ItemsCompanion.insert({
@@ -1329,6 +1372,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
     this.recurrenceMonthlyWeekday = const Value.absent(),
     this.calendarEventId = const Value.absent(),
     this.searchText = const Value.absent(),
+    this.focusedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -1363,6 +1407,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
     Expression<int>? recurrenceMonthlyWeekday,
     Expression<String>? calendarEventId,
     Expression<String>? searchText,
+    Expression<DateTime>? focusedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1399,6 +1444,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
         'recurrence_monthly_weekday': recurrenceMonthlyWeekday,
       if (calendarEventId != null) 'calendar_event_id': calendarEventId,
       if (searchText != null) 'search_text': searchText,
+      if (focusedAt != null) 'focused_at': focusedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1432,6 +1478,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
     Value<int?>? recurrenceMonthlyWeekday,
     Value<String?>? calendarEventId,
     Value<String>? searchText,
+    Value<DateTime?>? focusedAt,
     Value<int>? rowid,
   }) {
     return ItemsCompanion(
@@ -1465,6 +1512,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
           recurrenceMonthlyWeekday ?? this.recurrenceMonthlyWeekday,
       calendarEventId: calendarEventId ?? this.calendarEventId,
       searchText: searchText ?? this.searchText,
+      focusedAt: focusedAt ?? this.focusedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1570,6 +1618,9 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
     if (searchText.present) {
       map['search_text'] = Variable<String>(searchText.value);
     }
+    if (focusedAt.present) {
+      map['focused_at'] = Variable<DateTime>(focusedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1607,6 +1658,7 @@ class ItemsCompanion extends UpdateCompanion<ItemRow> {
           ..write('recurrenceMonthlyWeekday: $recurrenceMonthlyWeekday, ')
           ..write('calendarEventId: $calendarEventId, ')
           ..write('searchText: $searchText, ')
+          ..write('focusedAt: $focusedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1698,6 +1750,18 @@ class $ProjectsTable extends Projects
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _lastReviewedAtMeta = const VerificationMeta(
+    'lastReviewedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastReviewedAt =
+      GeneratedColumn<DateTime>(
+        'last_reviewed_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1708,6 +1772,7 @@ class $ProjectsTable extends Projects
     dueAt,
     createdAt,
     updatedAt,
+    lastReviewedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1768,6 +1833,15 @@ class $ProjectsTable extends Projects
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('last_reviewed_at')) {
+      context.handle(
+        _lastReviewedAtMeta,
+        lastReviewedAt.isAcceptableOrUnknown(
+          data['last_reviewed_at']!,
+          _lastReviewedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1811,6 +1885,10 @@ class $ProjectsTable extends Projects
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      lastReviewedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_reviewed_at'],
+      ),
     );
   }
 
@@ -1832,6 +1910,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
   final DateTime? dueAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Last time the Project was marked reviewed in the Weekly Review.
+  final DateTime? lastReviewedAt;
   const ProjectRow({
     required this.id,
     required this.title,
@@ -1841,6 +1922,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
     this.dueAt,
     required this.createdAt,
     required this.updatedAt,
+    this.lastReviewedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1863,6 +1945,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || lastReviewedAt != null) {
+      map['last_reviewed_at'] = Variable<DateTime>(lastReviewedAt);
+    }
     return map;
   }
 
@@ -1882,6 +1967,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           : Value(dueAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      lastReviewedAt: lastReviewedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastReviewedAt),
     );
   }
 
@@ -1899,6 +1987,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       dueAt: serializer.fromJson<DateTime?>(json['dueAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      lastReviewedAt: serializer.fromJson<DateTime?>(json['lastReviewedAt']),
     );
   }
   @override
@@ -1913,6 +2002,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       'dueAt': serializer.toJson<DateTime?>(dueAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'lastReviewedAt': serializer.toJson<DateTime?>(lastReviewedAt),
     };
   }
 
@@ -1925,6 +2015,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
     Value<DateTime?> dueAt = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<DateTime?> lastReviewedAt = const Value.absent(),
   }) => ProjectRow(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -1934,6 +2025,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
     dueAt: dueAt.present ? dueAt.value : this.dueAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    lastReviewedAt: lastReviewedAt.present
+        ? lastReviewedAt.value
+        : this.lastReviewedAt,
   );
   ProjectRow copyWithCompanion(ProjectsCompanion data) {
     return ProjectRow(
@@ -1945,6 +2039,9 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
       dueAt: data.dueAt.present ? data.dueAt.value : this.dueAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      lastReviewedAt: data.lastReviewedAt.present
+          ? data.lastReviewedAt.value
+          : this.lastReviewedAt,
     );
   }
 
@@ -1958,7 +2055,8 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           ..write('status: $status, ')
           ..write('dueAt: $dueAt, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('lastReviewedAt: $lastReviewedAt')
           ..write(')'))
         .toString();
   }
@@ -1973,6 +2071,7 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
     dueAt,
     createdAt,
     updatedAt,
+    lastReviewedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -1985,7 +2084,8 @@ class ProjectRow extends DataClass implements Insertable<ProjectRow> {
           other.status == this.status &&
           other.dueAt == this.dueAt &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.lastReviewedAt == this.lastReviewedAt);
 }
 
 class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
@@ -1997,6 +2097,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
   final Value<DateTime?> dueAt;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> lastReviewedAt;
   final Value<int> rowid;
   const ProjectsCompanion({
     this.id = const Value.absent(),
@@ -2007,6 +2108,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     this.dueAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.lastReviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ProjectsCompanion.insert({
@@ -2018,6 +2120,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     this.dueAt = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.lastReviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -2032,6 +2135,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     Expression<DateTime>? dueAt,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? lastReviewedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2043,6 +2147,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
       if (dueAt != null) 'due_at': dueAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (lastReviewedAt != null) 'last_reviewed_at': lastReviewedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2056,6 +2161,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     Value<DateTime?>? dueAt,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<DateTime?>? lastReviewedAt,
     Value<int>? rowid,
   }) {
     return ProjectsCompanion(
@@ -2067,6 +2173,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
       dueAt: dueAt ?? this.dueAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      lastReviewedAt: lastReviewedAt ?? this.lastReviewedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2100,6 +2207,9 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (lastReviewedAt.present) {
+      map['last_reviewed_at'] = Variable<DateTime>(lastReviewedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2117,6 +2227,7 @@ class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
           ..write('dueAt: $dueAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('lastReviewedAt: $lastReviewedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3172,6 +3283,18 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _currentStepMeta = const VerificationMeta(
+    'currentStep',
+  );
+  @override
+  late final GeneratedColumn<String> currentStep = GeneratedColumn<String>(
+    'current_step',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('capture'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3179,6 +3302,7 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
     startedAt,
     completedAt,
     notes,
+    currentStep,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3220,6 +3344,15 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('current_step')) {
+      context.handle(
+        _currentStepMeta,
+        currentStep.isAcceptableOrUnknown(
+          data['current_step']!,
+          _currentStepMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3251,6 +3384,10 @@ class $ReviewsTable extends Reviews with TableInfo<$ReviewsTable, ReviewRow> {
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      currentStep: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}current_step'],
+      )!,
     );
   }
 
@@ -3269,12 +3406,14 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
   final DateTime startedAt;
   final DateTime? completedAt;
   final String? notes;
+  final String currentStep;
   const ReviewRow({
     required this.id,
     required this.type,
     required this.startedAt,
     this.completedAt,
     this.notes,
+    required this.currentStep,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3290,6 +3429,7 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    map['current_step'] = Variable<String>(currentStep);
     return map;
   }
 
@@ -3304,6 +3444,7 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      currentStep: Value(currentStep),
     );
   }
 
@@ -3318,6 +3459,7 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
       notes: serializer.fromJson<String?>(json['notes']),
+      currentStep: serializer.fromJson<String>(json['currentStep']),
     );
   }
   @override
@@ -3329,6 +3471,7 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
       'startedAt': serializer.toJson<DateTime>(startedAt),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
       'notes': serializer.toJson<String?>(notes),
+      'currentStep': serializer.toJson<String>(currentStep),
     };
   }
 
@@ -3338,12 +3481,14 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
     DateTime? startedAt,
     Value<DateTime?> completedAt = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    String? currentStep,
   }) => ReviewRow(
     id: id ?? this.id,
     type: type ?? this.type,
     startedAt: startedAt ?? this.startedAt,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
     notes: notes.present ? notes.value : this.notes,
+    currentStep: currentStep ?? this.currentStep,
   );
   ReviewRow copyWithCompanion(ReviewsCompanion data) {
     return ReviewRow(
@@ -3354,6 +3499,9 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ? data.completedAt.value
           : this.completedAt,
       notes: data.notes.present ? data.notes.value : this.notes,
+      currentStep: data.currentStep.present
+          ? data.currentStep.value
+          : this.currentStep,
     );
   }
 
@@ -3364,13 +3512,15 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           ..write('type: $type, ')
           ..write('startedAt: $startedAt, ')
           ..write('completedAt: $completedAt, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('currentStep: $currentStep')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, type, startedAt, completedAt, notes);
+  int get hashCode =>
+      Object.hash(id, type, startedAt, completedAt, notes, currentStep);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3379,7 +3529,8 @@ class ReviewRow extends DataClass implements Insertable<ReviewRow> {
           other.type == this.type &&
           other.startedAt == this.startedAt &&
           other.completedAt == this.completedAt &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.currentStep == this.currentStep);
 }
 
 class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
@@ -3388,6 +3539,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
   final Value<DateTime> startedAt;
   final Value<DateTime?> completedAt;
   final Value<String?> notes;
+  final Value<String> currentStep;
   final Value<int> rowid;
   const ReviewsCompanion({
     this.id = const Value.absent(),
@@ -3395,6 +3547,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     this.startedAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.notes = const Value.absent(),
+    this.currentStep = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ReviewsCompanion.insert({
@@ -3403,6 +3556,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     required DateTime startedAt,
     this.completedAt = const Value.absent(),
     this.notes = const Value.absent(),
+    this.currentStep = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        type = Value(type),
@@ -3413,6 +3567,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Expression<DateTime>? startedAt,
     Expression<DateTime>? completedAt,
     Expression<String>? notes,
+    Expression<String>? currentStep,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3421,6 +3576,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       if (startedAt != null) 'started_at': startedAt,
       if (completedAt != null) 'completed_at': completedAt,
       if (notes != null) 'notes': notes,
+      if (currentStep != null) 'current_step': currentStep,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3431,6 +3587,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     Value<DateTime>? startedAt,
     Value<DateTime?>? completedAt,
     Value<String?>? notes,
+    Value<String>? currentStep,
     Value<int>? rowid,
   }) {
     return ReviewsCompanion(
@@ -3439,6 +3596,7 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       notes: notes ?? this.notes,
+      currentStep: currentStep ?? this.currentStep,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3463,6 +3621,9 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (currentStep.present) {
+      map['current_step'] = Variable<String>(currentStep.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3477,6 +3638,1070 @@ class ReviewsCompanion extends UpdateCompanion<ReviewRow> {
           ..write('startedAt: $startedAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('notes: $notes, ')
+          ..write('currentStep: $currentStep, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CalendarMirrorsTable extends CalendarMirrors
+    with TableInfo<$CalendarMirrorsTable, CalendarMirrorRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CalendarMirrorsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _calendarIdMeta = const VerificationMeta(
+    'calendarId',
+  );
+  @override
+  late final GeneratedColumn<String> calendarId = GeneratedColumn<String>(
+    'calendar_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isCurrentMeta = const VerificationMeta(
+    'isCurrent',
+  );
+  @override
+  late final GeneratedColumn<bool> isCurrent = GeneratedColumn<bool>(
+    'is_current',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_current" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    calendarId,
+    eventId,
+    itemId,
+    isCurrent,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'calendar_mirrors';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CalendarMirrorRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('calendar_id')) {
+      context.handle(
+        _calendarIdMeta,
+        calendarId.isAcceptableOrUnknown(data['calendar_id']!, _calendarIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_calendarIdMeta);
+    }
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('is_current')) {
+      context.handle(
+        _isCurrentMeta,
+        isCurrent.isAcceptableOrUnknown(data['is_current']!, _isCurrentMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {calendarId, eventId};
+  @override
+  CalendarMirrorRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CalendarMirrorRow(
+      calendarId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}calendar_id'],
+      )!,
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      )!,
+      isCurrent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_current'],
+      )!,
+    );
+  }
+
+  @override
+  $CalendarMirrorsTable createAlias(String alias) {
+    return $CalendarMirrorsTable(attachedDatabase, alias);
+  }
+}
+
+class CalendarMirrorRow extends DataClass
+    implements Insertable<CalendarMirrorRow> {
+  final String calendarId;
+  final String eventId;
+  final String itemId;
+  final bool isCurrent;
+  const CalendarMirrorRow({
+    required this.calendarId,
+    required this.eventId,
+    required this.itemId,
+    required this.isCurrent,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['calendar_id'] = Variable<String>(calendarId);
+    map['event_id'] = Variable<String>(eventId);
+    map['item_id'] = Variable<String>(itemId);
+    map['is_current'] = Variable<bool>(isCurrent);
+    return map;
+  }
+
+  CalendarMirrorsCompanion toCompanion(bool nullToAbsent) {
+    return CalendarMirrorsCompanion(
+      calendarId: Value(calendarId),
+      eventId: Value(eventId),
+      itemId: Value(itemId),
+      isCurrent: Value(isCurrent),
+    );
+  }
+
+  factory CalendarMirrorRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CalendarMirrorRow(
+      calendarId: serializer.fromJson<String>(json['calendarId']),
+      eventId: serializer.fromJson<String>(json['eventId']),
+      itemId: serializer.fromJson<String>(json['itemId']),
+      isCurrent: serializer.fromJson<bool>(json['isCurrent']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'calendarId': serializer.toJson<String>(calendarId),
+      'eventId': serializer.toJson<String>(eventId),
+      'itemId': serializer.toJson<String>(itemId),
+      'isCurrent': serializer.toJson<bool>(isCurrent),
+    };
+  }
+
+  CalendarMirrorRow copyWith({
+    String? calendarId,
+    String? eventId,
+    String? itemId,
+    bool? isCurrent,
+  }) => CalendarMirrorRow(
+    calendarId: calendarId ?? this.calendarId,
+    eventId: eventId ?? this.eventId,
+    itemId: itemId ?? this.itemId,
+    isCurrent: isCurrent ?? this.isCurrent,
+  );
+  CalendarMirrorRow copyWithCompanion(CalendarMirrorsCompanion data) {
+    return CalendarMirrorRow(
+      calendarId: data.calendarId.present
+          ? data.calendarId.value
+          : this.calendarId,
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      isCurrent: data.isCurrent.present ? data.isCurrent.value : this.isCurrent,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalendarMirrorRow(')
+          ..write('calendarId: $calendarId, ')
+          ..write('eventId: $eventId, ')
+          ..write('itemId: $itemId, ')
+          ..write('isCurrent: $isCurrent')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(calendarId, eventId, itemId, isCurrent);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CalendarMirrorRow &&
+          other.calendarId == this.calendarId &&
+          other.eventId == this.eventId &&
+          other.itemId == this.itemId &&
+          other.isCurrent == this.isCurrent);
+}
+
+class CalendarMirrorsCompanion extends UpdateCompanion<CalendarMirrorRow> {
+  final Value<String> calendarId;
+  final Value<String> eventId;
+  final Value<String> itemId;
+  final Value<bool> isCurrent;
+  final Value<int> rowid;
+  const CalendarMirrorsCompanion({
+    this.calendarId = const Value.absent(),
+    this.eventId = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.isCurrent = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CalendarMirrorsCompanion.insert({
+    required String calendarId,
+    required String eventId,
+    required String itemId,
+    this.isCurrent = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : calendarId = Value(calendarId),
+       eventId = Value(eventId),
+       itemId = Value(itemId);
+  static Insertable<CalendarMirrorRow> custom({
+    Expression<String>? calendarId,
+    Expression<String>? eventId,
+    Expression<String>? itemId,
+    Expression<bool>? isCurrent,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (calendarId != null) 'calendar_id': calendarId,
+      if (eventId != null) 'event_id': eventId,
+      if (itemId != null) 'item_id': itemId,
+      if (isCurrent != null) 'is_current': isCurrent,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CalendarMirrorsCompanion copyWith({
+    Value<String>? calendarId,
+    Value<String>? eventId,
+    Value<String>? itemId,
+    Value<bool>? isCurrent,
+    Value<int>? rowid,
+  }) {
+    return CalendarMirrorsCompanion(
+      calendarId: calendarId ?? this.calendarId,
+      eventId: eventId ?? this.eventId,
+      itemId: itemId ?? this.itemId,
+      isCurrent: isCurrent ?? this.isCurrent,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (calendarId.present) {
+      map['calendar_id'] = Variable<String>(calendarId.value);
+    }
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (isCurrent.present) {
+      map['is_current'] = Variable<bool>(isCurrent.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalendarMirrorsCompanion(')
+          ..write('calendarId: $calendarId, ')
+          ..write('eventId: $eventId, ')
+          ..write('itemId: $itemId, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TagsTable extends Tags with TableInfo<$TagsTable, TagRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isPersonMeta = const VerificationMeta(
+    'isPerson',
+  );
+  @override
+  late final GeneratedColumn<bool> isPerson = GeneratedColumn<bool>(
+    'is_person',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_person" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, isPerson, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tags';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TagRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('is_person')) {
+      context.handle(
+        _isPersonMeta,
+        isPerson.isAcceptableOrUnknown(data['is_person']!, _isPersonMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TagRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TagRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      isPerson: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_person'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TagsTable createAlias(String alias) {
+    return $TagsTable(attachedDatabase, alias);
+  }
+}
+
+class TagRow extends DataClass implements Insertable<TagRow> {
+  final String id;
+  final String name;
+
+  /// A person: the tag also keeps an Agenda.
+  final bool isPerson;
+  final DateTime createdAt;
+  const TagRow({
+    required this.id,
+    required this.name,
+    required this.isPerson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['is_person'] = Variable<bool>(isPerson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TagsCompanion toCompanion(bool nullToAbsent) {
+    return TagsCompanion(
+      id: Value(id),
+      name: Value(name),
+      isPerson: Value(isPerson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TagRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TagRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      isPerson: serializer.fromJson<bool>(json['isPerson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'isPerson': serializer.toJson<bool>(isPerson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TagRow copyWith({
+    String? id,
+    String? name,
+    bool? isPerson,
+    DateTime? createdAt,
+  }) => TagRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    isPerson: isPerson ?? this.isPerson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TagRow copyWithCompanion(TagsCompanion data) {
+    return TagRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      isPerson: data.isPerson.present ? data.isPerson.value : this.isPerson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TagRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isPerson: $isPerson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, isPerson, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TagRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.isPerson == this.isPerson &&
+          other.createdAt == this.createdAt);
+}
+
+class TagsCompanion extends UpdateCompanion<TagRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<bool> isPerson;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const TagsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.isPerson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TagsCompanion.insert({
+    required String id,
+    required String name,
+    this.isPerson = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       createdAt = Value(createdAt);
+  static Insertable<TagRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<bool>? isPerson,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (isPerson != null) 'is_person': isPerson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TagsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<bool>? isPerson,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return TagsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isPerson: isPerson ?? this.isPerson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (isPerson.present) {
+      map['is_person'] = Variable<bool>(isPerson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TagsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isPerson: $isPerson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ItemTagsTable extends ItemTags
+    with TableInfo<$ItemTagsTable, ItemTagRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ItemTagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES items (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _tagIdMeta = const VerificationMeta('tagId');
+  @override
+  late final GeneratedColumn<String> tagId = GeneratedColumn<String>(
+    'tag_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES tags (id) ON DELETE CASCADE',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [itemId, tagId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'item_tags';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ItemTagRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('tag_id')) {
+      context.handle(
+        _tagIdMeta,
+        tagId.isAcceptableOrUnknown(data['tag_id']!, _tagIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tagIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {itemId, tagId};
+  @override
+  ItemTagRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ItemTagRow(
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      )!,
+      tagId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag_id'],
+      )!,
+    );
+  }
+
+  @override
+  $ItemTagsTable createAlias(String alias) {
+    return $ItemTagsTable(attachedDatabase, alias);
+  }
+}
+
+class ItemTagRow extends DataClass implements Insertable<ItemTagRow> {
+  final String itemId;
+  final String tagId;
+  const ItemTagRow({required this.itemId, required this.tagId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['item_id'] = Variable<String>(itemId);
+    map['tag_id'] = Variable<String>(tagId);
+    return map;
+  }
+
+  ItemTagsCompanion toCompanion(bool nullToAbsent) {
+    return ItemTagsCompanion(itemId: Value(itemId), tagId: Value(tagId));
+  }
+
+  factory ItemTagRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ItemTagRow(
+      itemId: serializer.fromJson<String>(json['itemId']),
+      tagId: serializer.fromJson<String>(json['tagId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'itemId': serializer.toJson<String>(itemId),
+      'tagId': serializer.toJson<String>(tagId),
+    };
+  }
+
+  ItemTagRow copyWith({String? itemId, String? tagId}) =>
+      ItemTagRow(itemId: itemId ?? this.itemId, tagId: tagId ?? this.tagId);
+  ItemTagRow copyWithCompanion(ItemTagsCompanion data) {
+    return ItemTagRow(
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      tagId: data.tagId.present ? data.tagId.value : this.tagId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ItemTagRow(')
+          ..write('itemId: $itemId, ')
+          ..write('tagId: $tagId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(itemId, tagId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ItemTagRow &&
+          other.itemId == this.itemId &&
+          other.tagId == this.tagId);
+}
+
+class ItemTagsCompanion extends UpdateCompanion<ItemTagRow> {
+  final Value<String> itemId;
+  final Value<String> tagId;
+  final Value<int> rowid;
+  const ItemTagsCompanion({
+    this.itemId = const Value.absent(),
+    this.tagId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ItemTagsCompanion.insert({
+    required String itemId,
+    required String tagId,
+    this.rowid = const Value.absent(),
+  }) : itemId = Value(itemId),
+       tagId = Value(tagId);
+  static Insertable<ItemTagRow> custom({
+    Expression<String>? itemId,
+    Expression<String>? tagId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (itemId != null) 'item_id': itemId,
+      if (tagId != null) 'tag_id': tagId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ItemTagsCompanion copyWith({
+    Value<String>? itemId,
+    Value<String>? tagId,
+    Value<int>? rowid,
+  }) {
+    return ItemTagsCompanion(
+      itemId: itemId ?? this.itemId,
+      tagId: tagId ?? this.tagId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (tagId.present) {
+      map['tag_id'] = Variable<String>(tagId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ItemTagsCompanion(')
+          ..write('itemId: $itemId, ')
+          ..write('tagId: $tagId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ImportBatchesTable extends ImportBatches
+    with TableInfo<$ImportBatchesTable, ImportBatchRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ImportBatchesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fingerprintMeta = const VerificationMeta(
+    'fingerprint',
+  );
+  @override
+  late final GeneratedColumn<String> fingerprint = GeneratedColumn<String>(
+    'fingerprint',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, fingerprint];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'import_batches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ImportBatchRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('fingerprint')) {
+      context.handle(
+        _fingerprintMeta,
+        fingerprint.isAcceptableOrUnknown(
+          data['fingerprint']!,
+          _fingerprintMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fingerprintMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ImportBatchRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ImportBatchRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fingerprint'],
+      )!,
+    );
+  }
+
+  @override
+  $ImportBatchesTable createAlias(String alias) {
+    return $ImportBatchesTable(attachedDatabase, alias);
+  }
+}
+
+class ImportBatchRow extends DataClass implements Insertable<ImportBatchRow> {
+  final String id;
+  final String fingerprint;
+  const ImportBatchRow({required this.id, required this.fingerprint});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['fingerprint'] = Variable<String>(fingerprint);
+    return map;
+  }
+
+  ImportBatchesCompanion toCompanion(bool nullToAbsent) {
+    return ImportBatchesCompanion(
+      id: Value(id),
+      fingerprint: Value(fingerprint),
+    );
+  }
+
+  factory ImportBatchRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ImportBatchRow(
+      id: serializer.fromJson<String>(json['id']),
+      fingerprint: serializer.fromJson<String>(json['fingerprint']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fingerprint': serializer.toJson<String>(fingerprint),
+    };
+  }
+
+  ImportBatchRow copyWith({String? id, String? fingerprint}) => ImportBatchRow(
+    id: id ?? this.id,
+    fingerprint: fingerprint ?? this.fingerprint,
+  );
+  ImportBatchRow copyWithCompanion(ImportBatchesCompanion data) {
+    return ImportBatchRow(
+      id: data.id.present ? data.id.value : this.id,
+      fingerprint: data.fingerprint.present
+          ? data.fingerprint.value
+          : this.fingerprint,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImportBatchRow(')
+          ..write('id: $id, ')
+          ..write('fingerprint: $fingerprint')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, fingerprint);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ImportBatchRow &&
+          other.id == this.id &&
+          other.fingerprint == this.fingerprint);
+}
+
+class ImportBatchesCompanion extends UpdateCompanion<ImportBatchRow> {
+  final Value<String> id;
+  final Value<String> fingerprint;
+  final Value<int> rowid;
+  const ImportBatchesCompanion({
+    this.id = const Value.absent(),
+    this.fingerprint = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ImportBatchesCompanion.insert({
+    required String id,
+    required String fingerprint,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fingerprint = Value(fingerprint);
+  static Insertable<ImportBatchRow> custom({
+    Expression<String>? id,
+    Expression<String>? fingerprint,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fingerprint != null) 'fingerprint': fingerprint,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ImportBatchesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fingerprint,
+    Value<int>? rowid,
+  }) {
+    return ImportBatchesCompanion(
+      id: id ?? this.id,
+      fingerprint: fingerprint ?? this.fingerprint,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fingerprint.present) {
+      map['fingerprint'] = Variable<String>(fingerprint.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImportBatchesCompanion(')
+          ..write('id: $id, ')
+          ..write('fingerprint: $fingerprint, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3492,6 +4717,20 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AreasTable areas = $AreasTable(this);
   late final $AttachmentsTable attachments = $AttachmentsTable(this);
   late final $ReviewsTable reviews = $ReviewsTable(this);
+  late final $CalendarMirrorsTable calendarMirrors = $CalendarMirrorsTable(
+    this,
+  );
+  late final $TagsTable tags = $TagsTable(this);
+  late final $ItemTagsTable itemTags = $ItemTagsTable(this);
+  late final $ImportBatchesTable importBatches = $ImportBatchesTable(this);
+  late final Index itemTagsTagId = Index(
+    'item_tags_tag_id',
+    'CREATE INDEX item_tags_tag_id ON item_tags (tag_id)',
+  );
+  late final Index importBatchesFingerprint = Index(
+    'import_batches_fingerprint',
+    'CREATE INDEX import_batches_fingerprint ON import_batches (fingerprint)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3503,7 +4742,30 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     areas,
     attachments,
     reviews,
+    calendarMirrors,
+    tags,
+    itemTags,
+    importBatches,
+    itemTagsTagId,
+    importBatchesFingerprint,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'items',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('item_tags', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'tags',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('item_tags', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$ItemsTableCreateCompanionBuilder =
@@ -3536,6 +4798,7 @@ typedef $$ItemsTableCreateCompanionBuilder =
       Value<int?> recurrenceMonthlyWeekday,
       Value<String?> calendarEventId,
       Value<String> searchText,
+      Value<DateTime?> focusedAt,
       Value<int> rowid,
     });
 typedef $$ItemsTableUpdateCompanionBuilder =
@@ -3568,8 +4831,32 @@ typedef $$ItemsTableUpdateCompanionBuilder =
       Value<int?> recurrenceMonthlyWeekday,
       Value<String?> calendarEventId,
       Value<String> searchText,
+      Value<DateTime?> focusedAt,
       Value<int> rowid,
     });
+
+final class $$ItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $ItemsTable, ItemRow> {
+  $$ItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ItemTagsTable, List<ItemTagRow>>
+  _itemTagsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.itemTags,
+    aliasName: $_aliasNameGenerator(db.items.id, db.itemTags.itemId),
+  );
+
+  $$ItemTagsTableProcessedTableManager get itemTagsRefs {
+    final manager = $$ItemTagsTableTableManager(
+      $_db,
+      $_db.itemTags,
+    ).filter((f) => f.itemId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_itemTagsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
 
 class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
   $$ItemsTableFilterComposer({
@@ -3722,6 +5009,36 @@ class $$ItemsTableFilterComposer extends Composer<_$AppDatabase, $ItemsTable> {
     column: $table.searchText,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get focusedAt => $composableBuilder(
+    column: $table.focusedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> itemTagsRefs(
+    Expression<bool> Function($$ItemTagsTableFilterComposer f) f,
+  ) {
+    final $$ItemTagsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.itemTags,
+      getReferencedColumn: (t) => t.itemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemTagsTableFilterComposer(
+            $db: $db,
+            $table: $db.itemTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ItemsTableOrderingComposer
@@ -3872,6 +5189,11 @@ class $$ItemsTableOrderingComposer
     column: $table.searchText,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get focusedAt => $composableBuilder(
+    column: $table.focusedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ItemsTableAnnotationComposer
@@ -3998,6 +5320,34 @@ class $$ItemsTableAnnotationComposer
     column: $table.searchText,
     builder: (column) => column,
   );
+
+  GeneratedColumn<DateTime> get focusedAt =>
+      $composableBuilder(column: $table.focusedAt, builder: (column) => column);
+
+  Expression<T> itemTagsRefs<T extends Object>(
+    Expression<T> Function($$ItemTagsTableAnnotationComposer a) f,
+  ) {
+    final $$ItemTagsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.itemTags,
+      getReferencedColumn: (t) => t.itemId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemTagsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.itemTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ItemsTableTableManager
@@ -4011,9 +5361,9 @@ class $$ItemsTableTableManager
           $$ItemsTableAnnotationComposer,
           $$ItemsTableCreateCompanionBuilder,
           $$ItemsTableUpdateCompanionBuilder,
-          (ItemRow, BaseReferences<_$AppDatabase, $ItemsTable, ItemRow>),
+          (ItemRow, $$ItemsTableReferences),
           ItemRow,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool itemTagsRefs})
         > {
   $$ItemsTableTableManager(_$AppDatabase db, $ItemsTable table)
     : super(
@@ -4056,6 +5406,7 @@ class $$ItemsTableTableManager
                 Value<int?> recurrenceMonthlyWeekday = const Value.absent(),
                 Value<String?> calendarEventId = const Value.absent(),
                 Value<String> searchText = const Value.absent(),
+                Value<DateTime?> focusedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion(
                 id: id,
@@ -4086,6 +5437,7 @@ class $$ItemsTableTableManager
                 recurrenceMonthlyWeekday: recurrenceMonthlyWeekday,
                 calendarEventId: calendarEventId,
                 searchText: searchText,
+                focusedAt: focusedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4118,6 +5470,7 @@ class $$ItemsTableTableManager
                 Value<int?> recurrenceMonthlyWeekday = const Value.absent(),
                 Value<String?> calendarEventId = const Value.absent(),
                 Value<String> searchText = const Value.absent(),
+                Value<DateTime?> focusedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ItemsCompanion.insert(
                 id: id,
@@ -4148,12 +5501,37 @@ class $$ItemsTableTableManager
                 recurrenceMonthlyWeekday: recurrenceMonthlyWeekday,
                 calendarEventId: calendarEventId,
                 searchText: searchText,
+                focusedAt: focusedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) =>
+                    (e.readTable(table), $$ItemsTableReferences(db, table, e)),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({itemTagsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (itemTagsRefs) db.itemTags],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (itemTagsRefs)
+                    await $_getPrefetchedData<ItemRow, $ItemsTable, ItemTagRow>(
+                      currentTable: table,
+                      referencedTable: $$ItemsTableReferences
+                          ._itemTagsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$ItemsTableReferences(db, table, p0).itemTagsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.itemId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -4168,9 +5546,9 @@ typedef $$ItemsTableProcessedTableManager =
       $$ItemsTableAnnotationComposer,
       $$ItemsTableCreateCompanionBuilder,
       $$ItemsTableUpdateCompanionBuilder,
-      (ItemRow, BaseReferences<_$AppDatabase, $ItemsTable, ItemRow>),
+      (ItemRow, $$ItemsTableReferences),
       ItemRow,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool itemTagsRefs})
     >;
 typedef $$ProjectsTableCreateCompanionBuilder =
     ProjectsCompanion Function({
@@ -4182,6 +5560,7 @@ typedef $$ProjectsTableCreateCompanionBuilder =
       Value<DateTime?> dueAt,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<DateTime?> lastReviewedAt,
       Value<int> rowid,
     });
 typedef $$ProjectsTableUpdateCompanionBuilder =
@@ -4194,6 +5573,7 @@ typedef $$ProjectsTableUpdateCompanionBuilder =
       Value<DateTime?> dueAt,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<DateTime?> lastReviewedAt,
       Value<int> rowid,
     });
 
@@ -4246,6 +5626,11 @@ class $$ProjectsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<DateTime> get lastReviewedAt => $composableBuilder(
+    column: $table.lastReviewedAt,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$ProjectsTableOrderingComposer
@@ -4296,6 +5681,11 @@ class $$ProjectsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get lastReviewedAt => $composableBuilder(
+    column: $table.lastReviewedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -4330,6 +5720,11 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastReviewedAt => $composableBuilder(
+    column: $table.lastReviewedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$ProjectsTableTableManager
@@ -4371,6 +5766,7 @@ class $$ProjectsTableTableManager
                 Value<DateTime?> dueAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> lastReviewedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectsCompanion(
                 id: id,
@@ -4381,6 +5777,7 @@ class $$ProjectsTableTableManager
                 dueAt: dueAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                lastReviewedAt: lastReviewedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4393,6 +5790,7 @@ class $$ProjectsTableTableManager
                 Value<DateTime?> dueAt = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<DateTime?> lastReviewedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProjectsCompanion.insert(
                 id: id,
@@ -4403,6 +5801,7 @@ class $$ProjectsTableTableManager
                 dueAt: dueAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                lastReviewedAt: lastReviewedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -4997,6 +6396,7 @@ typedef $$ReviewsTableCreateCompanionBuilder =
       required DateTime startedAt,
       Value<DateTime?> completedAt,
       Value<String?> notes,
+      Value<String> currentStep,
       Value<int> rowid,
     });
 typedef $$ReviewsTableUpdateCompanionBuilder =
@@ -5006,6 +6406,7 @@ typedef $$ReviewsTableUpdateCompanionBuilder =
       Value<DateTime> startedAt,
       Value<DateTime?> completedAt,
       Value<String?> notes,
+      Value<String> currentStep,
       Value<int> rowid,
     });
 
@@ -5043,6 +6444,11 @@ class $$ReviewsTableFilterComposer
     column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get currentStep => $composableBuilder(
+    column: $table.currentStep,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$ReviewsTableOrderingComposer
@@ -5078,6 +6484,11 @@ class $$ReviewsTableOrderingComposer
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get currentStep => $composableBuilder(
+    column: $table.currentStep,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ReviewsTableAnnotationComposer
@@ -5105,6 +6516,11 @@ class $$ReviewsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get currentStep => $composableBuilder(
+    column: $table.currentStep,
+    builder: (column) => column,
+  );
 }
 
 class $$ReviewsTableTableManager
@@ -5140,6 +6556,7 @@ class $$ReviewsTableTableManager
                 Value<DateTime> startedAt = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String> currentStep = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion(
                 id: id,
@@ -5147,6 +6564,7 @@ class $$ReviewsTableTableManager
                 startedAt: startedAt,
                 completedAt: completedAt,
                 notes: notes,
+                currentStep: currentStep,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5156,6 +6574,7 @@ class $$ReviewsTableTableManager
                 required DateTime startedAt,
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String> currentStep = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReviewsCompanion.insert(
                 id: id,
@@ -5163,6 +6582,7 @@ class $$ReviewsTableTableManager
                 startedAt: startedAt,
                 completedAt: completedAt,
                 notes: notes,
+                currentStep: currentStep,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -5187,6 +6607,955 @@ typedef $$ReviewsTableProcessedTableManager =
       ReviewRow,
       PrefetchHooks Function()
     >;
+typedef $$CalendarMirrorsTableCreateCompanionBuilder =
+    CalendarMirrorsCompanion Function({
+      required String calendarId,
+      required String eventId,
+      required String itemId,
+      Value<bool> isCurrent,
+      Value<int> rowid,
+    });
+typedef $$CalendarMirrorsTableUpdateCompanionBuilder =
+    CalendarMirrorsCompanion Function({
+      Value<String> calendarId,
+      Value<String> eventId,
+      Value<String> itemId,
+      Value<bool> isCurrent,
+      Value<int> rowid,
+    });
+
+class $$CalendarMirrorsTableFilterComposer
+    extends Composer<_$AppDatabase, $CalendarMirrorsTable> {
+  $$CalendarMirrorsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get calendarId => $composableBuilder(
+    column: $table.calendarId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CalendarMirrorsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CalendarMirrorsTable> {
+  $$CalendarMirrorsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get calendarId => $composableBuilder(
+    column: $table.calendarId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CalendarMirrorsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CalendarMirrorsTable> {
+  $$CalendarMirrorsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get calendarId => $composableBuilder(
+    column: $table.calendarId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCurrent =>
+      $composableBuilder(column: $table.isCurrent, builder: (column) => column);
+}
+
+class $$CalendarMirrorsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CalendarMirrorsTable,
+          CalendarMirrorRow,
+          $$CalendarMirrorsTableFilterComposer,
+          $$CalendarMirrorsTableOrderingComposer,
+          $$CalendarMirrorsTableAnnotationComposer,
+          $$CalendarMirrorsTableCreateCompanionBuilder,
+          $$CalendarMirrorsTableUpdateCompanionBuilder,
+          (
+            CalendarMirrorRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CalendarMirrorsTable,
+              CalendarMirrorRow
+            >,
+          ),
+          CalendarMirrorRow,
+          PrefetchHooks Function()
+        > {
+  $$CalendarMirrorsTableTableManager(
+    _$AppDatabase db,
+    $CalendarMirrorsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CalendarMirrorsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CalendarMirrorsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CalendarMirrorsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> calendarId = const Value.absent(),
+                Value<String> eventId = const Value.absent(),
+                Value<String> itemId = const Value.absent(),
+                Value<bool> isCurrent = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CalendarMirrorsCompanion(
+                calendarId: calendarId,
+                eventId: eventId,
+                itemId: itemId,
+                isCurrent: isCurrent,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String calendarId,
+                required String eventId,
+                required String itemId,
+                Value<bool> isCurrent = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CalendarMirrorsCompanion.insert(
+                calendarId: calendarId,
+                eventId: eventId,
+                itemId: itemId,
+                isCurrent: isCurrent,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CalendarMirrorsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CalendarMirrorsTable,
+      CalendarMirrorRow,
+      $$CalendarMirrorsTableFilterComposer,
+      $$CalendarMirrorsTableOrderingComposer,
+      $$CalendarMirrorsTableAnnotationComposer,
+      $$CalendarMirrorsTableCreateCompanionBuilder,
+      $$CalendarMirrorsTableUpdateCompanionBuilder,
+      (
+        CalendarMirrorRow,
+        BaseReferences<_$AppDatabase, $CalendarMirrorsTable, CalendarMirrorRow>,
+      ),
+      CalendarMirrorRow,
+      PrefetchHooks Function()
+    >;
+typedef $$TagsTableCreateCompanionBuilder =
+    TagsCompanion Function({
+      required String id,
+      required String name,
+      Value<bool> isPerson,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$TagsTableUpdateCompanionBuilder =
+    TagsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<bool> isPerson,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$TagsTableReferences
+    extends BaseReferences<_$AppDatabase, $TagsTable, TagRow> {
+  $$TagsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ItemTagsTable, List<ItemTagRow>>
+  _itemTagsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.itemTags,
+    aliasName: $_aliasNameGenerator(db.tags.id, db.itemTags.tagId),
+  );
+
+  $$ItemTagsTableProcessedTableManager get itemTagsRefs {
+    final manager = $$ItemTagsTableTableManager(
+      $_db,
+      $_db.itemTags,
+    ).filter((f) => f.tagId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_itemTagsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$TagsTableFilterComposer extends Composer<_$AppDatabase, $TagsTable> {
+  $$TagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPerson => $composableBuilder(
+    column: $table.isPerson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> itemTagsRefs(
+    Expression<bool> Function($$ItemTagsTableFilterComposer f) f,
+  ) {
+    final $$ItemTagsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.itemTags,
+      getReferencedColumn: (t) => t.tagId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemTagsTableFilterComposer(
+            $db: $db,
+            $table: $db.itemTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$TagsTableOrderingComposer extends Composer<_$AppDatabase, $TagsTable> {
+  $$TagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPerson => $composableBuilder(
+    column: $table.isPerson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TagsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TagsTable> {
+  $$TagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPerson =>
+      $composableBuilder(column: $table.isPerson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> itemTagsRefs<T extends Object>(
+    Expression<T> Function($$ItemTagsTableAnnotationComposer a) f,
+  ) {
+    final $$ItemTagsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.itemTags,
+      getReferencedColumn: (t) => t.tagId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemTagsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.itemTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$TagsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TagsTable,
+          TagRow,
+          $$TagsTableFilterComposer,
+          $$TagsTableOrderingComposer,
+          $$TagsTableAnnotationComposer,
+          $$TagsTableCreateCompanionBuilder,
+          $$TagsTableUpdateCompanionBuilder,
+          (TagRow, $$TagsTableReferences),
+          TagRow,
+          PrefetchHooks Function({bool itemTagsRefs})
+        > {
+  $$TagsTableTableManager(_$AppDatabase db, $TagsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TagsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<bool> isPerson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TagsCompanion(
+                id: id,
+                name: name,
+                isPerson: isPerson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<bool> isPerson = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TagsCompanion.insert(
+                id: id,
+                name: name,
+                isPerson: isPerson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$TagsTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({itemTagsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (itemTagsRefs) db.itemTags],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (itemTagsRefs)
+                    await $_getPrefetchedData<TagRow, $TagsTable, ItemTagRow>(
+                      currentTable: table,
+                      referencedTable: $$TagsTableReferences._itemTagsRefsTable(
+                        db,
+                      ),
+                      managerFromTypedResult: (p0) =>
+                          $$TagsTableReferences(db, table, p0).itemTagsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.tagId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TagsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TagsTable,
+      TagRow,
+      $$TagsTableFilterComposer,
+      $$TagsTableOrderingComposer,
+      $$TagsTableAnnotationComposer,
+      $$TagsTableCreateCompanionBuilder,
+      $$TagsTableUpdateCompanionBuilder,
+      (TagRow, $$TagsTableReferences),
+      TagRow,
+      PrefetchHooks Function({bool itemTagsRefs})
+    >;
+typedef $$ItemTagsTableCreateCompanionBuilder =
+    ItemTagsCompanion Function({
+      required String itemId,
+      required String tagId,
+      Value<int> rowid,
+    });
+typedef $$ItemTagsTableUpdateCompanionBuilder =
+    ItemTagsCompanion Function({
+      Value<String> itemId,
+      Value<String> tagId,
+      Value<int> rowid,
+    });
+
+final class $$ItemTagsTableReferences
+    extends BaseReferences<_$AppDatabase, $ItemTagsTable, ItemTagRow> {
+  $$ItemTagsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ItemsTable _itemIdTable(_$AppDatabase db) => db.items.createAlias(
+    $_aliasNameGenerator(db.itemTags.itemId, db.items.id),
+  );
+
+  $$ItemsTableProcessedTableManager get itemId {
+    final $_column = $_itemColumn<String>('item_id')!;
+
+    final manager = $$ItemsTableTableManager(
+      $_db,
+      $_db.items,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_itemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TagsTable _tagIdTable(_$AppDatabase db) =>
+      db.tags.createAlias($_aliasNameGenerator(db.itemTags.tagId, db.tags.id));
+
+  $$TagsTableProcessedTableManager get tagId {
+    final $_column = $_itemColumn<String>('tag_id')!;
+
+    final manager = $$TagsTableTableManager(
+      $_db,
+      $_db.tags,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_tagIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ItemTagsTableFilterComposer
+    extends Composer<_$AppDatabase, $ItemTagsTable> {
+  $$ItemTagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ItemsTableFilterComposer get itemId {
+    final $$ItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.itemId,
+      referencedTable: $db.items,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.items,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TagsTableFilterComposer get tagId {
+    final $$TagsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tagId,
+      referencedTable: $db.tags,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TagsTableFilterComposer(
+            $db: $db,
+            $table: $db.tags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ItemTagsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ItemTagsTable> {
+  $$ItemTagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ItemsTableOrderingComposer get itemId {
+    final $$ItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.itemId,
+      referencedTable: $db.items,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.items,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TagsTableOrderingComposer get tagId {
+    final $$TagsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tagId,
+      referencedTable: $db.tags,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TagsTableOrderingComposer(
+            $db: $db,
+            $table: $db.tags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ItemTagsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ItemTagsTable> {
+  $$ItemTagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$ItemsTableAnnotationComposer get itemId {
+    final $$ItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.itemId,
+      referencedTable: $db.items,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.items,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TagsTableAnnotationComposer get tagId {
+    final $$TagsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tagId,
+      referencedTable: $db.tags,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TagsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ItemTagsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ItemTagsTable,
+          ItemTagRow,
+          $$ItemTagsTableFilterComposer,
+          $$ItemTagsTableOrderingComposer,
+          $$ItemTagsTableAnnotationComposer,
+          $$ItemTagsTableCreateCompanionBuilder,
+          $$ItemTagsTableUpdateCompanionBuilder,
+          (ItemTagRow, $$ItemTagsTableReferences),
+          ItemTagRow,
+          PrefetchHooks Function({bool itemId, bool tagId})
+        > {
+  $$ItemTagsTableTableManager(_$AppDatabase db, $ItemTagsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ItemTagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ItemTagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ItemTagsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> itemId = const Value.absent(),
+                Value<String> tagId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) =>
+                  ItemTagsCompanion(itemId: itemId, tagId: tagId, rowid: rowid),
+          createCompanionCallback:
+              ({
+                required String itemId,
+                required String tagId,
+                Value<int> rowid = const Value.absent(),
+              }) => ItemTagsCompanion.insert(
+                itemId: itemId,
+                tagId: tagId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ItemTagsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({itemId = false, tagId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (itemId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.itemId,
+                                referencedTable: $$ItemTagsTableReferences
+                                    ._itemIdTable(db),
+                                referencedColumn: $$ItemTagsTableReferences
+                                    ._itemIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (tagId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.tagId,
+                                referencedTable: $$ItemTagsTableReferences
+                                    ._tagIdTable(db),
+                                referencedColumn: $$ItemTagsTableReferences
+                                    ._tagIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ItemTagsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ItemTagsTable,
+      ItemTagRow,
+      $$ItemTagsTableFilterComposer,
+      $$ItemTagsTableOrderingComposer,
+      $$ItemTagsTableAnnotationComposer,
+      $$ItemTagsTableCreateCompanionBuilder,
+      $$ItemTagsTableUpdateCompanionBuilder,
+      (ItemTagRow, $$ItemTagsTableReferences),
+      ItemTagRow,
+      PrefetchHooks Function({bool itemId, bool tagId})
+    >;
+typedef $$ImportBatchesTableCreateCompanionBuilder =
+    ImportBatchesCompanion Function({
+      required String id,
+      required String fingerprint,
+      Value<int> rowid,
+    });
+typedef $$ImportBatchesTableUpdateCompanionBuilder =
+    ImportBatchesCompanion Function({
+      Value<String> id,
+      Value<String> fingerprint,
+      Value<int> rowid,
+    });
+
+class $$ImportBatchesTableFilterComposer
+    extends Composer<_$AppDatabase, $ImportBatchesTable> {
+  $$ImportBatchesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fingerprint => $composableBuilder(
+    column: $table.fingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ImportBatchesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ImportBatchesTable> {
+  $$ImportBatchesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fingerprint => $composableBuilder(
+    column: $table.fingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ImportBatchesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ImportBatchesTable> {
+  $$ImportBatchesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fingerprint => $composableBuilder(
+    column: $table.fingerprint,
+    builder: (column) => column,
+  );
+}
+
+class $$ImportBatchesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ImportBatchesTable,
+          ImportBatchRow,
+          $$ImportBatchesTableFilterComposer,
+          $$ImportBatchesTableOrderingComposer,
+          $$ImportBatchesTableAnnotationComposer,
+          $$ImportBatchesTableCreateCompanionBuilder,
+          $$ImportBatchesTableUpdateCompanionBuilder,
+          (
+            ImportBatchRow,
+            BaseReferences<_$AppDatabase, $ImportBatchesTable, ImportBatchRow>,
+          ),
+          ImportBatchRow,
+          PrefetchHooks Function()
+        > {
+  $$ImportBatchesTableTableManager(_$AppDatabase db, $ImportBatchesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ImportBatchesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ImportBatchesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ImportBatchesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fingerprint = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ImportBatchesCompanion(
+                id: id,
+                fingerprint: fingerprint,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fingerprint,
+                Value<int> rowid = const Value.absent(),
+              }) => ImportBatchesCompanion.insert(
+                id: id,
+                fingerprint: fingerprint,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ImportBatchesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ImportBatchesTable,
+      ImportBatchRow,
+      $$ImportBatchesTableFilterComposer,
+      $$ImportBatchesTableOrderingComposer,
+      $$ImportBatchesTableAnnotationComposer,
+      $$ImportBatchesTableCreateCompanionBuilder,
+      $$ImportBatchesTableUpdateCompanionBuilder,
+      (
+        ImportBatchRow,
+        BaseReferences<_$AppDatabase, $ImportBatchesTable, ImportBatchRow>,
+      ),
+      ImportBatchRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5203,4 +7572,11 @@ class $AppDatabaseManager {
       $$AttachmentsTableTableManager(_db, _db.attachments);
   $$ReviewsTableTableManager get reviews =>
       $$ReviewsTableTableManager(_db, _db.reviews);
+  $$CalendarMirrorsTableTableManager get calendarMirrors =>
+      $$CalendarMirrorsTableTableManager(_db, _db.calendarMirrors);
+  $$TagsTableTableManager get tags => $$TagsTableTableManager(_db, _db.tags);
+  $$ItemTagsTableTableManager get itemTags =>
+      $$ItemTagsTableTableManager(_db, _db.itemTags);
+  $$ImportBatchesTableTableManager get importBatches =>
+      $$ImportBatchesTableTableManager(_db, _db.importBatches);
 }

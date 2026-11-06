@@ -1,0 +1,19 @@
+- Buy stamps @tags(Errands)
+
+- Write a blogpost about TaskPaper @parallel(false) @autodone(false)
+	Draft by Friday.
+	- Find out what TaskPaper is @parallel(false) @autodone(false) @context(Wohnung) @tags(Wohnung) @due(2019-11-14 22:00)
+	- Compare to todo.txt @parallel(false) @autodone(false) @tags(Research, Deep work) @defer(2026-11-02) @estimate(1h30m)
+	- Already done @done(2019-11-10)
+	- Outline @parallel(true) @autodone(false)
+		- Intro @flagged
+		- Conclusion @due(next Thursday -3d)
+Errands Folder:
+	- Garden @parallel(true)
+		- Buy soil @tags(errands)
+	- House @parallel(true)
+		- Fix door @repeat-rule(FREQ=MONTHLY;BYDAY=2TU) @due(2026-11-10)
+Paused project: @hold
+	- Something on hold
+Dropped project: @dropped(2026-01-01)
+	- Never happening

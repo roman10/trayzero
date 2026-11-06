@@ -170,8 +170,30 @@ final searchResultsProvider =
     StreamProvider.autoDispose<List<Item>>((ref) {
   final q = ref.watch(searchQueryProvider).trim();
   if (!isSearchableQuery(q)) return Stream.value(const []);
-  return ref.watch(itemRepositoryProvider).watchSearch(q);
+  // A query also matches tag names (ADR 0010). Selected as a joined string so
+  // the query re-subscribes only when the set of matching tags changes, not
+  // on every tag-list emission.
+  final tagIds = ref.watch(
+    tagsProvider.select(
+      (tags) => tagIdsMatchingQuery(tags.valueOrNull ?? const [], q).join(' '),
+    ),
+  );
+  return ref.watch(itemRepositoryProvider).watchSearch(
+        q,
+        tagIds: tagIds.isEmpty ? const [] : tagIds.split(' '),
+      );
 });
+
+/// Ids of [tags] whose name contains [query], folded like item search text
+/// (case- and accent-insensitive).
+List<String> tagIdsMatchingQuery(List<Tag> tags, String query) {
+  final needle = normalizeForSearch(query.trim());
+  if (needle.isEmpty) return const [];
+  return [
+    for (final t in tags)
+      if (normalizeForSearch(t.name).contains(needle)) t.id,
+  ];
+}
 
 /// Filter state. Deliberately **not** autoDispose: filters are sticky
 /// across navigation within a session (the badge/clear affordance keeps

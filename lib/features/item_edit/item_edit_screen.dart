@@ -3,23 +3,29 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../application/providers.dart';
 import '../../core/clock.dart';
 import '../../core/notification_scheduler.dart';
 import '../../domain/entities/entities.dart';
+import '../../domain/item_invariants.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../common/error_view.dart';
 import '../common/exact_alarm_permission_recovery.dart';
 import '../common/notification_permission_recovery.dart';
+import '../common/localized_entity_labels.dart';
+import '../common/localized_recurrence.dart';
+import '../common/undo_snack_bar.dart';
+import '../common/tag_picker.dart';
 import 'attachments_section.dart';
 import 'item_edit_controller.dart';
 import 'recurrence_section.dart';
 import 'sections.dart';
 
 class ItemEditScreen extends ConsumerStatefulWidget {
-  const ItemEditScreen({required this.itemId, super.key});
+  const ItemEditScreen({required this.itemId, this.leading, super.key});
   final String itemId;
+  final Widget? leading;
 
   @override
   ConsumerState<ItemEditScreen> createState() => _ItemEditScreenState();
@@ -73,10 +79,33 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
     _debounce = Timer(const Duration(milliseconds: 600), _commit);
   }
 
-  Future<void> _commit() async {
-    final wrote = await ref
-        .read(itemEditControllerProvider(widget.itemId).notifier)
-        .commit();
+  Future<void> _commit({bool propagateError = false}) async {
+    final bool wrote;
+    try {
+      wrote = await ref
+          .read(itemEditControllerProvider(widget.itemId).notifier)
+          .commit();
+    } catch (_) {
+      if (propagateError) rethrow;
+      if (!mounted) return;
+      setState(() => _justSaved = false);
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.saveError),
+            action: SnackBarAction(
+              label: l10n.retry,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                unawaited(_commit());
+              },
+            ),
+          ),
+        );
+      return;
+    }
     if (!mounted || !wrote) return;
     setState(() => _justSaved = true);
     Future<void>.delayed(const Duration(seconds: 2), () {
@@ -113,11 +142,12 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
         ..showSnackBar(
           SnackBar(
             content: Text(
-              blocked
-                  ? l10n.remindersBlockedWarning
-                  : l10n.remindersOffWarning,
+              blocked ? l10n.remindersBlockedWarning : l10n.remindersOffWarning,
             ),
             duration: const Duration(seconds: 6),
+            // Action snackbars otherwise persist for everyone. Keep recovery
+            // available without a timeout when screen-reader navigation is on.
+            persist: MediaQuery.accessibleNavigationOf(context),
             action: SnackBarAction(
               label: blocked ? l10n.settings : l10n.enable,
               onPressed: () => runNotificationPermissionRecovery(context, ref),
@@ -140,6 +170,7 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
         SnackBar(
           content: Text(l10n.preciseReminderOffWarning),
           duration: const Duration(seconds: 6),
+          persist: MediaQuery.accessibleNavigationOf(context),
           action: SnackBarAction(
             label: l10n.allowExactAlarms,
             onPressed: () => runExactAlarmPermissionRecovery(context, ref),
@@ -184,10 +215,21 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
     Navigator.of(context).pop();
   }
 
-  Future<void> _onComplete() => _runStatusAction(
-    (n) => n.complete(),
-    onError: AppLocalizations.of(context).completeError,
-  );
+  Future<void> _onComplete() {
+    // Resolved before the screen pops: the snackbar outlives this widget.
+    final undo = ref.read(undoCompleteProvider);
+    final id = widget.itemId;
+    String? spawnedId;
+    return _runStatusAction(
+      (n) async => spawnedId = await n.complete(),
+      onError: AppLocalizations.of(context).completeError,
+      onSuccess: undoSnackBar(
+        context,
+        message: AppLocalizations.of(context).completed,
+        onUndo: () => undo(id, spawnedRecurrenceId: spawnedId),
+      ),
+    );
+  }
 
   Future<void> _onReopen() => _runStatusAction(
     (n) => n.reopen(),
@@ -201,14 +243,20 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
   Future<void> _runStatusAction(
     Future<void> Function(ItemEditController) action, {
     required String onError,
+    SnackBar? onSuccess,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      await _commit();
+      await _commit(propagateError: true);
       await action(
         ref.read(itemEditControllerProvider(widget.itemId).notifier),
       );
+      if (onSuccess != null) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(onSuccess);
+      }
     } catch (_) {
       messenger
         ..hideCurrentSnackBar()
@@ -234,15 +282,25 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
         if (didPop) await _commit();
       },
       child: async.when(
-        loading: () =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (e, _) => Scaffold(
-          appBar: AppBar(),
-          body: Center(child: Text('Item not found: $e')),
+        loading: () => Scaffold(
+          appBar: widget.leading == null
+              ? null
+              : AppBar(leading: widget.leading),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, st) => Scaffold(
+          appBar: AppBar(leading: widget.leading),
+          body: ErrorView(
+            error: e,
+            stackTrace: st,
+            onRetry: () =>
+                ref.invalidate(itemEditControllerProvider(widget.itemId)),
+          ),
         ),
         data: (item) {
           _seedControllers(item);
           return _ItemEditView(
+            leading: widget.leading,
             item: item,
             title: _title,
             notes: _notes,
@@ -256,7 +314,10 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
               (c) => c.copyWith(title: v.trim().isEmpty ? c.title : v.trim()),
             ),
             onNotesChanged: (v) => _updateDraft(
-              (c) => c.copyWith(notes: v.trim().isEmpty ? null : v.trim()),
+              (c) => c.copyWith(
+                notes: v.trim().isEmpty ? null : v.trim(),
+                clearNotes: v.trim().isEmpty,
+              ),
             ),
             onWaitingChanged: (v) => _updateDraft(
               (c) => c.copyWith(
@@ -278,6 +339,7 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
 
 class _ItemEditView extends ConsumerWidget {
   const _ItemEditView({
+    required this.leading,
     required this.item,
     required this.title,
     required this.notes,
@@ -297,6 +359,7 @@ class _ItemEditView extends ConsumerWidget {
     required this.onReopen,
   });
 
+  final Widget? leading;
   final Item item;
   final TextEditingController title;
   final TextEditingController notes;
@@ -323,6 +386,7 @@ class _ItemEditView extends ConsumerWidget {
     final projects = ref.watch(activeProjectsProvider).valueOrNull ?? const [];
     return Scaffold(
       appBar: AppBar(
+        leading: leading,
         title: Text(l10n.editTitle),
         actions: [
           AnimatedOpacity(
@@ -331,18 +395,18 @@ class _ItemEditView extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Center(
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, size: 16, color: scheme.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.savedIndicator,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                child: Tooltip(
+                  message: l10n.savedIndicator,
+                  excludeFromSemantics: true,
+                  child: Semantics(
+                    label: l10n.savedIndicator,
+                    liveRegion: true,
+                    child: Icon(
+                      Icons.check_circle,
+                      size: 20,
+                      color: scheme.primary,
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -364,360 +428,362 @@ class _ItemEditView extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          TextField(
-            controller: title,
-            focusNode: titleFocus,
-            decoration: InputDecoration(labelText: l10n.titleLabel),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            onChanged: (v) {
-              onTitleChanged(v);
-              onTextChange();
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: notes,
-            focusNode: notesFocus,
-            minLines: 2,
-            maxLines: 6,
-            decoration: InputDecoration(labelText: l10n.notesLabel),
-            onChanged: (v) {
-              onNotesChanged(v);
-              onTextChange();
-            },
-          ),
-          const SizedBox(height: 20),
-          SectionHeader(l10n.statusSection),
-          StatusSelector(
-            current: item.status,
-            onChanged: (s) async {
-              updateDraft((c) => c.copyWith(status: s));
-              await commitNow();
-            },
-          ),
-          if (item.status == ItemStatus.nextAction ||
-              item.status == ItemStatus.someday) ...[
-            const SizedBox(height: 20),
-            SectionHeader(l10n.contextSection),
-            ContextSelector(
-              contexts: contexts,
-              currentId: item.contextId,
-              onChanged: (id) async {
-                updateDraft(
-                  (c) => c.copyWith(contextId: id, clearContext: id == null),
-                );
-                await commitNow();
-              },
-            ),
-            const SizedBox(height: 20),
-            SectionHeader(l10n.energySection),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final e in Energy.values)
-                  ChoiceChip(
-                    label: Text(switch (e) {
-                      Energy.low => l10n.energyLow,
-                      Energy.medium => l10n.energyMedium,
-                      Energy.high => l10n.energyHigh,
-                    }),
-                    selected: item.energy == e,
-                    onSelected: (sel) async {
-                      updateDraft(
-                        (c) => c.copyWith(
-                          energy: sel ? e : null,
-                          clearEnergy: !sel,
-                        ),
-                      );
-                      await commitNow();
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SectionHeader(l10n.timeEstimateSection),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final mins in const [5, 15, 30, 60, 120])
-                  ChoiceChip(
-                    label: Text('${mins}m'),
-                    selected: item.timeEstimateMinutes == mins,
-                    onSelected: (sel) async {
-                      updateDraft(
-                        (c) => c.copyWith(
-                          timeEstimateMinutes: sel ? mins : null,
-                          clearTimeEstimate: !sel,
-                        ),
-                      );
-                      await commitNow();
-                    },
-                  ),
-              ],
-            ),
-          ],
-          if (item.status == ItemStatus.waiting) ...[
-            const SizedBox(height: 20),
-            SectionHeader(l10n.waitingOnSection),
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          children: [
             TextField(
-              controller: waitingOn,
-              focusNode: waitingFocus,
-              decoration: InputDecoration(
-                hintText: l10n.waitingOnHint,
-              ),
+              controller: title,
+              focusNode: titleFocus,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(labelText: l10n.titleLabel),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               onChanged: (v) {
-                onWaitingChanged(v);
+                onTitleChanged(v);
                 onTextChange();
               },
             ),
-          ],
-          const SizedBox(height: 20),
-          SectionHeader(l10n.projectSection),
-          ProjectSelector(
-            projects: projects,
-            currentId: item.projectId,
-            onChanged: (id) async {
-              updateDraft(
-                (c) => c.copyWith(projectId: id, clearProject: id == null),
-              );
-              await commitNow();
-            },
-          ),
-          const SizedBox(height: 20),
-          SectionHeader(l10n.datesSection),
-          // A next action lives off the calendar — its only date anchor is
-          // "Defer until" (a tickler). Offering a hard "Due" here would let it
-          // accrue a deadline that surfaces nowhere; the persistence layer
-          // strips it anyway, so don't present a control that does nothing.
-          if (item.status != ItemStatus.nextAction)
-            DateTile(
-              label: l10n.dueLabel,
-              icon: Icons.event,
-              value: item.dueAt,
-              onChange: (d) async {
-                updateDraft((c) => c.copyWith(dueAt: d, clearDueAt: d == null));
+            const SizedBox(height: 12),
+            TextField(
+              controller: notes,
+              focusNode: notesFocus,
+              textCapitalization: TextCapitalization.sentences,
+              minLines: 2,
+              maxLines: 6,
+              decoration: InputDecoration(labelText: l10n.notesLabel),
+              onChanged: (v) {
+                onNotesChanged(v);
+                onTextChange();
+              },
+            ),
+            const SizedBox(height: 20),
+            SectionHeader(l10n.statusSection),
+            StatusSelector(
+              current: item.status,
+              onChanged: (s) async {
+                DateTime? due;
+                if (s == ItemStatus.calendar && item.dueAt == null) {
+                  due = await pickDateTime(context, ref);
+                  if (due == null || !context.mounted) return;
+                }
+                updateDraft((c) => changeItemStatus(c, s, dueAt: due));
                 await commitNow();
               },
             ),
-          DateTile(
-            label: l10n.deferUntilLabel,
-            icon: Icons.snooze,
-            value: item.deferUntil,
-            onChange: (d) async {
-              updateDraft(
-                (c) => c.copyWith(deferUntil: d, clearDeferUntil: d == null),
-              );
-              await commitNow();
-            },
-          ),
-          const SizedBox(height: 20),
-          SectionHeader(l10n.repeatSection),
-          Builder(
-            builder: (_) {
-              final hasAnchor = item.dueAt != null || item.deferUntil != null;
-              // Hard-block: recurrence shifts the due/defer date forward, so
-              // it cannot be turned on without one. An item that already has
-              // recurrence (e.g. its date was later cleared) keeps its chips
-              // live so the user can still turn it Off — never trapped.
-              final canSetRecurrence = hasAnchor || item.recurrence != null;
-              return Wrap(
+            if (item.status == ItemStatus.nextAction ||
+                item.status == ItemStatus.someday) ...[
+              const SizedBox(height: 20),
+              SectionHeader(l10n.contextSection),
+              ContextSelector(
+                contexts: contexts,
+                currentId: item.contextId,
+                onChanged: (id) async {
+                  updateDraft(
+                    (c) => c.copyWith(contextId: id, clearContext: id == null),
+                  );
+                  await commitNow();
+                },
+              ),
+              const SizedBox(height: 20),
+              SectionHeader(l10n.energySection),
+              Wrap(
                 spacing: 8,
                 children: [
-                  ChoiceChip(
-                    label: Text(l10n.recurrenceOff),
-                    selected: item.recurrence == null,
-                    onSelected: (_) async {
-                      updateDraft((c) => c.copyWith(clearRecurrence: true));
-                      await commitNow();
-                    },
-                  ),
-                  for (final r in Recurrence.values)
+                  for (final e in Energy.values)
                     ChoiceChip(
-                      label: Text(r.label),
-                      selected: item.recurrence == r,
-                      onSelected: canSetRecurrence
-                          ? (_) async {
-                              updateDraft((c) => c.copyWith(recurrence: r));
-                              await commitNow();
-                            }
-                          : null,
+                      label: Text(switch (e) {
+                        Energy.low => l10n.energyLow,
+                        Energy.medium => l10n.energyMedium,
+                        Energy.high => l10n.energyHigh,
+                      }),
+                      selected: item.energy == e,
+                      onSelected: (sel) async {
+                        updateDraft(
+                          (c) => c.copyWith(
+                            energy: sel ? e : null,
+                            clearEnergy: !sel,
+                          ),
+                        );
+                        await commitNow();
+                      },
                     ),
                 ],
-              );
-            },
-          ),
-          if (item.recurrence == null &&
-              item.dueAt == null &&
-              item.deferUntil == null) ...[
+              ),
+              const SizedBox(height: 20),
+              SectionHeader(l10n.timeEstimateSection),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final mins in const [5, 15, 30, 60, 120])
+                    ChoiceChip(
+                      label: Text(l10n.minutesShort(mins)),
+                      selected: item.timeEstimateMinutes == mins,
+                      onSelected: (sel) async {
+                        updateDraft(
+                          (c) => c.copyWith(
+                            timeEstimateMinutes: sel ? mins : null,
+                            clearTimeEstimate: !sel,
+                          ),
+                        );
+                        await commitNow();
+                      },
+                    ),
+                ],
+              ),
+            ],
+            if (item.status == ItemStatus.waiting) ...[
+              const SizedBox(height: 20),
+              SectionHeader(l10n.waitingOnSection),
+              TextField(
+                controller: waitingOn,
+                focusNode: waitingFocus,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(hintText: l10n.waitingOnHint),
+                onChanged: (v) {
+                  onWaitingChanged(v);
+                  onTextChange();
+                },
+              ),
+            ],
+            const SizedBox(height: 20),
+            SectionHeader(l10n.projectSection),
+            ProjectSelector(
+              projects: projects,
+              currentId: item.projectId,
+              onChanged: (id) async {
+                updateDraft(
+                  (c) => c.copyWith(projectId: id, clearProject: id == null),
+                );
+                await commitNow();
+              },
+            ),
             const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                item.status == ItemStatus.nextAction
-                    ? l10n.recurrenceNeedsDeferHint
-                    : l10n.recurrenceNeedsDueDateHint,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: scheme.onSurfaceVariant,
+            ItemTagsField(itemId: item.id),
+            const SizedBox(height: 20),
+            SectionHeader(l10n.datesSection),
+            // A next action lives off the calendar — its only date anchor is
+            // "Defer until" (a tickler). Offering a hard "Due" here would let it
+            // accrue a deadline that surfaces nowhere; the persistence layer
+            // strips it anyway, so don't present a control that does nothing.
+            if (item.status != ItemStatus.nextAction)
+              DateTile(
+                label: l10n.dueLabel,
+                icon: Icons.event,
+                value: item.dueAt,
+                allowClear: item.status != ItemStatus.calendar,
+                onChange: (d) async {
+                  updateDraft(
+                    (c) => c.copyWith(dueAt: d, clearDueAt: d == null),
+                  );
+                  await commitNow();
+                },
+              ),
+            DateTile(
+              label: l10n.deferUntilLabel,
+              icon: Icons.snooze,
+              dateOnly: true,
+              value: item.deferUntil,
+              onChange: (d) async {
+                updateDraft(
+                  (c) => c.copyWith(deferUntil: d, clearDeferUntil: d == null),
+                );
+                await commitNow();
+              },
+            ),
+            const SizedBox(height: 20),
+            SectionHeader(l10n.repeatSection),
+            Builder(
+              builder: (_) {
+                final hasAnchor = item.dueAt != null || item.deferUntil != null;
+                // Hard-block: recurrence shifts the due/defer date forward, so
+                // it cannot be turned on without one. An item that already has
+                // recurrence (e.g. its date was later cleared) keeps its chips
+                // live so the user can still turn it Off — never trapped.
+                final canSetRecurrence = hasAnchor || item.recurrence != null;
+                return Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: Text(l10n.recurrenceOff),
+                      selected: item.recurrence == null,
+                      onSelected: (_) async {
+                        updateDraft((c) => c.copyWith(clearRecurrence: true));
+                        await commitNow();
+                      },
+                    ),
+                    for (final r in Recurrence.values)
+                      ChoiceChip(
+                        label: Text(r.localizedLabel(l10n)),
+                        selected: item.recurrence == r,
+                        onSelected: canSetRecurrence
+                            ? (_) async {
+                                updateDraft((c) => c.copyWith(recurrence: r));
+                                await commitNow();
+                              }
+                            : null,
+                      ),
+                  ],
+                );
+              },
+            ),
+            if (item.recurrence == null &&
+                item.dueAt == null &&
+                item.deferUntil == null) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  item.status == ItemStatus.nextAction
+                      ? l10n.recurrenceNeedsDeferHint
+                      : l10n.recurrenceNeedsDueDateHint,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-          ],
-          if (item.recurrence != null) ...[
-            const SizedBox(height: 12),
-            IntervalStepper(
-              recurrence: item.recurrence!,
-              interval: item.recurrenceInterval,
-              onChanged: (n) async {
-                updateDraft((c) => c.copyWith(recurrenceInterval: n));
-                await commitNow();
-              },
-            ),
-            RecurrencePatternEditor(
-              recurrence: item.recurrence!,
-              byWeekdays: item.recurrenceByWeekdays,
-              monthlyWeek: item.recurrenceMonthlyWeek,
-              monthlyWeekday: item.recurrenceMonthlyWeekday,
-              onWeekdaysChanged: (days) async {
-                updateDraft((c) => c.copyWith(recurrenceByWeekdays: days));
-                await commitNow();
-              },
-              onDayOfMonth: () async {
-                updateDraft((c) => c.copyWith(clearRecurrenceMonthlyNth: true));
-                await commitNow();
-              },
-              onNthWeekday: (week, weekday) async {
-                updateDraft(
-                  (c) => c.copyWith(
-                    recurrenceMonthlyWeek: week,
-                    recurrenceMonthlyWeekday: weekday,
-                  ),
-                );
-                await commitNow();
-              },
-            ),
-            const SizedBox(height: 16),
-            RecurrenceEndPicker(
-              until: item.recurrenceUntil,
-              count: item.recurrenceCount,
-              onNever: () async {
-                updateDraft(
-                  (c) => c.copyWith(
-                    clearRecurrenceUntil: true,
-                    clearRecurrenceCount: true,
-                  ),
-                );
-                await commitNow();
-              },
-              onUntil: (d) async {
-                updateDraft(
-                  (c) => c.copyWith(
-                    recurrenceUntil: d,
-                    clearRecurrenceCount: true,
-                  ),
-                );
-                await commitNow();
-              },
-              onCount: (n) async {
-                updateDraft(
-                  (c) => c.copyWith(
-                    recurrenceCount: n,
-                    clearRecurrenceUntil: true,
-                  ),
-                );
-                await commitNow();
-              },
-            ),
-            const SizedBox(height: 8),
-            if (item.dueAt == null && item.deferUntil == null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.error_outline, size: 16, color: scheme.error),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        item.status == ItemStatus.nextAction
-                            ? l10n.recurrenceNoDateNextActionError
-                            : l10n.recurrenceNoDateError,
-                        style: TextStyle(fontSize: 12.5, color: scheme.error),
-                      ),
+            ],
+            if (item.recurrence != null) ...[
+              const SizedBox(height: 12),
+              IntervalStepper(
+                recurrence: item.recurrence!,
+                interval: item.recurrenceInterval,
+                onChanged: (n) async {
+                  updateDraft((c) => c.copyWith(recurrenceInterval: n));
+                  await commitNow();
+                },
+              ),
+              RecurrencePatternEditor(
+                recurrence: item.recurrence!,
+                byWeekdays: item.recurrenceByWeekdays,
+                monthlyWeek: item.recurrenceMonthlyWeek,
+                monthlyWeekday: item.recurrenceMonthlyWeekday,
+                onWeekdaysChanged: (days) async {
+                  updateDraft((c) => c.copyWith(recurrenceByWeekdays: days));
+                  await commitNow();
+                },
+                onDayOfMonth: () async {
+                  updateDraft(
+                    (c) => c.copyWith(clearRecurrenceMonthlyNth: true),
+                  );
+                  await commitNow();
+                },
+                onNthWeekday: (week, weekday) async {
+                  updateDraft(
+                    (c) => c.copyWith(
+                      recurrenceMonthlyWeek: week,
+                      recurrenceMonthlyWeekday: weekday,
                     ),
-                  ],
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.repeat, size: 16, color: scheme.primary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _recurrenceSummary(item),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
+                  );
+                  await commitNow();
+                },
+              ),
+              const SizedBox(height: 16),
+              RecurrenceEndPicker(
+                until: item.recurrenceUntil,
+                count: item.recurrenceCount,
+                onNever: () async {
+                  updateDraft(
+                    (c) => c.copyWith(
+                      clearRecurrenceUntil: true,
+                      clearRecurrenceCount: true,
+                    ),
+                  );
+                  await commitNow();
+                },
+                onUntil: (d) async {
+                  updateDraft(
+                    (c) => c.copyWith(
+                      recurrenceUntil: d,
+                      clearRecurrenceCount: true,
+                    ),
+                  );
+                  await commitNow();
+                },
+                onCount: (n) async {
+                  updateDraft(
+                    (c) => c.copyWith(
+                      recurrenceCount: n,
+                      clearRecurrenceUntil: true,
+                    ),
+                  );
+                  await commitNow();
+                },
+              ),
+              const SizedBox(height: 8),
+              if (item.dueAt == null && item.deferUntil == null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.error_outline, size: 16, color: scheme.error),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.status == ItemStatus.nextAction
+                              ? l10n.recurrenceNoDateNextActionError
+                              : l10n.recurrenceNoDateError,
+                          style: TextStyle(fontSize: 12.5, color: scheme.error),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.repeat, size: 16, color: scheme.primary),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              item.localizedRecurrenceSummary(l10n),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.recurrenceExplanation,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.recurrenceExplanation,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+            ],
+            const SizedBox(height: 20),
+            SectionHeader(l10n.attachmentsSection),
+            AttachmentsSection(itemId: item.id),
+            const SizedBox(height: 20),
+            if (item.status != ItemStatus.done)
+              OutlinedButton.icon(
+                onPressed: onComplete,
+                icon: Icon(Icons.check_circle_outline, color: scheme.primary),
+                label: Text(l10n.markComplete),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: onReopen,
+                icon: Icon(Icons.refresh, color: scheme.primary),
+                label: Text(l10n.reopen),
               ),
           ],
-          const SizedBox(height: 20),
-          SectionHeader(l10n.attachmentsSection),
-          AttachmentsSection(itemId: item.id),
-          const SizedBox(height: 20),
-          if (item.status != ItemStatus.done)
-            OutlinedButton.icon(
-              onPressed: onComplete,
-              icon: Icon(Icons.check_circle_outline, color: scheme.primary),
-              label: Text(l10n.markComplete),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: onReopen,
-              icon: Icon(Icons.refresh, color: scheme.primary),
-              label: Text(l10n.reopen),
-            ),
-        ],
+        ),
       ),
     );
   }
-}
-
-/// One-line readout of the item's recurrence: cadence/pattern from the
-/// domain rule, plus the end condition composed here (it carries a date,
-/// which the domain layer deliberately doesn't format).
-String _recurrenceSummary(Item item) {
-  final rule = item.recurrenceRule!;
-  final base = rule.describe();
-  if (item.recurrenceCount != null) {
-    return '$base · ${item.recurrenceCount} times';
-  }
-  if (item.recurrenceUntil != null) {
-    return '$base · until ${DateFormat.yMMMd().format(item.recurrenceUntil!)}';
-  }
-  return base;
 }

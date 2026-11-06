@@ -3,18 +3,33 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
+import '../common/localized_dates.dart';
 import '../common/notes_text.dart';
+import '../common/localized_entity_labels.dart';
 
-class CapturedCard extends StatelessWidget {
+class CapturedCard extends StatefulWidget {
   const CapturedCard({required this.item, super.key});
   final Item item;
 
   @override
+  State<CapturedCard> createState() => _CapturedCardState();
+}
+
+class _CapturedCardState extends State<CapturedCard> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final scheme = Theme.of(context).colorScheme;
-    // Cap the card so a long title/notes can't push the GTD step buttons off
-    // screen; the content scrolls within this bound while short items stay
-    // compact (the Column is still mainAxisSize.min).
+    // Keep long captures bounded so reaching a decision does not require
+    // scrolling through the whole note. The card and page scroll independently.
     final maxHeight = MediaQuery.sizeOf(context).height * 0.4;
     return Container(
       width: double.infinity,
@@ -27,7 +42,10 @@ class CapturedCard extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Scrollbar(
+          controller: _scrollController,
           child: SingleChildScrollView(
+            controller: _scrollController,
+            primary: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -75,10 +93,13 @@ class StepQuestion extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-      textAlign: TextAlign.center,
+    return Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }
@@ -154,15 +175,11 @@ class StepTwoMin extends StatelessWidget {
           onPressed: onYes,
         ),
         const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: onNo,
-          child: const Text('No — keep clarifying'),
-        ),
+        OutlinedButton(onPressed: onNo, child: Text(l10n.processTwoMinNo)),
         const SizedBox(height: 18),
         Center(
           child: Text(
-            'The Two-Minute Rule: if it takes less time to do than to track, '
-            'just do it.',
+            l10n.twoMinRule,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12.5,
@@ -189,45 +206,43 @@ class StepDelegate extends StatelessWidget {
         const SizedBox(height: 28),
         FilledButton.icon(
           icon: const Icon(Icons.person_add_outlined),
-          label: const Text('Yes — delegate & wait for them'),
+          label: Text(l10n.delegateYes),
           onPressed: onYes,
         ),
         const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: onNo,
-          child: const Text("No — it's on me"),
-        ),
+        OutlinedButton(onPressed: onNo, child: Text(l10n.delegateNo)),
       ],
     );
   }
 }
 
 class StepSingleStep extends StatelessWidget {
-  const StepSingleStep({required this.onProject, required this.onSingle, super.key});
+  const StepSingleStep({
+    required this.onProject,
+    required this.onSingle,
+    super.key,
+  });
   final VoidCallback onProject;
   final VoidCallback onSingle;
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepQuestion('Is this a single physical action?'),
+        StepQuestion(l10n.singleStepQuestion),
         const SizedBox(height: 28),
-        FilledButton(
-          onPressed: onSingle,
-          child: const Text('Yes — single next action'),
-        ),
+        FilledButton(onPressed: onSingle, child: Text(l10n.singleStepYes)),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.folder_outlined),
-          label: const Text('No — this is a project'),
+          label: Text(l10n.singleStepProject),
           onPressed: onProject,
         ),
         const SizedBox(height: 18),
         Center(
           child: Text(
-            'A project is any outcome that needs more than one action step '
-            'and can finish within a year.',
+            l10n.projectRule,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12.5,
@@ -245,33 +260,65 @@ class StepDefer extends StatelessWidget {
     required this.onCalendar,
     required this.onSetDefer,
     required this.onSkip,
+    this.capturedStart,
+    this.capturedDue,
+    this.onUseCapturedStart,
+    this.onUseCapturedDue,
     super.key,
   });
   final VoidCallback onCalendar;
   final VoidCallback onSetDefer;
   final VoidCallback onSkip;
+
+  /// Start and due dates recognized at capture (ADR 0007), offered as
+  /// one-tap answers above the generic choices.
+  final DateTime? capturedStart;
+  final DateTime? capturedDue;
+  final VoidCallback? onUseCapturedStart;
+  final VoidCallback? onUseCapturedDue;
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    String date(DateTime d) => DateFormat.MMMEd(l10n.dateLocaleName).format(d);
+    final start = capturedStart;
+    final due = capturedDue;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepQuestion('Does it have a specific day or time?'),
+        StepQuestion(l10n.deferQuestion),
         const SizedBox(height: 28),
+        if (due != null && onUseCapturedDue != null) ...[
+          FilledButton.tonalIcon(
+            icon: const Icon(Icons.event),
+            label: Text(l10n.deferUseDueDate(date(due))),
+            onPressed: onUseCapturedDue,
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (start != null && onUseCapturedStart != null) ...[
+          FilledButton.tonalIcon(
+            icon: const Icon(Icons.schedule_send_outlined),
+            label: Text(l10n.deferUseStartDate(date(start))),
+            onPressed: onUseCapturedStart,
+          ),
+          const SizedBox(height: 8),
+        ],
         FilledButton.icon(
           icon: const Icon(Icons.bolt),
-          label: const Text('No — do it as soon as I can'),
+          label: Text(l10n.deferAsap),
           onPressed: onSkip,
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.event),
-          label: const Text('Yes — put it on the calendar'),
+          label: Text(l10n.deferCalendar),
           onPressed: onCalendar,
         ),
         const SizedBox(height: 8),
         TextButton.icon(
           icon: const Icon(Icons.snooze),
-          label: const Text('Defer until a date'),
+          label: Text(l10n.deferChooseDate),
           onPressed: onSetDefer,
         ),
       ],
@@ -296,6 +343,7 @@ class StepDetail extends StatelessWidget {
     required this.onTime,
     required this.onConfirm,
     required this.onBack,
+    this.tags,
     super.key,
   });
   final List<GtdContext> contexts;
@@ -314,15 +362,19 @@ class StepDetail extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onBack;
 
+  /// The optional Tags row (ADR 0010); null hides it, as when no tag exists.
+  final Widget? tags;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ListView(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepQuestion('Add details'),
+        StepQuestion(l10n.processDetailsTitle),
         const SizedBox(height: 20),
         StepSection(
-          label: 'CONTEXT',
+          label: l10n.contextSection,
           child: Wrap(
             spacing: 8,
             runSpacing: 4,
@@ -337,13 +389,13 @@ class StepDetail extends StatelessWidget {
           ),
         ),
         StepSection(
-          label: 'ENERGY',
+          label: l10n.energySection,
           child: Wrap(
             spacing: 8,
             children: [
               for (final e in Energy.values)
                 ChoiceChip(
-                  label: Text(e.label),
+                  label: Text(e.localizedLabel(l10n)),
                   selected: energy == e,
                   onSelected: (sel) => onEnergy(sel ? e : null),
                 ),
@@ -351,13 +403,13 @@ class StepDetail extends StatelessWidget {
           ),
         ),
         StepSection(
-          label: 'TIME ESTIMATE',
+          label: l10n.timeEstimateSection,
           child: Wrap(
             spacing: 8,
             children: [
               for (final mins in const [5, 15, 30, 60, 120])
                 ChoiceChip(
-                  label: Text('${mins}m'),
+                  label: Text(l10n.minutesShort(mins)),
                   selected: timeEstimate == mins,
                   onSelected: (sel) => onTime(sel ? mins : null),
                 ),
@@ -365,7 +417,7 @@ class StepDetail extends StatelessWidget {
           ),
         ),
         StepSection(
-          label: 'PROJECT',
+          label: l10n.projectSection,
           child: Wrap(
             spacing: 8,
             runSpacing: 4,
@@ -389,34 +441,43 @@ class StepDetail extends StatelessWidget {
             ],
           ),
         ),
+        if (tags != null) StepSection(label: l10n.tagsSection, child: tags!),
         if (deferUntil != null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(children: [
-              const Icon(Icons.snooze, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Deferred until '
-                  '${DateFormat.yMMMd().add_jm().format(deferUntil!)}'
-                  '${recurrence == null ? '' : ' · repeats '
-                      '${recurrence!.label.toLowerCase()}'}',
-                  style: const TextStyle(fontSize: 13),
+            child: Row(
+              children: [
+                const Icon(Icons.snooze, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    recurrence == null
+                        ? l10n.deferredUntilSummary(
+                            localizedDeferLabel(deferUntil!, l10n),
+                          )
+                        : l10n.deferredRepeatingSummary(
+                            localizedDeferLabel(deferUntil!, l10n),
+                            recurrence!.localizedLabel(l10n),
+                          ),
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ),
-              ),
-            ]),
+              ],
+            ),
           ),
         const SizedBox(height: 16),
-        Row(
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 12,
+          runSpacing: 8,
           children: [
             TextButton(
               onPressed: onBack,
               child: Text(AppLocalizations.of(context).back),
             ),
-            const Spacer(),
             FilledButton.icon(
               icon: const Icon(Icons.check),
-              label: const Text('File as next action'),
+              label: Text(l10n.processFileNextAction),
               onPressed: onConfirm,
             ),
           ],
@@ -439,13 +500,16 @@ class StepSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                letterSpacing: 0.6,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            child: Semantics(
+              header: true,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  letterSpacing: 0.6,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),

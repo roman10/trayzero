@@ -11,17 +11,19 @@ import 'package:record/record.dart';
 
 import '../../application/providers.dart';
 import '../../core/clock.dart';
+import '../../core/system_settings.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/image_viewer.dart';
+import '../common/thumbnail_file_image.dart';
+import '../common/undo_snack_bar.dart';
 
 class AttachmentsSection extends ConsumerStatefulWidget {
   const AttachmentsSection({required this.itemId, super.key});
   final String itemId;
 
   @override
-  ConsumerState<AttachmentsSection> createState() =>
-      _AttachmentsSectionState();
+  ConsumerState<AttachmentsSection> createState() => _AttachmentsSectionState();
 }
 
 class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
@@ -31,6 +33,10 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
   StreamSubscription<void>? _completeSub;
   bool _recording = false;
   String? _playingId;
+
+  /// Attachments the user removed whose Undo window is still open. Hidden from
+  /// the list but not yet deleted from disk / the database.
+  final _pendingRemoval = <String>{};
 
   @override
   void initState() {
@@ -50,9 +56,15 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final file = await _picker.pickImage(source: source, maxWidth: 2400);
+    final file = await _picker.pickImage(
+      source: source,
+      maxWidth: 2400,
+      maxHeight: 2400,
+    );
     if (file == null) return;
-    await ref.read(attachmentRepositoryProvider).attach(
+    await ref
+        .read(attachmentRepositoryProvider)
+        .attach(
           itemId: widget.itemId,
           kind: AttachmentKind.image,
           source: File(file.path),
@@ -65,7 +77,9 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
       final path = await _recorder.stop();
       setState(() => _recording = false);
       if (path == null) return;
-      await ref.read(attachmentRepositoryProvider).attach(
+      await ref
+          .read(attachmentRepositoryProvider)
+          .attach(
             itemId: widget.itemId,
             kind: AttachmentKind.audio,
             source: File(path),
@@ -76,7 +90,11 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
       if (await tmp.exists()) await tmp.delete();
       return;
     }
-    if (!await _recorder.hasPermission()) return;
+    if (!await _recorder.hasPermission()) {
+      if (!mounted) return;
+      _showMicrophoneDenied();
+      return;
+    }
     final tmpDir = await getTemporaryDirectory();
     final tmpPath = p.join(
       tmpDir.path,
@@ -86,14 +104,31 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
     setState(() => _recording = true);
   }
 
+  /// Recording needs the microphone; once it is denied the OS will not ask
+  /// again, so say why nothing happened and offer the way out.
+  void _showMicrophoneDenied() {
+    final l10n = AppLocalizations.of(context);
+    final settings = ref.read(systemSettingsProvider);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(l10n.microphoneAccessDenied),
+          action: SnackBarAction(
+            label: l10n.notificationActionOpenSettings,
+            onPressed: () => unawaited(settings.openAppSettings()),
+          ),
+        ),
+      );
+  }
+
   Future<void> _play(Attachment a) async {
     if (_playingId == a.id) {
       await _player.stop();
       setState(() => _playingId = null);
       return;
     }
-    final abs =
-        await ref.read(attachmentRepositoryProvider).absolutePathOf(a);
+    final abs = await ref.read(attachmentRepositoryProvider).absolutePathOf(a);
     if (!mounted) return;
     await _player.stop();
     await _player.play(DeviceFileSource(abs));
@@ -101,9 +136,40 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
     setState(() => _playingId = a.id);
   }
 
+  /// Hides [a] and offers Undo; the file and row are deleted only once the
+  /// snackbar closes without Undo, so a mis-tap never destroys a photo.
+  void _removeWithUndo(Attachment a) {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    // Resolved now: the snackbar can outlive this section (and its ref).
+    final repo = ref.read(attachmentRepositoryProvider);
+    if (_playingId == a.id) {
+      unawaited(_player.stop());
+      _playingId = null;
+    }
+    setState(() => _pendingRemoval.add(a.id));
+    messenger.hideCurrentSnackBar();
+    messenger
+        .showSnackBar(
+          undoSnackBar(
+            context,
+            message: l10n.attachmentRemoved,
+            onUndo: () {
+              if (mounted) setState(() => _pendingRemoval.remove(a.id));
+            },
+          ),
+        )
+        .closed
+        .then((reason) async {
+          if (reason == SnackBarClosedReason.action) return;
+          await repo.delete(a);
+          if (mounted) setState(() => _pendingRemoval.remove(a.id));
+        })
+        .catchError((Object _) {});
+  }
+
   Future<void> _openImage(Attachment tapped, List<Attachment> all) async {
-    final imgs =
-        all.where((a) => a.kind == AttachmentKind.image).toList();
+    final imgs = all.where((a) => a.kind == AttachmentKind.image).toList();
     // Capture the position now; the list passed in is the current snapshot.
     final initialIndex = imgs.indexOf(tapped);
     if (initialIndex < 0) return;
@@ -117,19 +183,18 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
         ),
     ];
     if (!mounted) return;
-    await showImageViewer(
-      context,
-      images: srcs,
-      initialIndex: initialIndex,
-    );
+    await showImageViewer(context, images: srcs, initialIndex: initialIndex);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final attachments =
-        ref.watch(attachmentsForItemProvider(widget.itemId)).valueOrNull ??
-            const <Attachment>[];
+    final attachments = [
+      for (final a
+          in ref.watch(attachmentsForItemProvider(widget.itemId)).valueOrNull ??
+              const <Attachment>[])
+        if (!_pendingRemoval.contains(a.id)) a,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -147,11 +212,10 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
               onPressed: () => _pickImage(ImageSource.camera),
             ),
             ActionChip(
-              avatar: Icon(
-                _recording ? Icons.stop : Icons.mic_none,
-                size: 18,
+              avatar: Icon(_recording ? Icons.stop : Icons.mic_none, size: 18),
+              label: Text(
+                _recording ? l10n.attachmentStop : l10n.attachmentVoiceMemo,
               ),
-              label: Text(_recording ? l10n.attachmentStop : l10n.attachmentVoiceMemo),
               onPressed: _toggleRecord,
             ),
           ],
@@ -164,8 +228,7 @@ class _AttachmentsSectionState extends ConsumerState<AttachmentsSection> {
               isPlaying: _playingId == a.id,
               onPlay: () => _play(a),
               onOpenImage: () => _openImage(a, attachments),
-              onDelete: () =>
-                  ref.read(attachmentRepositoryProvider).delete(a),
+              onDelete: () => _removeWithUndo(a),
             ),
         ],
       ],
@@ -218,8 +281,13 @@ class _AttachmentTile extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(8),
                         child: Hero(
                           tag: attachment.id,
-                          child: Image.file(
-                            File(snap.data!),
+                          child: Image(
+                            image: ThumbnailFileImage(
+                              File(snap.data!),
+                              pixelSize:
+                                  (56 * MediaQuery.devicePixelRatioOf(context))
+                                      .ceil(),
+                            ),
                             width: 56,
                             height: 56,
                             fit: BoxFit.cover,
@@ -243,16 +311,12 @@ class _AttachmentTile extends ConsumerWidget {
                         color: scheme.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        switch (attachment.kind) {
-                          AttachmentKind.audio => isPlaying
-                              ? Icons.pause
-                              : Icons.play_arrow,
-                          AttachmentKind.file => Icons.insert_drive_file,
-                          _ => Icons.image_outlined,
-                        },
-                        color: scheme.onPrimaryContainer,
-                      ),
+                      child: Icon(switch (attachment.kind) {
+                        AttachmentKind.audio =>
+                          isPlaying ? Icons.pause : Icons.play_arrow,
+                        AttachmentKind.file => Icons.insert_drive_file,
+                        _ => Icons.image_outlined,
+                      }, color: scheme.onPrimaryContainer),
                     );
                   },
                 ),

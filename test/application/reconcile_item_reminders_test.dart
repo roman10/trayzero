@@ -54,6 +54,16 @@ void main() {
     expect(scheduler.cancelled, contains(notificationIdFor('i1', 3)));
   });
 
+  test('a past dueAt cancels the Due id instead of scheduling it', () async {
+    // Editing a due date backward must tear down the previously-armed Due
+    // reminder, not leave it alive. `schedule` would silently drop a past
+    // `at` without replacing the old notification, so reconcile must route
+    // a past dueAt through the cancel branch.
+    await reconcile(item(dueAt: DateTime(2026, 5, 14, 11))); // before now (12)
+    expect(scheduler.scheduled.any((s) => s.title.startsWith('Due')), isFalse);
+    expect(scheduler.cancelled, contains(notificationIdFor('i1', 1)));
+  });
+
   test('schedules a "Ready" reminder at an explicit-time deferUntil (salt 2)',
       () async {
     final defer = DateTime(2026, 5, 17, 8);
@@ -61,6 +71,20 @@ void main() {
     expect(scheduler.scheduled.single.id, notificationIdFor('i1', 2));
     expect(scheduler.scheduled.single.at, defer);
     expect(scheduler.scheduled.single.title, startsWith('Ready'));
+  });
+
+  test('elapsed Ready reminders are cancelled while the anchor is retained', () async {
+    for (final anchor in [DateTime(2026, 5, 14), now]) {
+      await reconcile(item(deferUntil: anchor));
+    }
+    expect(scheduler.scheduled, isEmpty);
+    expect(scheduler.cancelled, contains(notificationIdFor('i1', 2)));
+  });
+
+  test('a past midnight anchor still schedules a future surface hour', () async {
+    await reconcile(item(deferUntil: DateTime(2026, 5, 14)),
+      deferSurfaceMinutes: 13 * 60);
+    expect(scheduler.scheduled.single.at, DateTime(2026, 5, 14, 13));
   });
 
   test('a start-of-day defer surfaces at the configured hour', () async {

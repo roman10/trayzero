@@ -1,0 +1,11 @@
+[
+  {"id":"default","displayName":"タスク","wellknownListName":"defaultList","tasks":[
+    {"id":"a","title":"Call Mom 日本語","status":"notStarted","body":{"contentType":"text","content":"Ask about travel"},"categories":["phone","family"],"checklistItems":[]},
+    {"id":"done","title":"Finished task","status":"completed"}
+  ]},
+  {"id":"garage","displayName":"Garage","wellknownListName":"none","tasks":[
+    {"id":"b","title":"Paint shelves","status":"inProgress","body":{"contentType":"html","content":"<p>Buy <b>blue</b> paint &amp; brushes.</p><p>See <a href=\"https://example.com/paint\">paint guide</a></p>"},"dueDateTime":{"dateTime":"2026-11-06T00:00:00.0000000","timeZone":"UTC"},"startDateTime":{"dateTime":"2026-11-04T00:00:00.0000000","timeZone":"UTC"},"categories":["@home","weekend"],"importance":"high","hasAttachments":true,"isReminderOn":true,"recurrence":{"pattern":{"type":"weekly","interval":1,"daysOfWeek":["friday"]},"range":{"type":"noEnd","startDate":"2026-11-06"}},"checklistItems":[{"id":"step1","displayName":"Buy brushes","isChecked":false},{"id":"step2","displayName":"Clear space","isChecked":true}]},
+    {"id":"c","title":"Wait for delivery","status":"waitingOnOthers","checklistItems":[]},
+    {"id":"d","title":"Build workbench","status":"deferred","checklistItems":[]}
+  ]}
+]

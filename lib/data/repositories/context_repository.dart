@@ -55,6 +55,10 @@ class ContextRepository {
   }
 
   Future<void> delete(String id) async {
-    await (_db.delete(_db.contexts)..where((t) => t.id.equals(id))).go();
+    await _db.transaction(() async {
+      await (_db.update(_db.items)..where((t) => t.contextId.equals(id)))
+          .write(const ItemsCompanion(contextId: Value(null)));
+      await (_db.delete(_db.contexts)..where((t) => t.id.equals(id))).go();
+    });
   }
 }

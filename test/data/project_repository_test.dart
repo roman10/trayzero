@@ -91,4 +91,25 @@ void main() {
     await repo.upsert(project('a', areaId: 'area-1'));
     expect((await repo.getById('a'))?.areaId, 'area-1');
   });
+  test('saving an edit keeps a review mark made meanwhile', () async {
+    await repo.upsert(project('a', title: 'Launch website'));
+    final stale = (await repo.getById('a'))!;
+    final reviewedAt = DateTime(2026, 5, 15, 9);
+    await repo.markReviewed('a', reviewedAt);
+
+    await repo.upsert(stale.copyWith(outcome: 'Site is live'));
+
+    final fetched = (await repo.getById('a'))!;
+    expect(fetched.outcome, 'Site is live');
+    expect(fetched.lastReviewedAt, reviewedAt);
+  });
+
+  test('upsertAll restores lastReviewedAt wholesale', () async {
+    await repo.upsert(project('a'));
+    await repo.markReviewed('a', DateTime(2026, 5, 15, 9));
+
+    await repo.upsertAll([project('a')]);
+
+    expect((await repo.getById('a'))!.lastReviewedAt, isNull);
+  });
 }

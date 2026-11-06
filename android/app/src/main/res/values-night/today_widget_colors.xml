@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="today_widget_surface">#FF1E1E1E</color>
+    <color name="today_widget_text">#FFF3F4F6</color>
+    <color name="today_widget_text_muted">#80F3F4F6</color>
+    <color name="today_widget_accent">#FFF08A4B</color>
+    <color name="today_widget_on_accent">#FF1E1E1E</color>
+</resources>

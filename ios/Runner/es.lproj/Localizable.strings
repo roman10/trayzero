@@ -1,0 +1,14 @@
+/* App Intents (ADR 0009). Follows the system language. */
+
+"Add to Inbox" = "Añadir a la bandeja";
+"Adds text to your Trayzero Inbox without opening the app." = "Añade texto a tu bandeja de Trayzero sin abrir la app.";
+"Text" = "Texto";
+"What do you want to capture?" = "¿Qué quieres capturar?";
+"Add ${text} to Inbox" = "Añadir ${text} a la bandeja";
+"Added to your Inbox." = "Añadido a tu bandeja.";
+"Open Quick Capture" = "Abrir captura rápida";
+"Opens Trayzero's quick capture sheet." = "Abre la captura rápida de Trayzero.";
+"Show Today" = "Ver Hoy";
+"Opens the items you focused for today." = "Abre tus elementos en foco para hoy.";
+"Quick Capture" = "Captura rápida";
+"Today" = "Hoy";

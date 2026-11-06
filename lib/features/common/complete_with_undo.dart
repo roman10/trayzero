@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../l10n/gen/app_localizations.dart';
+import 'undo_snack_bar.dart';
 
 /// Completes [itemId] and shows an "Undo" snackbar. Undo fully reverses the
 /// completion — including deleting any recurrence instance that completing
@@ -15,23 +17,53 @@ Future<void> completeWithUndo(
   String itemId,
 ) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  // The snackbar can outlive its list screen. Resolve Undo before awaiting or
+  // navigating so its callback never reads a disposed WidgetRef.
+  final undo = ref.read(undoCompleteProvider);
   final spawnedId = await ref.read(completeItemProvider).call(itemId);
+  if (!context.mounted) return;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
-      SnackBar(
-        content: const Text('Completed'),
-        // Flutter defaults `persist` to `action != null`, which keeps any
-        // snackbar with an action on screen until the user dismisses it.
-        // We want the usual auto-dismiss after a short Undo window.
-        persist: false,
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () => ref
-              .read(undoCompleteProvider)
-              .call(itemId, spawnedRecurrenceId: spawnedId),
-        ),
+      undoSnackBar(
+        context,
+        message: l10n.completed,
+        onUndo: () => undo(itemId, spawnedRecurrenceId: spawnedId),
       ),
     );
+}
+
+/// Batch variant of [completeWithUndo]: completes every id in [itemIds] and
+/// shows a single "Undo" snackbar that reverses the whole batch, including any
+/// recurrence instances the completions spawned.
+Future<void> completeManyWithUndo(
+  BuildContext context,
+  WidgetRef ref,
+  List<String> itemIds,
+) async {
+  if (itemIds.isEmpty) return;
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context);
+  final complete = ref.read(completeItemProvider);
+  // Resolved up front so Undo still works if this screen is gone by then.
+  final undo = ref.read(undoCompleteProvider);
+  final spawnedIds = <String, String?>{};
+  // Built before awaiting (it needs the BuildContext); Undo reads the map,
+  // which is complete by the time the snackbar can be shown.
+  final snackBar = undoSnackBar(
+    context,
+    message: l10n.completedItemsSnackbar(itemIds.length),
+    onUndo: () async {
+      for (final e in spawnedIds.entries) {
+        await undo(e.key, spawnedRecurrenceId: e.value);
+      }
+    },
+  );
+  for (final id in itemIds) {
+    spawnedIds[id] = await complete(id);
+  }
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(snackBar);
 }

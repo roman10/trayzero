@@ -71,16 +71,4 @@ void main() {
 
     expect(find.text('Awaiting Sara reply'), findsOneWidget);
   });
-
-  testWidgets('opening the weekly review wizard shows the first step',
-      (tester) async {
-    await pumpApp(tester, const ReviewScreen(), env: env);
-    await tester.pump(const Duration(milliseconds: 100));
-
-    await tester.tap(find.text('Weekly review'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Step 1 of 7'), findsOneWidget);
-    expect(find.text('Empty your head'), findsOneWidget);
-  });
 }

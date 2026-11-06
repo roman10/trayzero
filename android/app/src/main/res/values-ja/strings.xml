@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Trayzero の受信箱にすばやく取り込む</string>
+    <string name="today_widget_name">今日</string>
+    <string name="today_widget_description">今日フォーカスした項目。丸をタップして完了。</string>
+    <string name="today_widget_title">今日</string>
+    <string name="today_widget_done">%1$d 件完了</string>
+    <string name="today_widget_more">ほか %1$d 件</string>
+    <string name="today_widget_empty">まだフォーカスがありません</string>
+    <string name="today_widget_all_done">今日はすべて完了</string>
+    <string name="today_widget_plan">1日を計画</string>
+    <string name="today_widget_complete">%1$s を完了</string>
+    <string name="tile_capture_label">Trayzero に取り込む</string>
+    <string name="shortcut_capture_short">取り込む</string>
+    <string name="shortcut_capture_long">受信箱に取り込む</string>
+    <string name="shortcut_today_short">今日</string>
+    <string name="shortcut_today_long">今日を表示</string>
+    <string name="shortcut_process_short">処理</string>
+    <string name="shortcut_process_long">受信箱を処理</string>
+</resources>

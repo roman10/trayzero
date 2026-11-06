@@ -44,8 +44,9 @@ class _ImageViewerScreen extends StatefulWidget {
 }
 
 class _ImageViewerScreenState extends State<_ImageViewerScreen> {
-  late final PageController _controller =
-      PageController(initialPage: widget.initialIndex);
+  late final PageController _controller = PageController(
+    initialPage: widget.initialIndex,
+  );
   late int _index = widget.initialIndex;
 
   @override
@@ -74,7 +75,9 @@ class _ImageViewerScreenState extends State<_ImageViewerScreen> {
           showCounter
               ? l10n.imageViewerCounter(_index + 1, widget.images.length)
               : (current.name ?? ''),
-          style: const TextStyle(fontSize: 15),
+          // AppBarTheme can set an explicit title color that otherwise wins
+          // over this viewer's white AppBar foreground.
+          style: const TextStyle(fontSize: 15, color: Colors.white),
         ),
       ),
       body: PageView.builder(

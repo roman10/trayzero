@@ -1,0 +1,8 @@
+TYPE,CONTENT,DESCRIPTION,PRIORITY,INDENT,AUTHOR,RESPONSIBLE,DATE,DATE_LANG,TIMEZONE,DURATION,DURATION_UNIT,DEADLINE,DEADLINE_LANG
+meta,view_style=list,,,,,,,,,,,,
+,,,,,,,,,,,,,
+task,Call that very important client,,1,1,,,today at 11:00,en,,30,minute,2025-03-31,en
+note,Only available on Tuesdays and Thursdays,,,,,,,,,,,,
+task,**Household chores**:,,4,1,,,,,,,,2025-02-24,en
+task,Clean the house,,4,2,,,every month @ 13:00,en,,120,minute,,
+task,Take out the trash,,3,2,,,every Friday,en,,,,,

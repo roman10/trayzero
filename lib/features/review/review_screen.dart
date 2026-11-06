@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../application/providers.dart';
-import '../../core/clock.dart';
-import '../../core/id_generator.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/complete_with_undo.dart';
+import '../common/delete_with_undo.dart';
+import '../common/focus_star.dart';
 import '../common/gtd_workflow_diagram.dart';
 import '../common/item_card.dart';
 import '../common/redecide_actions.dart';
@@ -25,6 +25,7 @@ class ReviewScreen extends ConsumerWidget {
     final reference = ref.watch(referenceProvider).valueOrNull ?? const [];
     final completed =
         ref.watch(completedThisWeekProvider).valueOrNull ?? const [];
+    final agendas = ref.watch(agendasProvider);
     final gtd = context.gtd;
     final l = AppLocalizations.of(context);
 
@@ -62,6 +63,32 @@ class ReviewScreen extends ConsumerWidget {
             items: waiting,
             emptyMsg: l.waitingForEmpty,
           ),
+          // GTD reviews Agendas beside Waiting For (ADR 0010); the bucket
+          // exists only while some tag is a person.
+          if (agendas.isNotEmpty)
+            _Bucket(
+              title: l.agendasTitle,
+              icon: Icons.people_outline,
+              color: gtd.waiting,
+              count: agendas.length,
+              subtitle: l.agendasPeopleCount(agendas.length),
+              items: const [],
+              emptyMsg: '',
+              children: [
+                for (final a in agendas)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(a.person.name),
+                    trailing: Text(
+                      '${a.count}',
+                      semanticsLabel: l.tagOpenItems(a.count),
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    onTap: () => context.push('/agenda/${a.person.id}'),
+                  ),
+              ],
+            ),
           _Bucket(
             title: l.somedayMaybe,
             icon: Icons.cloud_outlined,
@@ -98,12 +125,13 @@ class _WeeklyReviewCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context);
+    final incomplete = ref.watch(incompleteWeeklyReviewProvider).valueOrNull;
     return Material(
       color: scheme.primaryContainer,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => _startWeeklyReview(context, ref),
+        onTap: () => context.push('/review/weekly'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -123,7 +151,9 @@ class _WeeklyReviewCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l.weeklyReviewCardTitle,
+                      incomplete == null
+                          ? l.weeklyReviewCardTitle
+                          : l.weeklyReviewResume,
                       style: TextStyle(
                         color: scheme.onPrimaryContainer,
                         fontSize: 16,
@@ -161,6 +191,8 @@ class _Bucket extends ConsumerWidget {
     required this.items,
     required this.emptyMsg,
     this.readOnly = false,
+    this.subtitle,
+    this.children,
   });
   final String title;
   final IconData icon;
@@ -173,6 +205,12 @@ class _Bucket extends ConsumerWidget {
   /// delete affordances. Tapping still opens the item (where it can be
   /// reopened).
   final bool readOnly;
+
+  /// Replaces the "N items" subtitle.
+  final String? subtitle;
+
+  /// Rows shown instead of [items], for buckets that list something else.
+  final List<Widget>? children;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -207,9 +245,12 @@ class _Bucket extends ConsumerWidget {
               title,
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
-            subtitle: Text(AppLocalizations.of(context).bucketCount(count)),
+            subtitle: Text(
+              subtitle ?? AppLocalizations.of(context).bucketCount(count),
+            ),
             children: [
-              if (items.isEmpty)
+              ...?children,
+              if (children == null && items.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
@@ -226,7 +267,10 @@ class _Bucket extends ConsumerWidget {
                       : () => completeWithUndo(context, ref, item.id),
                   onDelete: readOnly
                       ? null
-                      : () => ref.read(deleteItemProvider).call(item.id),
+                      : () => deleteWithUndo(context, ref, item.id),
+                  onToggleFocus: readOnly
+                      ? null
+                      : () => toggleTodayFocus(context, ref, item),
                 ),
                 const SizedBox(height: 6),
               ],
@@ -299,132 +343,3 @@ class _NeedsReDecisionBucket extends ConsumerWidget {
     );
   }
 }
-
-// ----- Weekly Review wizard -------------------------------------------------
-
-/// Total weekly-review steps. Step text is sourced from [AppLocalizations]
-/// inside the wizard so titles/bodies follow the active locale.
-const _stepCount = 7;
-
-class _StepDef {
-  const _StepDef({required this.title, required this.body});
-  final String title;
-  final String body;
-}
-
-List<_StepDef> _reviewSteps(AppLocalizations l) => [
-      _StepDef(title: l.reviewStep1Title, body: l.reviewStep1Body),
-      _StepDef(title: l.reviewStep2Title, body: l.reviewStep2Body),
-      _StepDef(title: l.reviewStep3Title, body: l.reviewStep3Body),
-      _StepDef(title: l.reviewStep4Title, body: l.reviewStep4Body),
-      _StepDef(title: l.reviewStep5Title, body: l.reviewStep5Body),
-      _StepDef(title: l.reviewStep6Title, body: l.reviewStep6Body),
-      _StepDef(title: l.reviewStep7Title, body: l.reviewStep7Body),
-    ];
-
-Future<void> _startWeeklyReview(BuildContext context, WidgetRef ref) async {
-  await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => const _WeeklyReviewWizard()),
-  );
-}
-
-class _WeeklyReviewWizard extends ConsumerStatefulWidget {
-  const _WeeklyReviewWizard();
-
-  @override
-  ConsumerState<_WeeklyReviewWizard> createState() =>
-      _WeeklyReviewWizardState();
-}
-
-class _WeeklyReviewWizardState extends ConsumerState<_WeeklyReviewWizard> {
-  int _i = 0;
-  late final DateTime _startedAt = ref.read(clockProvider).now();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l = AppLocalizations.of(context);
-    final steps = _reviewSteps(l);
-    final step = steps[_i];
-    final progress = (_i + 1) / _stepCount;
-    final isLast = _i == _stepCount - 1;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.reviewStepCounter(_i + 1, _stepCount)),
-      ),
-      body: Column(
-        children: [
-          LinearProgressIndicator(value: progress, minHeight: 3),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    step.body,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: scheme.onSurfaceVariant,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Row(
-                children: [
-                  if (_i > 0)
-                    TextButton(
-                      onPressed: () => setState(() => _i -= 1),
-                      child: Text(l.back),
-                    ),
-                  const Spacer(),
-                  FilledButton.icon(
-                    icon: Icon(isLast ? Icons.check : Icons.arrow_forward),
-                    label: Text(isLast ? l.finishReview : l.next),
-                    onPressed: () async {
-                      if (isLast) {
-                        final completedAt = ref.read(clockProvider).now();
-                        await ref.read(reviewRepositoryProvider).insert(
-                              ReviewLog(
-                                id: ref.read(idGeneratorProvider).newId(),
-                                type: ReviewType.weekly,
-                                startedAt: _startedAt,
-                                completedAt: completedAt,
-                              ),
-                            );
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(l.reviewCompleteSnackbar)),
-                        );
-                        Navigator.of(context).pop();
-                      } else {
-                        setState(() => _i += 1);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-

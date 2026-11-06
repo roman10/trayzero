@@ -1,0 +1,5 @@
+Language improvements:
+
+- New: choose your app language in Settings > Appearance > Language, including a "System default" option.
+- Fixed: unsupported device languages now fall back to English instead of German.
+- Added Russian; refined German, Spanish, French, Japanese, Korean, Chinese (Simplified & Traditional) and Portuguese translations.

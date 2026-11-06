@@ -37,4 +37,45 @@ void main() {
     final item = await capture(title: 't', notes: 'detail');
     expect(item.notes, 'detail');
   });
+
+  test('keeps parsed fields on the Inbox Item, due at the reminder hour',
+      () async {
+    final reconciled = <Item>[];
+    final dated = CaptureItem(
+      items: items,
+      clock: FakeClock(DateTime(2026, 5, 14, 9)),
+      ids: FixedIdGenerator(['cap-2']),
+      reconcileReminders: (item) async => reconciled.add(item),
+      dueMinutesOfDay: 8 * 60 + 30,
+    );
+    final item = await dated(
+      title: 'Submit report',
+      contextId: 'c-office',
+      projectId: 'p-q3',
+      dueAt: DateTime(2026, 5, 15),
+    );
+    // Capture is not Clarify: parsed details never skip the Inbox.
+    expect(item.status, ItemStatus.inbox);
+    expect(item.contextId, 'c-office');
+    expect(item.projectId, 'p-q3');
+    expect(item.dueAt, DateTime(2026, 5, 15, 8, 30));
+    expect(item.deferUntil, isNull);
+    expect(reconciled.single.id, 'cap-2');
+    expect((await items.getById('cap-2'))!.dueAt, DateTime(2026, 5, 15, 8, 30));
+  });
+
+  test('a failed reminder reconcile still returns the saved Item', () async {
+    final dated = CaptureItem(
+      items: items,
+      clock: FakeClock(DateTime(2026, 5, 14, 9)),
+      ids: FixedIdGenerator(['cap-3']),
+      reconcileReminders: (_) async => throw StateError('no alarms'),
+    );
+    final item = await dated(
+      title: 'Renew passport',
+      deferUntil: DateTime(2026, 6, 1),
+    );
+    expect(item.deferUntil, DateTime(2026, 6, 1));
+    expect(await items.getById('cap-3'), isNotNull);
+  });
 }

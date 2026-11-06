@@ -1,0 +1,6 @@
+/* Siri and Shortcuts phrases (ADR 0009). Follows the system language. */
+
+"Add to ${applicationName} inbox" = "Adicionar à caixa de entrada do ${applicationName}";
+"Capture in ${applicationName}" = "Capturar no ${applicationName}";
+"Open ${applicationName} quick capture" = "Abrir captura rápida do ${applicationName}";
+"Show ${applicationName} Today" = "Mostrar Hoje no ${applicationName}";

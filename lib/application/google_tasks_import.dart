@@ -15,6 +15,8 @@
 ///    subtask hierarchy).
 library;
 
+import '../domain/import/google_tasks_dates.dart';
+
 /// True when [raw] looks like a Google Takeout Tasks export rather than a
 /// Trayzero backup.
 bool isGoogleTasksExport(Map<String, Object?> raw) {
@@ -108,7 +110,8 @@ Map<String, Object?> _taskToItem(
     'status': completed ? 'done' : 'inbox',
     'projectId': null,
     'contextId': null,
-    'dueAt': _scheduledDate(task) ?? _normDate(task['due']),
+    'dueAt': _scheduledDate(task) ??
+        parseGoogleTasksDueDate(task['due'])?.toIso8601String(),
     'deferUntil': null,
     'waitingOn': null,
     'energy': null,

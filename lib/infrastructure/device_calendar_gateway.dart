@@ -14,6 +14,12 @@ class DeviceCalendarGateway implements CalendarGateway {
   final DeviceCalendarPlugin _plugin = DeviceCalendarPlugin();
 
   @override
+  Future<bool> hasPermissions() async {
+    final result = await _plugin.hasPermissions();
+    return result.isSuccess && (result.data ?? false);
+  }
+
+  @override
   Future<bool> requestPermissions() async {
     // Trust an existing grant first: avoids a redundant prompt when the user
     // taps "Grant"/"Retry" again, and sidesteps the Android quirk where a
@@ -40,10 +46,22 @@ class DeviceCalendarGateway implements CalendarGateway {
       await Future<void>.delayed(const Duration(milliseconds: 400));
       res = await _plugin.retrieveCalendars();
     }
+    if (!res.isSuccess) {
+      throw StateError(
+        'Device calendar lookup failed (codes: '
+        '${res.errors.map((e) => e.errorCode).join(',')})',
+      );
+    }
     return (res.data ?? const <Calendar>[])
         .where((c) => (c.id ?? '').isNotEmpty)
-        .map((c) =>
-            CalendarInfo(id: c.id!, name: c.name ?? c.id ?? 'Unnamed'))
+        .map(
+          (c) => CalendarInfo(
+            id: c.id!,
+            name: c.name ?? c.id ?? 'Unnamed',
+            accountName: c.accountName,
+            writable: c.isReadOnly != true,
+          ),
+        )
         .toList();
   }
 
@@ -84,9 +102,7 @@ class DeviceCalendarGateway implements CalendarGateway {
 
     switch (r.frequency) {
       case CalendarFrequency.weekly:
-        daysOfWeek = (r.byWeekdays.isEmpty
-                ? [start.weekday]
-                : r.byWeekdays)
+        daysOfWeek = (r.byWeekdays.isEmpty ? [start.weekday] : r.byWeekdays)
             .map(dow)
             .toList();
       case CalendarFrequency.monthly:
@@ -120,7 +136,16 @@ class DeviceCalendarGateway implements CalendarGateway {
     required String eventId,
   }) async {
     final res = await _plugin.deleteEvent(calendarId, eventId);
-    return res.isSuccess && (res.data ?? false);
+    if (res.isSuccess && (res.data ?? false)) return true;
+    // Users can remove the event in their calendar app. Confirm absence;
+    // unsuccessful lookups still retain ownership for a later retry.
+    final remaining = await _plugin.retrieveEvents(
+      calendarId,
+      RetrieveEventsParams(eventIds: [eventId]),
+    );
+    return remaining.isSuccess &&
+        remaining.data != null &&
+        remaining.data!.isEmpty;
   }
 
   @override
@@ -133,13 +158,16 @@ class DeviceCalendarGateway implements CalendarGateway {
       calendarId,
       RetrieveEventsParams(startDate: from, endDate: to),
     );
+    if (!res.isSuccess) throw StateError('Calendar event lookup failed');
     return (res.data ?? const <Event>[])
         .where((e) => e.eventId != null)
-        .map((e) => CalendarEventView(
-              id: e.eventId!,
-              title: e.title ?? '',
-              start: e.start?.toLocal(),
-            ))
+        .map(
+          (e) => CalendarEventView(
+            id: e.eventId!,
+            title: e.title ?? '',
+            start: e.start?.toLocal(),
+          ),
+        )
         .toList();
   }
 }

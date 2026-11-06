@@ -1,26 +1,40 @@
 import 'dart:async';
 
+import 'core/calendar_connection.dart';
+import 'infrastructure/shared_preferences_calendar_connection.dart';
+import 'application/calendar_connection_controller.dart';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'app/app_links.dart';
+import 'app/locale_resolution.dart';
 import 'application/drain_pending_notification_intents.dart';
+import 'application/automatic_folder_backup.dart';
 import 'application/handle_notification_response.dart';
 import 'application/providers.dart';
+import 'application/today_widget_snapshot.dart';
 import 'app/router.dart';
+import 'core/app_review.dart';
+import 'core/appearance_preferences.dart';
 import 'core/clock.dart';
+import 'core/folder_backup.dart';
 import 'core/home_widget_bridge.dart';
 import 'core/id_generator.dart';
 import 'core/notification_intent.dart';
 import 'core/notification_scheduler.dart';
 import 'data/seed.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'features/settings/settings_controller.dart';
 import 'infrastructure/billing_providers.dart';
 import 'infrastructure/pending_notification_intents.dart';
 import 'infrastructure/providers.dart';
+import 'infrastructure/shared_preferences_appearance_store.dart';
+import 'infrastructure/shared_preferences_folder_backup.dart';
+import 'infrastructure/shared_preferences_review_prompt_store.dart';
 import 'infrastructure/time_zone.dart';
 
 // Sentry DSN — pass via `--dart-define=SENTRY_DSN=...`. Empty means disabled.
@@ -36,10 +50,8 @@ AppLifecycleListener? _lifecycleListener;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Use the platform's supported orientations. A portrait-only runtime lock
+  // overrides the iOS manifest and prevents landscape on the outer display.
 
   final prefs = await SharedPreferences.getInstance();
   final crashReportingEnabled =
@@ -49,14 +61,46 @@ Future<void> main() async {
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
+      calendarConnectionPreferencesProvider.overrideWithValue(
+        SharedPreferencesCalendarConnection(prefs),
+      ),
+      folderBackupPreferencesProvider.overrideWithValue(
+        SharedPreferencesFolderBackup(prefs),
+      ),
+      appearancePreferencesStoreProvider.overrideWithValue(
+        SharedPreferencesAppearanceStore(prefs),
+      ),
+      reviewPromptStoreProvider.overrideWithValue(
+        SharedPreferencesReviewPromptStore(prefs),
+      ),
       ...defaultInfrastructureOverrides(),
     ],
   );
 
-  // Bootstrap one-time defaults (idempotent).
+  // Count this launch for the store-rating prompt policy (ADR 0007). Best
+  // effort: a preference write failure must never block launch.
+  try {
+    await container.read(recordAppSessionProvider).call();
+  } catch (e) {
+    debugPrint('[review-prompt] session record FAILED: $e');
+  }
+
+  // Bootstrap one-time defaults (idempotent). Resolve the UI locale the same
+  // way MaterialApp will, and load its strings, so seeded context names match
+  // the language the app renders in.
+  final seedLocale = container.read(localeOverrideProvider) ??
+      resolveAppLocale(WidgetsBinding.instance.platformDispatcher.locales);
+  final seedL10n = await AppLocalizations.delegate.load(seedLocale);
   await seedDefaultContextsIfEmpty(
     container.read(contextRepositoryProvider),
     container.read(idGeneratorProvider),
+    phoneLabel: seedL10n.seedContextPhone,
+    computerLabel: seedL10n.seedContextComputer,
+    errandsLabel: seedL10n.seedContextErrands,
+    homeLabel: seedL10n.seedContextHome,
+    officeLabel: seedL10n.seedContextOffice,
+    anywhereLabel: seedL10n.seedContextAnywhere,
+    waitingLabel: seedL10n.seedContextWaiting,
   );
 
   // Point tz.local at the real device timezone before anything builds a
@@ -89,6 +133,17 @@ Future<void> main() async {
     debugPrint('[notif] startup re-arm FAILED: $e\n$st');
   }
 
+  // Finish deletes whose Undo window was cut short by the app being killed:
+  // soft-deleted (trashed) rows are invisible everywhere, so this only frees
+  // their rows and attachment files. Best-effort and off the critical path.
+  unawaited(() async {
+    try {
+      await container.read(purgeTrashProvider).call();
+    } catch (e, st) {
+      debugPrint('[trash] startup purge FAILED: $e\n$st');
+    }
+  }());
+
   // Mirror inbox count to any installed home-screen widget.
   container.listen<AsyncValue<int>>(
     inboxCountProvider,
@@ -101,20 +156,32 @@ Future<void> main() async {
     fireImmediately: true,
   );
 
-  // Route widget taps (cleartray://capture, cleartray://inbox) once the
-  // router is alive.
-  homeWidget.widgetTaps.listen((uri) {
-    final router = container.read(routerProvider);
-    switch (uri.host.isNotEmpty ? uri.host : uri.path.replaceAll('/', '')) {
-      case 'capture':
-        openDeepLink(router, '/capture');
-      case 'inbox':
-        openDeepLink(router, '/inbox');
-      default:
-        // Unknown deep link — open inbox as a safe default.
-        openDeepLink(router, '/inbox');
+  // Mirror Today's focused Items to the Today widget (ADR 0009).
+  container.listen<TodayWidgetSnapshot?>(
+    todayWidgetSnapshotProvider,
+    (prev, next) {
+      if (next != null) unawaited(homeWidget.publishToday(next));
+    },
+    fireImmediately: true,
+  );
+
+  // Route links from widgets, the Quick Settings tile, launcher shortcuts,
+  // and App Intents (cleartray://capture, cleartray://today, …) once the
+  // router is alive. Unknown links open the Inbox.
+  homeWidget.widgetTaps.listen((uri) => openAppLink(container, uri));
+
+  // Apply widget checkbox taps and Siri captures queued outside the app:
+  // at startup, on resume (below), and when native code signals new work
+  // while the app is alive.
+  Future<void> drainExternalQueue() async {
+    try {
+      await container.read(drainExternalQueueProvider).call();
+    } catch (e, st) {
+      debugPrint('[widget] external queue drain FAILED: $e\n$st');
     }
-  });
+  }
+  homeWidget.queueChanged.listen((_) => unawaited(drainExternalQueue()));
+  unawaited(drainExternalQueue());
 
   // Notification taps / action buttons. Body taps and screen actions
   // (Start review / Back up now) arrive here as foreground responses
@@ -176,10 +243,22 @@ Future<void> main() async {
   // The same resume is also where the stale-notification sweep
   // catches up on iOS: the user is about to look at the tray, so
   // "best-effort eventually" is fine.
+  final folderBackups = container.read(automaticFolderBackupProvider.notifier);
+  unawaited(folderBackups.resume());
+  final calendars = container.read(calendarConnectionProvider.notifier);
+  unawaited(calendars.resume());
   _lifecycleListener = AppLifecycleListener(
+    onPause: () {
+      unawaited(folderBackups.pause());
+      calendars.background();
+    },
     onResume: () {
+      unawaited(calendars.resume());
+      unawaited(folderBackups.resume());
       unawaited(drainPendingIntents());
       unawaited(sweepStaleNotifications());
+      unawaited(drainExternalQueue());
+      unawaited(homeWidget.checkPendingLaunch());
     },
   );
 

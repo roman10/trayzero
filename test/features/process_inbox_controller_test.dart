@@ -84,4 +84,29 @@ void main() {
     expect(container.read(inboxItemsProvider).valueOrNull!.single.id, 'solo',
         reason: 'the lone item is still there to clarify later');
   });
+
+  test('captured context and project are preselected per item (ADR 0007)',
+      () async {
+    final container = env.container();
+    final repo = container.read(itemRepositoryProvider);
+    await repo.upsert(
+      anItem(id: 'a', title: 'A', contextId: 'c1', projectId: 'p1')
+          .copyWith(sortOrder: 0),
+    );
+    await repo.upsert(anItem(id: 'b', title: 'B').copyWith(sortOrder: 1));
+    final notifier = container.read(processInboxControllerProvider.notifier);
+    container.listen(inboxItemsProvider, (_, _) {});
+    await pumpEventQueue();
+
+    var state = container.read(processInboxControllerProvider);
+    expect(state.selectedContextId, 'c1');
+    expect(state.selectedProjectId, 'p1');
+
+    final itemA = container.read(inboxItemsProvider).valueOrNull!.first;
+    await notifier.decide(itemA, const TrashDecision());
+    await pumpEventQueue();
+    state = container.read(processInboxControllerProvider);
+    expect(state.selectedContextId, isNull);
+    expect(state.selectedProjectId, isNull);
+  });
 }

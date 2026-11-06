@@ -1,14 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/theme.dart';
 import '../../application/providers.dart';
-import '../../core/clock.dart';
+import '../../application/current_time.dart';
 import '../../core/due_status.dart';
+import '../../domain/today_focus.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
+import 'complete_circle.dart';
+import 'focus_star.dart';
+import 'localized_dates.dart';
+import 'localized_due_label.dart';
+import 'localized_entity_labels.dart';
+import 'localized_recurrence.dart';
 import 'notes_text.dart';
+
+const _cardPadding = 14.0;
+const _cardBorderWidth = 1.0;
+
+/// Distance from the card's outer edge to its content.
+const _cardInset = _cardPadding + _cardBorderWidth;
+
+/// Space between the completion circle and the title.
+const _circleGap = 10.0;
+
+/// How far [CompleteCircle]'s touch target extends past the visible ring.
+const _circleOverhang =
+    (CompleteCircle.targetSize - CompleteCircle.diameter) / 2;
+
+/// Tag chips shown before the rest collapse into "+N".
+const _maxTagChips = 2;
+
+/// How far [FocusStar]'s touch target extends past the visible star.
+const _starOverhang = (FocusStar.targetSize - FocusStar.iconSize) / 2;
 
 class ItemCard extends ConsumerWidget {
   const ItemCard({
@@ -20,8 +47,11 @@ class ItemCard extends ConsumerWidget {
     this.showContext = true,
     this.showProject = true,
     this.selectionMode = false,
+    this.highlighted = false,
     this.selected = false,
     this.onToggleSelected,
+    this.onToggleFocus,
+    this.hiddenTagId,
     super.key,
   });
 
@@ -37,144 +67,199 @@ class ItemCard extends ConsumerWidget {
   /// selection instead of opening the item, and the swipe actions are
   /// suppressed so bulk triage and per-item gestures never fight each other.
   final bool selectionMode;
+
+  /// Current editor selection, independent of bulk-selection controls.
+  final bool highlighted;
   final bool selected;
   final VoidCallback? onToggleSelected;
+
+  /// When set, the card shows a Today star (ADR 0007), filled while the Item
+  /// is focused today. Hidden for Items that cannot be focused.
+  final VoidCallback? onToggleFocus;
+
+  /// A tag the surrounding screen already implies (the person on their own
+  /// Agenda), left off the card's tag chips.
+  final String? hiddenTagId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final now = ref.read(clockProvider).now();
+    final l10n = AppLocalizations.of(context);
+    final now = ref.watch(currentTimeProvider);
     final contexts = ref.watch(contextsProvider).valueOrNull ?? const [];
     final GtdContext? ctx = item.contextId == null
         ? null
         : contexts.cast<GtdContext?>().firstWhere(
-              (c) => c?.id == item.contextId,
-              orElse: () => null,
-            );
-    final summary =
-        ref.watch(attachmentSummariesProvider).valueOrNull?[item.id];
+            (c) => c?.id == item.contextId,
+            orElse: () => null,
+          );
+    final summary = ref
+        .watch(attachmentSummariesProvider)
+        .valueOrNull?[item.id];
     final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
     final Project? project = item.projectId == null
         ? null
         : projects.cast<Project?>().firstWhere(
-              (p) => p?.id == item.projectId,
-              orElse: () => null,
-            );
+            (p) => p?.id == item.projectId,
+            orElse: () => null,
+          );
+    final tags = _tagsOf(
+      ref.watch(itemTagIdsProvider).valueOrNull?[item.id],
+      ref.watch(tagsProvider).valueOrNull ?? const [],
+    );
 
-    final card = InkWell(
-        onTap: selectionMode ? onToggleSelected : onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selectionMode && selected
-                ? scheme.primaryContainer
-                : scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selectionMode && selected
-                  ? scheme.primary
-                  : scheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (selectionMode)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Icon(
-                        selected
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        size: 22,
-                        color: selected ? scheme.primary : scheme.outline,
-                      ),
-                    ),
-                  if (!selectionMode && onComplete != null)
-                    Semantics(
-                      label: 'Mark ${item.title} done',
-                      button: true,
-                      child: GestureDetector(
-                        onTap: onComplete,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          margin: const EdgeInsets.only(top: 2, right: 12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: scheme.outline,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w500,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                  if (item.isTwoMin)
-                    Container(
-                      margin: const EdgeInsets.only(left: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: scheme.tertiaryContainer,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '2 min',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: scheme.onTertiaryContainer,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              if (item.notes != null && item.notes!.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                NotesText(
-                  text: item.notes!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  baseStyle: TextStyle(
-                    fontSize: 13,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final meta = _metaItems(context, ctx, project, scheme,
-                      constraints.maxWidth, now, summary);
-                  if (meta.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Wrap(spacing: 6, runSpacing: 6, children: meta),
-                  );
-                },
-              ),
-            ],
+    final canComplete = !selectionMode && onComplete != null;
+    final canStar = !selectionMode && onToggleFocus != null && canFocus(item);
+
+    final body = InkWell(
+      onTap: selectionMode ? onToggleSelected : onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(_cardPadding),
+        decoration: BoxDecoration(
+          color: (selectionMode && selected) || highlighted
+              ? scheme.primaryContainer
+              : scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: (selectionMode && selected) || highlighted
+                ? scheme.primary
+                : scheme.outlineVariant.withValues(alpha: 0.5),
+            width: _cardBorderWidth,
           ),
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (selectionMode)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(
+                      selected
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      size: 22,
+                      color: selected ? scheme.primary : scheme.outline,
+                    ),
+                  ),
+                // Reserves the circle's footprint; the circle itself is drawn
+                // by the overlay below so its touch target can exceed it.
+                if (canComplete)
+                  const SizedBox(
+                    width: CompleteCircle.diameter + _circleGap,
+                    height: CompleteCircle.diameter,
+                  ),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                if (item.isTwoMin)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      l10n.minutesShort(2),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onTertiaryContainer,
+                      ),
+                    ),
+                  ),
+                // Reserves the star's footprint; drawn by the overlay below.
+                if (canStar)
+                  const SizedBox(
+                    width: _circleGap + FocusStar.iconSize,
+                    height: FocusStar.iconSize,
+                  ),
+              ],
+            ),
+            if (item.notes != null && item.notes!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              NotesText(
+                text: item.notes!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                baseStyle: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final meta = _metaItems(
+                  context,
+                  ctx,
+                  project,
+                  scheme,
+                  constraints.maxWidth,
+                  now,
+                  summary,
+                  tags,
+                );
+                if (meta.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Wrap(spacing: 6, runSpacing: 6, children: meta),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
+
+    // The circle is an overlay rather than part of the title row: a widget
+    // can't receive taps outside its parent's bounds, and the touch target
+    // (48dp) is bigger than the row's slot for the ring.
+    final card = !canComplete && !canStar
+        ? body
+        : Stack(
+            children: [
+              body,
+              if (canComplete)
+                Positioned(
+                  left: _cardInset - _circleOverhang,
+                  top: _cardInset - _circleOverhang,
+                  child: CompleteCircle(
+                    key: ValueKey(item.id),
+                    title: item.title,
+                    onComplete: onComplete!,
+                  ),
+                ),
+              if (canStar)
+                Positioned(
+                  right: _cardInset - _starOverhang,
+                  top: _cardInset - _starOverhang,
+                  child: FocusStar(
+                    title: item.title,
+                    focused: isFocusedToday(item, now),
+                    onToggle: onToggleFocus!,
+                  ),
+                ),
+            ],
+          );
 
     if (selectionMode) {
       return Semantics(
-        label: 'Select ${item.title}',
+        label: l10n.selectItem(item.title),
         selected: selected,
         button: true,
         child: card,
@@ -182,7 +267,7 @@ class ItemCard extends ConsumerWidget {
     }
 
     if (onComplete == null && onDelete == null && onMoveToProject == null) {
-      return card;
+      return highlighted ? Semantics(selected: true, child: card) : card;
     }
 
     return Slidable(
@@ -198,7 +283,7 @@ class ItemCard extends ConsumerWidget {
                   backgroundColor: scheme.secondary,
                   foregroundColor: scheme.onSecondary,
                   icon: Icons.folder_outlined,
-                  label: 'Project',
+                  label: l10n.project,
                 ),
               ],
             ),
@@ -214,7 +299,7 @@ class ItemCard extends ConsumerWidget {
                     backgroundColor: scheme.primary,
                     foregroundColor: scheme.onPrimary,
                     icon: Icons.check,
-                    label: 'Done',
+                    label: l10n.done,
                   ),
                 if (onDelete != null)
                   SlidableAction(
@@ -222,7 +307,7 @@ class ItemCard extends ConsumerWidget {
                     backgroundColor: scheme.error,
                     foregroundColor: scheme.onError,
                     icon: Icons.delete,
-                    label: 'Delete',
+                    label: l10n.delete,
                   ),
               ],
             ),
@@ -231,112 +316,221 @@ class ItemCard extends ConsumerWidget {
   }
 
   List<Widget> _metaItems(
-      BuildContext context,
-      GtdContext? ctx,
-      Project? project,
-      ColorScheme scheme,
-      double maxWidth,
-      DateTime now,
-      AttachmentSummary? attachments) {
+    BuildContext context,
+    GtdContext? ctx,
+    Project? project,
+    ColorScheme scheme,
+    double maxWidth,
+    DateTime now,
+    AttachmentSummary? attachments,
+    List<Tag> tags,
+  ) {
     final out = <Widget>[];
+    final l10n = AppLocalizations.of(context);
     if (showContext && ctx != null) {
-      out.add(_chip(context, ctx.name,
+      out.add(
+        _chip(
+          context,
+          ctx.name,
           Color(ctx.color).onSurfaceOf(scheme.brightness),
-          maxWidth: maxWidth));
+          maxWidth: maxWidth,
+        ),
+      );
     }
     if (showProject && project != null && project.id.isNotEmpty) {
       final title = project.title;
-      out.add(_chip(
-        context,
-        title,
-        scheme.primary,
-        icon: Icons.folder,
-        // Project titles are free-form and can be long; give them two lines
-        // before ellipsizing, and let a tap reveal the full name.
-        maxLines: 2,
-        maxWidth: maxWidth,
-        onTap: () {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(title)));
-        },
-      ));
+      out.add(
+        _chip(
+          context,
+          title,
+          scheme.primary,
+          icon: Icons.folder,
+          // Project titles are free-form and can be long; give them two lines
+          // before ellipsizing, and let a tap reveal the full name.
+          maxLines: 2,
+          maxWidth: maxWidth,
+          onTap: () {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(title)));
+          },
+        ),
+      );
     }
     if (item.energy != null) {
-      out.add(_chip(
-        context,
-        '${item.energy!.label} energy',
-        scheme.tertiary,
-        maxWidth: maxWidth,
-        icon: switch (item.energy!) {
-          Energy.low => Icons.battery_2_bar,
-          Energy.medium => Icons.battery_4_bar,
-          Energy.high => Icons.battery_full,
-        },
-      ));
+      out.add(
+        _chip(
+          context,
+          l10n.itemEnergyLabel(item.energy!.localizedLabel(l10n)),
+          scheme.tertiary,
+          maxWidth: maxWidth,
+          icon: switch (item.energy!) {
+            Energy.low => Icons.battery_2_bar,
+            Energy.medium => Icons.battery_4_bar,
+            Energy.high => Icons.battery_full,
+          },
+        ),
+      );
     }
     if (item.timeEstimateMinutes != null) {
-      out.add(_chip(
-        context,
-        '${item.timeEstimateMinutes} min',
-        scheme.secondary,
-        icon: Icons.schedule,
-        maxWidth: maxWidth,
-      ));
+      out.add(
+        _chip(
+          context,
+          l10n.minutesShort(item.timeEstimateMinutes!),
+          scheme.secondary,
+          icon: Icons.schedule,
+          maxWidth: maxWidth,
+        ),
+      );
     }
     if (item.dueAt != null) {
-      final overdue =
-          dueStatusOf(item.dueAt!, now).phase == DuePhase.overdue;
-      out.add(_chip(
-        context,
-        dueChipLabel(item.dueAt!, now),
-        scheme.error,
-        icon: overdue ? Icons.event_busy : Icons.event,
-        maxWidth: maxWidth,
-        filled: overdue,
-      ));
+      final overdue = dueStatusOf(item.dueAt!, now).phase == DuePhase.overdue;
+      out.add(
+        _chip(
+          context,
+          localizedDueChipLabel(item.dueAt!, now, l10n),
+          scheme.error,
+          icon: overdue ? Icons.event_busy : Icons.event,
+          maxWidth: maxWidth,
+          filled: overdue,
+        ),
+      );
+    }
+    final defer = item.deferUntil;
+    if (defer != null && defer.isAfter(now)) {
+      out.add(
+        _chip(
+          context,
+          l10n.startsOnDate(_shortDate(defer, now, l10n)),
+          scheme.secondary,
+          icon: Icons.schedule_send_outlined,
+          maxWidth: maxWidth,
+        ),
+      );
     }
     if (item.recurrence != null) {
       // Sits next to the due/defer chip it is anchored to. The chip stays
       // terse (cadence word only); a tap surfaces the full pattern, weekday
       // and monthly qualifiers included, without crowding the row.
       final rule = item.recurrenceRule!;
-      out.add(_chip(
-        context,
-        rule.shortLabel,
-        scheme.primary,
-        icon: Icons.repeat,
-        maxWidth: maxWidth,
-        onTap: () {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(rule.describe())));
-        },
-      ));
+      out.add(
+        _chip(
+          context,
+          rule.localizedShortLabel(l10n),
+          scheme.primary,
+          icon: Icons.repeat,
+          maxWidth: maxWidth,
+          onTap: () {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(content: Text(item.localizedRecurrenceSummary(l10n))),
+              );
+          },
+        ),
+      );
     }
     if (item.waitingOn != null && item.waitingOn!.isNotEmpty) {
-      out.add(_chip(context, 'Waiting on ${item.waitingOn!}', scheme.tertiary,
-          icon: Icons.hourglass_top, maxWidth: maxWidth));
+      out.add(
+        _chip(
+          context,
+          l10n.waitingOnPerson(item.waitingOn!),
+          context.gtd.waiting,
+          icon: Icons.hourglass_top,
+          maxWidth: maxWidth,
+        ),
+      );
+    }
+    // At most two tag chips and a "+N": tags label, they don't dominate.
+    for (final tag in tags.take(_maxTagChips)) {
+      out.add(
+        Semantics(
+          label: tag.isPerson
+              ? l10n.personChipSemantics(tag.name)
+              : l10n.tagChipSemantics(tag.name),
+          excludeSemantics: true,
+          child: _chip(
+            context,
+            tag.name,
+            scheme.onSurfaceVariant,
+            icon: tag.isPerson ? Icons.person_outline : Icons.sell_outlined,
+            maxWidth: maxWidth,
+          ),
+        ),
+      );
+    }
+    if (tags.length > _maxTagChips) {
+      final rest = tags.skip(_maxTagChips).map((t) => t.name).join(', ');
+      out.add(
+        Semantics(
+          label: l10n.moreTags(tags.length - _maxTagChips),
+          excludeSemantics: true,
+          child: _chip(
+            context,
+            '+${tags.length - _maxTagChips}',
+            scheme.onSurfaceVariant,
+            maxWidth: maxWidth,
+            onTap: () {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(content: Text(rest)));
+            },
+          ),
+        ),
+      );
     }
     if (attachments != null && !attachments.isEmpty) {
-      final l10n = AppLocalizations.of(context);
       void add(int count, IconData icon, String semantic) {
         if (count == 0) return;
-        out.add(Semantics(
-          label: semantic,
-          child: _chip(context, '$count', scheme.secondary,
-              icon: icon, maxWidth: maxWidth),
-        ));
+        out.add(
+          Semantics(
+            label: semantic,
+            child: _chip(
+              context,
+              '$count',
+              scheme.secondary,
+              icon: icon,
+              maxWidth: maxWidth,
+            ),
+          ),
+        );
       }
 
-      add(attachments.images, Icons.image_outlined,
-          l10n.attachmentPhotoCount(attachments.images));
-      add(attachments.audio, Icons.mic_none,
-          l10n.attachmentAudioCount(attachments.audio));
-      add(attachments.files, Icons.attach_file,
-          l10n.attachmentFileCount(attachments.files));
+      add(
+        attachments.images,
+        Icons.image_outlined,
+        l10n.attachmentPhotoCount(attachments.images),
+      );
+      add(
+        attachments.audio,
+        Icons.mic_none,
+        l10n.attachmentAudioCount(attachments.audio),
+      );
+      add(
+        attachments.files,
+        Icons.attach_file,
+        l10n.attachmentFileCount(attachments.files),
+      );
     }
     return out;
+  }
+
+  /// The Item's tags, alphabetical, without [hiddenTagId].
+  List<Tag> _tagsOf(List<String>? ids, List<Tag> all) {
+    if (ids == null || ids.isEmpty) return const [];
+    return [
+      for (final t in all)
+        if (t.id != hiddenTagId && ids.contains(t.id)) t,
+    ];
+  }
+
+  /// A terse future date: "Fri, Oct 30", with the time when one was set.
+  static String _shortDate(DateTime at, DateTime now, AppLocalizations l10n) {
+    final format = at.year == now.year
+        ? DateFormat.MMMEd(l10n.dateLocaleName)
+        : DateFormat.yMMMEd(l10n.dateLocaleName);
+    final hasTime = at.hour != 0 || at.minute != 0;
+    return (hasTime ? format.add_jm() : format).format(at);
   }
 
   Widget _chip(
@@ -349,22 +543,21 @@ class ItemCard extends ConsumerWidget {
     VoidCallback? onTap,
     bool filled = false,
   }) {
-    // Filled chips invert: solid colour fill with a contrast-matched content
-    // colour, used to make overdue items visually unmistakable. The fill is
-    // arbitrary (error / tertiary / due colours) and varies by theme, so pick
-    // black or white from its luminance rather than assuming white. Subtle
-    // chips use a 12%-alpha wash.
+    final scheme = Theme.of(context).colorScheme;
+    final backdrop = (selectionMode && selected) || highlighted
+        ? scheme.primaryContainer
+        : scheme.surfaceContainerLow;
+    final fill = filled ? color : color.withValues(alpha: 0.12);
+    final background = Color.alphaBlend(fill, backdrop);
     final fg = filled
-        ? (ThemeData.estimateBrightnessForColor(color) == Brightness.dark
-            ? Colors.white
-            : Colors.black)
-        : color;
+        ? background.contrastingForeground
+        : color.foregroundOn(background);
     final chip = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: filled ? color : color.withValues(alpha: 0.12),
+          color: fill,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(

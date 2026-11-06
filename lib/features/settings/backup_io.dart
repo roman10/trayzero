@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 
 import '../../application/import_backup.dart';
 import '../../l10n/gen/app_localizations.dart';
+import 'settings_tiles.dart';
 
-enum ImportSource { file, paste }
+enum RestoreSource { folder, file, paste }
 
 /// Runs [task] behind a non-dismissible progress dialog. A large import
 /// (thousands of Google tasks) takes seconds; without this the screen looks
@@ -18,26 +19,28 @@ Future<T> withProgress<T>(
   String label,
   Future<T> Function() task,
 ) async {
-  unawaited(showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => PopScope(
-      canPop: false,
-      child: AlertDialog(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ),
-            const SizedBox(width: 20),
-            Expanded(child: Text(label)),
-          ],
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              const SizedBox(width: 20),
+              Expanded(child: Text(label)),
+            ],
+          ),
         ),
       ),
     ),
-  ));
+  );
   try {
     return await task();
   } finally {
@@ -47,46 +50,70 @@ Future<T> withProgress<T>(
   }
 }
 
-/// Bottom-sheet chooser: file is the recommended/primary path, paste is the
-/// fallback. Returns null if dismissed.
-Future<ImportSource?> chooseImportSource(BuildContext context) {
+/// Bottom-sheet chooser for where a backup to restore lives. Nothing is
+/// changed by choosing; every path previews before it restores. Returns null
+/// if dismissed.
+Future<RestoreSource?> chooseRestoreSource(BuildContext context) {
   final l10n = AppLocalizations.of(context);
-  return showModalBottomSheet<ImportSource>(
+  final scheme = Theme.of(context).colorScheme;
+  return showModalBottomSheet<RestoreSource>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l10n.importSourceSheetTitle,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  l10n.backupRestoreTitle,
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
                 ),
               ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.folder_open_outlined),
-            title: Text(l10n.importFromFileTitle),
-            subtitle: Text(l10n.importFromFileDescription),
-            onTap: () =>
-                Navigator.of(sheetContext).pop(ImportSource.file),
-          ),
-          ListTile(
-            leading: const Icon(Icons.content_paste_outlined),
-            title: Text(l10n.importFromPasteTitle),
-            subtitle: Text(l10n.importFromPasteDescription),
-            onTap: () =>
-                Navigator.of(sheetContext).pop(ImportSource.paste),
-          ),
-          const SizedBox(height: 8),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(
+                l10n.backupRestoreSheetBody,
+                style: TextStyle(color: scheme.onSurfaceVariant, height: 1.35),
+              ),
+            ),
+            ListTile(
+              key: const ValueKey('restore_source_folder'),
+              minTileHeight: 56,
+              leading: const SettingsIconBadge(icon: Icons.folder_zip_outlined),
+              title: Text(l10n.backupRestoreFromFolder),
+              subtitle: Text(l10n.backupRestoreFromFolderHint),
+              onTap: () => Navigator.of(sheetContext).pop(RestoreSource.folder),
+            ),
+            ListTile(
+              key: const ValueKey('restore_source_file'),
+              minTileHeight: 56,
+              leading: const SettingsIconBadge(
+                icon: Icons.insert_drive_file_outlined,
+              ),
+              title: Text(l10n.backupRestoreFromFile),
+              subtitle: Text(l10n.backupRestoreFromFileHint),
+              onTap: () => Navigator.of(sheetContext).pop(RestoreSource.file),
+            ),
+            ListTile(
+              key: const ValueKey('restore_source_paste'),
+              minTileHeight: 56,
+              leading: const SettingsIconBadge(
+                icon: Icons.content_paste_outlined,
+              ),
+              title: Text(l10n.backupRestorePaste),
+              subtitle: Text(l10n.importFromPasteDescription),
+              onTap: () => Navigator.of(sheetContext).pop(RestoreSource.paste),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     ),
   );
@@ -109,13 +136,13 @@ Future<String?> readBackupFile() async {
 
 Future<bool?> confirmImport(BuildContext context, BackupPreview p) {
   final l10n = AppLocalizations.of(context);
-  String n(int c, String singular) =>
-      '$c $singular${c == 1 ? '' : 's'}';
   final parts = <String>[
-    if (p.items > 0) n(p.items, 'item'),
-    if (p.projects > 0) n(p.projects, 'project'),
-    if (p.contexts > 0) n(p.contexts, 'context'),
-    if (p.areas > 0) n(p.areas, 'area'),
+    if (p.items > 0) l10n.backupCountItems(p.items),
+    if (p.projects > 0) l10n.backupCountProjects(p.projects),
+    if (p.contexts > 0) l10n.backupCountContexts(p.contexts),
+    if (p.areas > 0) l10n.backupCountAreas(p.areas),
+    if (p.attachments > 0) l10n.backupCountAttachments(p.attachments),
+    if (p.reviews > 0) l10n.backupCountReviews(p.reviews),
   ];
   return showDialog<bool>(
     context: context,
@@ -166,9 +193,7 @@ class _PasteBackupDialogState extends State<PasteBackupDialog> {
         minLines: 6,
         maxLines: 10,
         onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          hintText: l10n.pasteBackupHint,
-        ),
+        decoration: InputDecoration(hintText: l10n.pasteBackupHint),
       ),
       actions: [
         TextButton(
@@ -176,11 +201,53 @@ class _PasteBackupDialogState extends State<PasteBackupDialog> {
           child: Text(l10n.cancel),
         ),
         FilledButton(
-          onPressed:
-              hasText ? () => Navigator.of(context).pop(_ctrl.text) : null,
+          onPressed: hasText
+              ? () => Navigator.of(context).pop(_ctrl.text)
+              : null,
           child: Text(l10n.importButton),
         ),
       ],
     );
   }
+}
+
+/// A short, offline explanation of what folder backup does and how to move
+/// to another device with it.
+Future<void> showBackupHowItWorks(BuildContext context) {
+  final l10n = AppLocalizations.of(context);
+  final scheme = Theme.of(context).colorScheme;
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.backupHowTitle,
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            for (final text in [
+              l10n.backupHowSaves,
+              l10n.backupHowSync,
+              l10n.backupHowMove,
+            ]) ...[
+              const SizedBox(height: 12),
+              Text(
+                text,
+                style: TextStyle(color: scheme.onSurfaceVariant, height: 1.35),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
 }

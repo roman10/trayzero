@@ -1,0 +1,6 @@
+/* Siri and Shortcuts phrases (ADR 0009). Follows the system language. */
+
+"Add to ${applicationName} inbox" = "${applicationName} 받은함에 추가";
+"Capture in ${applicationName}" = "${applicationName}에 수집";
+"Open ${applicationName} quick capture" = "${applicationName} 빠른 수집 열기";
+"Show ${applicationName} Today" = "${applicationName} 오늘 보기";

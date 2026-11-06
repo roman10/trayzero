@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Быстрая запись во «Входящие» Trayzero</string>
+    <string name="today_widget_name">Сегодня</string>
+    <string name="today_widget_description">Ваши задачи в фокусе на сегодня. Нажмите на кружок, чтобы выполнить.</string>
+    <string name="today_widget_title">Сегодня</string>
+    <string name="today_widget_done">Выполнено: %1$d</string>
+    <string name="today_widget_more">Ещё %1$d</string>
+    <string name="today_widget_empty">Пока ничего в фокусе</string>
+    <string name="today_widget_all_done">На сегодня всё сделано</string>
+    <string name="today_widget_plan">Спланировать день</string>
+    <string name="today_widget_complete">Выполнить «%1$s»</string>
+    <string name="tile_capture_label">Записать в Trayzero</string>
+    <string name="shortcut_capture_short">Записать</string>
+    <string name="shortcut_capture_long">Записать во «Входящие»</string>
+    <string name="shortcut_today_short">Сегодня</string>
+    <string name="shortcut_today_long">Показать «Сегодня»</string>
+    <string name="shortcut_process_short">Разобрать</string>
+    <string name="shortcut_process_long">Разобрать «Входящие»</string>
+</resources>

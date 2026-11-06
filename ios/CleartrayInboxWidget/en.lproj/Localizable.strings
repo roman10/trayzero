@@ -1,0 +1,22 @@
+/* Widgets and controls (ADR 0009). Follows the system language. */
+
+"Today" = "Today";
+"%lld done" = "%lld done";
+"+%lld more" = "+%lld more";
+"Complete %@" = "Complete %@";
+"All done for today" = "All done for today";
+"Nothing focused yet" = "Nothing focused yet";
+"Plan your day" = "Plan your day";
+"Your focused items for today. Tap a circle to complete." = "Your focused items for today. Tap a circle to complete.";
+"Complete Item" = "Complete Item";
+"Item" = "Item";
+"Capture to Trayzero" = "Capture to Trayzero";
+"Open Quick Capture" = "Open Quick Capture";
+"Opens Trayzero's quick capture sheet." = "Opens Trayzero's quick capture sheet.";
+"Show Today" = "Show Today";
+"Opens the items you focused for today." = "Opens the items you focused for today.";
+"item in Inbox" = "item in Inbox";
+"items in Inbox" = "items in Inbox";
+"+ Capture" = "+ Capture";
+"Trayzero Inbox" = "Trayzero Inbox";
+"See your unprocessed inbox count and capture in one tap." = "See your unprocessed inbox count and capture in one tap.";

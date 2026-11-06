@@ -1,0 +1,22 @@
+/* Widgets and controls (ADR 0009). Follows the system language. */
+
+"Today" = "今日";
+"%lld done" = "%lld 件完了";
+"+%lld more" = "ほか %lld 件";
+"Complete %@" = "%@ を完了";
+"All done for today" = "今日はすべて完了";
+"Nothing focused yet" = "まだフォーカスがありません";
+"Plan your day" = "1日を計画";
+"Your focused items for today. Tap a circle to complete." = "今日フォーカスした項目。丸をタップして完了。";
+"Complete Item" = "項目を完了";
+"Item" = "項目";
+"Capture to Trayzero" = "Trayzero に取り込む";
+"Open Quick Capture" = "クイック取り込みを開く";
+"Opens Trayzero's quick capture sheet." = "Trayzero のクイック取り込みを開きます。";
+"Show Today" = "今日を表示";
+"Opens the items you focused for today." = "今日フォーカスした項目を開きます。";
+"item in Inbox" = "件（受信箱）";
+"items in Inbox" = "件（受信箱）";
+"+ Capture" = "+ 取り込む";
+"Trayzero Inbox" = "Trayzero 受信箱";
+"See your unprocessed inbox count and capture in one tap." = "未処理の受信箱の件数を確認し、ワンタップで取り込めます。";

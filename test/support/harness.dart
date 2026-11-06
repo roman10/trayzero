@@ -9,9 +9,19 @@
 /// `core/` and `support/fakes.dart`.
 library;
 
+import 'package:cleartray/core/calendar_connection.dart';
+import 'package:cleartray/infrastructure/shared_preferences_calendar_connection.dart';
+
 import 'package:cleartray/application/providers.dart';
 import 'package:cleartray/app/theme.dart';
 import 'package:cleartray/core/calendar_gateway.dart';
+import 'package:cleartray/core/backup_files.dart';
+import 'backup_files_fake.dart';
+import 'folder_backup_fake.dart';
+import 'package:cleartray/core/folder_backup.dart';
+import 'package:cleartray/infrastructure/shared_preferences_folder_backup.dart';
+import 'package:cleartray/core/appearance_preferences.dart';
+import 'package:cleartray/infrastructure/shared_preferences_appearance_store.dart';
 import 'package:cleartray/core/clock.dart';
 import 'package:cleartray/core/id_generator.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
@@ -28,6 +38,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fakes.dart';
+import 'package:cleartray/core/things_snapshot_reader.dart';
+import 'package:cleartray/infrastructure/sqlite_things_snapshot_reader.dart';
 
 export 'package:cleartray/core/clock.dart' show Clock, FakeClock;
 export 'package:cleartray/core/id_generator.dart'
@@ -84,15 +96,29 @@ class TestEnv {
 
   /// The default provider overrides. Pass [extra] to add or replace any.
   List<Override> overrides([List<Override> extra = const []]) => [
-        databaseProvider.overrideWithValue(db),
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        clockProvider.overrideWithValue(clock),
-        idGeneratorProvider.overrideWithValue(ids),
-        notificationSchedulerProvider.overrideWithValue(scheduler),
-        calendarGatewayProvider.overrideWithValue(calendar),
-        systemSettingsProvider.overrideWithValue(systemSettings),
-        ...extra,
-      ];
+    databaseProvider.overrideWithValue(db),
+    thingsSnapshotReaderProvider.overrideWithValue(
+      SqliteThingsSnapshotReader(),
+    ),
+    backupFilesProvider.overrideWithValue(MemoryBackupFiles()),
+    folderBackupFilesProvider.overrideWithValue(MemoryFolderBackupFiles()),
+    folderBackupPreferencesProvider.overrideWithValue(
+      SharedPreferencesFolderBackup(prefs),
+    ),
+    sharedPreferencesProvider.overrideWithValue(prefs),
+    calendarConnectionPreferencesProvider.overrideWithValue(
+      SharedPreferencesCalendarConnection(prefs),
+    ),
+    appearancePreferencesStoreProvider.overrideWithValue(
+      SharedPreferencesAppearanceStore(prefs),
+    ),
+    clockProvider.overrideWithValue(clock),
+    idGeneratorProvider.overrideWithValue(ids),
+    notificationSchedulerProvider.overrideWithValue(scheduler),
+    calendarGatewayProvider.overrideWithValue(calendar),
+    systemSettingsProvider.overrideWithValue(systemSettings),
+    ...extra,
+  ];
 
   /// A standalone container (no widget tree) for use-case / provider tests.
   ProviderContainer container([List<Override> extra = const []]) {
@@ -112,6 +138,8 @@ Future<void> pumpApp(
   required TestEnv env,
   List<Override> extraOverrides = const [],
   ThemeData? theme,
+  Locale? locale,
+  TextScaler? textScaler,
 }) async {
   final container = ProviderContainer(overrides: env.overrides(extraOverrides));
   addTearDown(container.dispose);
@@ -120,8 +148,15 @@ Future<void> pumpApp(
       container: container,
       child: MaterialApp(
         theme: theme ?? AppTheme.light(),
+        locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: textScaler == null
+            ? null
+            : (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+                child: child!,
+              ),
         home: child,
       ),
     ),

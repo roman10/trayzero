@@ -33,6 +33,7 @@ extension ItemRowMapper on ItemRow {
         recurrenceMonthlyWeek: recurrenceMonthlyWeek,
         recurrenceMonthlyWeekday: recurrenceMonthlyWeekday,
         calendarEventId: calendarEventId,
+        focusedAt: focusedAt,
       );
 }
 
@@ -75,6 +76,7 @@ extension ItemMapper on Item {
         recurrenceMonthlyWeek: Value(recurrenceMonthlyWeek),
         recurrenceMonthlyWeekday: Value(recurrenceMonthlyWeekday),
         calendarEventId: Value(calendarEventId),
+        focusedAt: Value(focusedAt),
         // Derived, persistence-only: recomputed on every upsert so it can
         // never drift from title/notes. See core/search_text.dart.
         searchText: Value(searchTextFor(title, notes)),
@@ -91,6 +93,7 @@ extension ProjectRowMapper on ProjectRow {
         dueAt: dueAt,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        lastReviewedAt: lastReviewedAt,
       );
 }
 
@@ -104,6 +107,7 @@ extension ProjectMapper on Project {
         dueAt: Value(dueAt),
         createdAt: Value(createdAt),
         updatedAt: Value(updatedAt),
+        lastReviewedAt: Value(lastReviewedAt),
       );
 }
 
@@ -170,5 +174,13 @@ extension ReviewRowMapper on ReviewRow {
         startedAt: startedAt,
         completedAt: completedAt,
         notes: notes,
+        currentStep: WeeklyReviewStep.values.firstWhere(
+          (step) => step.name == currentStep,
+          orElse: () => WeeklyReviewStep.capture,
+        ),
       );
+}
+
+extension TagRowMapper on TagRow {
+  Tag toEntity() => Tag(id: id, name: name, isPerson: isPerson);
 }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Schnell in deinen Trayzero-Eingang erfassen</string>
+    <string name="today_widget_name">Heute</string>
+    <string name="today_widget_description">Deine Fokus-Einträge für heute. Tippe auf einen Kreis zum Erledigen.</string>
+    <string name="today_widget_title">Heute</string>
+    <string name="today_widget_done">%1$d erledigt</string>
+    <string name="today_widget_more">+%1$d weitere</string>
+    <string name="today_widget_empty">Noch nichts im Fokus</string>
+    <string name="today_widget_all_done">Für heute alles erledigt</string>
+    <string name="today_widget_plan">Tag planen</string>
+    <string name="today_widget_complete">%1$s erledigen</string>
+    <string name="tile_capture_label">In Trayzero erfassen</string>
+    <string name="shortcut_capture_short">Erfassen</string>
+    <string name="shortcut_capture_long">Im Eingang erfassen</string>
+    <string name="shortcut_today_short">Heute</string>
+    <string name="shortcut_today_long">Heute anzeigen</string>
+    <string name="shortcut_process_short">Verarbeiten</string>
+    <string name="shortcut_process_long">Eingang verarbeiten</string>
+</resources>

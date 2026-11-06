@@ -1,0 +1,17 @@
+"Date: 2026-10-20+0000"
+"Version: 7.1"
+"Status:
+0 Normal
+1 Completed
+2 Archived"
+"Folder Name","List Name","Title","Kind","Tags","Content","Is Check list","Start Date","Due Date","Reminder","Repeat","Priority","Status","Created Time","Completed Time","Order","Timezone","Is All Day","Is Floating","Column Name","Column Order","View Mode","taskId","parentId"
+"","Inbox","Buy milk","TEXT","","","N","","","","","0","0","2026-10-01T08:00:00+0000","","-1","Europe/Berlin","","false","","","list","1",""
+"Home","Renovation","Paint the hallway","TEXT","@errands, weekend","Colours: white, grey
+Check the ceiling","N","2026-11-01T00:00:00+0000","2026-11-08T00:00:00+0000","","","3","0","2026-10-01T08:00:00+0000","","1","UTC","true","false","Prep","0","kanban","2",""
+"Home","Renovation","Buy brushes","TEXT","","","N","","","","","0","0","2026-10-01T08:00:00+0000","","2","UTC","","false","","","list","3","2"
+"Home","Renovation","Old task","TEXT","","","N","","","","","0","2","2026-10-01T08:00:00+0000","2026-10-02T08:00:00+0000","3","UTC","","false","","","list","4",""
+"","Renovation","Paint codes","NOTE","","RAL 9010","N","","","","","0","0","2026-10-01T08:00:00+0000","","4","UTC","","false","","","list","5",""
+"","Routines","Take vitamins 💊","TEXT","phone","","N","2026-10-27T07:30:00+0000","2026-10-27T07:30:00+0000","","RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR","0","0","2026-10-01T08:00:00+0000","","5","UTC","false","false","","","list","6",""
+"","Routines","Skip-weekend thing","TEXT","","","N","2026-10-27T00:00:00+0000","2026-10-27T00:00:00+0000","","RRULE:FREQ=DAILY;INTERVAL=1;TT_SKIP=WEEKEND","0","0","2026-10-01T08:00:00+0000","","6","UTC","true","false","","","list","7",""
+"","Someday","Learn Portuguese","TEXT","","","N","","","","","0","0","2026-10-01T08:00:00+0000","","7","UTC","","false","","","list","8",""
+"","Routines","","TEXT","","","N","","","","","0","0","","","8","UTC","","false","","","list","9",""

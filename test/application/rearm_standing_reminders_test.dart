@@ -16,6 +16,8 @@ void main() {
     required bool backupEnabled,
   }) =>
       RearmStandingReminders(
+        scheduler: scheduler,
+        clock: clock,
         scheduleWeeklyReview:
             ScheduleWeeklyReviewReminder(scheduler: scheduler, clock: clock),
         scheduleBackup:

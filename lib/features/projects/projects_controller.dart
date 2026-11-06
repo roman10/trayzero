@@ -3,12 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../domain/entities/entities.dart';
 
-/// A labelled group of projects rendered as one section on the
-/// Projects screen.
+/// The kind of a projects-screen section. Built-in kinds resolve their header
+/// text from localizations at render time; [ProjectSectionKind.area] carries a
+/// user-defined [ProjectSection.areaName] instead.
+enum ProjectSectionKind { area, unfiled, active, onHold, someday, completed }
+
+/// A group of projects rendered as one section on the Projects screen. The
+/// header label is not stored here so grouping stays locale-independent and
+/// unit-testable; the widget layer resolves [kind] (and [areaName]) to text.
 class ProjectSection {
-  const ProjectSection({required this.label, required this.projects});
-  final String label;
+  const ProjectSection({
+    required this.kind,
+    required this.projects,
+    this.areaName,
+  });
+  final ProjectSectionKind kind;
   final List<Project> projects;
+
+  /// The area's display name, set only when [kind] is
+  /// [ProjectSectionKind.area].
+  final String? areaName;
 }
 
 /// Pure grouping logic for the Projects screen. Active projects are grouped
@@ -34,23 +48,42 @@ List<ProjectSection> groupProjects(
     for (final area in areas) {
       final inArea = active.where((p) => p.areaId == area.id).toList();
       if (inArea.isEmpty) continue;
-      sections.add(ProjectSection(label: area.name, projects: inArea));
+      sections.add(ProjectSection(
+        kind: ProjectSectionKind.area,
+        areaName: area.name,
+        projects: inArea,
+      ));
     }
     final unfiled = active.where((p) => p.areaId == null).toList();
     if (unfiled.isNotEmpty) {
-      sections.add(ProjectSection(label: 'Unfiled', projects: unfiled));
+      sections.add(ProjectSection(
+        kind: ProjectSectionKind.unfiled,
+        projects: unfiled,
+      ));
     }
   } else if (active.isNotEmpty) {
-    sections.add(ProjectSection(label: 'Active', projects: active));
+    sections.add(ProjectSection(
+      kind: ProjectSectionKind.active,
+      projects: active,
+    ));
   }
   if (onHold.isNotEmpty) {
-    sections.add(ProjectSection(label: 'On hold', projects: onHold));
+    sections.add(ProjectSection(
+      kind: ProjectSectionKind.onHold,
+      projects: onHold,
+    ));
   }
   if (someday.isNotEmpty) {
-    sections.add(ProjectSection(label: 'Someday', projects: someday));
+    sections.add(ProjectSection(
+      kind: ProjectSectionKind.someday,
+      projects: someday,
+    ));
   }
   if (done.isNotEmpty) {
-    sections.add(ProjectSection(label: 'Completed', projects: done));
+    sections.add(ProjectSection(
+      kind: ProjectSectionKind.completed,
+      projects: done,
+    ));
   }
   return sections;
 }
@@ -64,3 +97,24 @@ final projectSectionsProvider = Provider<AsyncValue<List<ProjectSection>>>(
     return projects.whenData((list) => groupProjects(list, areas));
   },
 );
+
+/// Workspace context includes history so an editor opened from Completed still
+/// has a selected entry. Repository ordering is retained within each group.
+final projectWorkspaceItemsProvider = Provider.autoDispose
+    .family<AsyncValue<List<Item>>, String>((ref, id) {
+      final active = ref.watch(projectItemsProvider(id));
+      final completed = ref.watch(completedProjectItemsProvider(id));
+      return active.when(
+        data: (items) => completed.whenData((done) => [...items, ...done]),
+        loading: () => const AsyncLoading(),
+        error: (error, stack) => AsyncError(error, stack),
+      );
+    });
+
+final workspaceProjectProvider = Provider.autoDispose.family<Project?, String>((
+  ref,
+  id,
+) {
+  final projects = ref.watch(projectsProvider).valueOrNull;
+  return projects?.where((project) => project.id == id).firstOrNull;
+});

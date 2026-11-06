@@ -3,8 +3,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cleartray/app/theme.dart';
 import 'package:cleartray/features/common/image_viewer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/harness.dart';
@@ -54,8 +56,9 @@ void main() {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
 
-  testWidgets('opens a full-screen viewer with a page counter and dismisses',
-      (tester) async {
+  testWidgets('opens a full-screen viewer with a page counter and dismisses', (
+    tester,
+  ) async {
     await pumpApp(tester, _Host(images), env: env);
 
     await tester.tap(find.text('open'));
@@ -69,4 +72,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PageView), findsNothing);
   });
+
+  for (final brightness in Brightness.values) {
+    for (final multiple in [false, true]) {
+      testWidgets(
+        'title stays readable on black in $brightness with multiple=$multiple',
+        (tester) async {
+          await pumpApp(
+            tester,
+            _Host(multiple ? images : [images.first]),
+            env: env,
+            theme: brightness == Brightness.light
+                ? AppTheme.light()
+                : AppTheme.dark(),
+          );
+          await tester.tap(find.text('open'));
+          await tester.pumpAndSettle();
+
+          final title = find.text(multiple ? '1 / 2' : images.first.name!);
+          final paragraph = tester.renderObject<RenderParagraph>(title);
+          final renderedColor = paragraph.text.style!.color!;
+          final appBar = tester.widget<AppBar>(find.byType(AppBar));
+          expect(appBar.backgroundColor, Colors.black);
+          expect(
+            renderedColor.contrastAgainst(appBar.backgroundColor!),
+            greaterThanOrEqualTo(4.5),
+          );
+        },
+      );
+    }
+  }
 }

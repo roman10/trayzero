@@ -42,12 +42,24 @@ void main() {
     expect(find.text('Type at least two characters'), findsOneWidget);
   });
 
-  testWidgets('toggling a status chip re-filters without retyping',
-      (tester) async {
+  testWidgets('filter chips keep a 48dp touch target', (tester) async {
+    await pumpApp(tester, const SearchScreen(), env: env);
+    await tester.pump(const Duration(milliseconds: 100));
+    for (final label in ['Inbox', 'All contexts']) {
+      final size = tester.getSize(find.widgetWithText(FilterChip, label));
+      expect(size.height, greaterThanOrEqualTo(48), reason: label);
+    }
+  });
+
+  testWidgets('toggling a status chip re-filters without retyping', (
+    tester,
+  ) async {
     await items.upsert(
-        anItem(id: 'a', title: 'Report alpha', status: ItemStatus.inbox));
+      anItem(id: 'a', title: 'Report alpha', status: ItemStatus.inbox),
+    );
     await items.upsert(
-        anItem(id: 'b', title: 'Report beta', status: ItemStatus.nextAction));
+      anItem(id: 'b', title: 'Report beta', status: ItemStatus.nextAction),
+    );
 
     await pumpApp(tester, const SearchScreen(), env: env);
     await type(tester, 'report');
@@ -64,16 +76,20 @@ void main() {
     expect(find.text('Report beta'), findsNothing);
   });
 
-  testWidgets('completed items are hidden until the Completed chip is on',
-      (tester) async {
+  testWidgets('completed items are hidden until the Completed chip is on', (
+    tester,
+  ) async {
     await items.upsert(
-        anItem(id: 'a', title: 'Report live', status: ItemStatus.nextAction));
-    await items.upsert(anItem(
-      id: 'b',
-      title: 'Report finished',
-      status: ItemStatus.done,
-      completedAt: DateTime(2026, 5, 13),
-    ));
+      anItem(id: 'a', title: 'Report live', status: ItemStatus.nextAction),
+    );
+    await items.upsert(
+      anItem(
+        id: 'b',
+        title: 'Report finished',
+        status: ItemStatus.done,
+        completedAt: DateTime(2026, 5, 13),
+      ),
+    );
 
     await pumpApp(tester, const SearchScreen(), env: env);
     await type(tester, 'report');
@@ -91,12 +107,15 @@ void main() {
     expect(find.text('Report finished'), findsOneWidget);
   });
 
-  testWidgets('clear-filters button resets to unfiltered results',
-      (tester) async {
+  testWidgets('clear-filters button resets to unfiltered results', (
+    tester,
+  ) async {
     await items.upsert(
-        anItem(id: 'a', title: 'Report alpha', status: ItemStatus.inbox));
+      anItem(id: 'a', title: 'Report alpha', status: ItemStatus.inbox),
+    );
     await items.upsert(
-        anItem(id: 'b', title: 'Report beta', status: ItemStatus.nextAction));
+      anItem(id: 'b', title: 'Report beta', status: ItemStatus.nextAction),
+    );
 
     await pumpApp(tester, const SearchScreen(), env: env);
     await type(tester, 'report');
@@ -114,10 +133,12 @@ void main() {
     expect(find.text('Report beta'), findsOneWidget);
   });
 
-  testWidgets('empty-state copy differs with vs without active filters',
-      (tester) async {
+  testWidgets('empty-state copy differs with vs without active filters', (
+    tester,
+  ) async {
     await items.upsert(
-        anItem(id: 'a', title: 'Report alpha', status: ItemStatus.inbox));
+      anItem(id: 'a', title: 'Report alpha', status: ItemStatus.inbox),
+    );
 
     await pumpApp(tester, const SearchScreen(), env: env);
 
@@ -143,17 +164,22 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  testWidgets('picking a project from the sheet narrows results',
-      (tester) async {
+  testWidgets('picking a project from the sheet narrows results', (
+    tester,
+  ) async {
     useWideSurface(tester);
     await projects.upsert(_project(id: 'p1', title: 'Website'));
-    await items.upsert(anItem(
+    await items.upsert(
+      anItem(
         id: 'a',
         title: 'Report alpha',
         status: ItemStatus.nextAction,
-        projectId: 'p1'));
-    await items.upsert(anItem(
-        id: 'b', title: 'Report beta', status: ItemStatus.nextAction));
+        projectId: 'p1',
+      ),
+    );
+    await items.upsert(
+      anItem(id: 'b', title: 'Report beta', status: ItemStatus.nextAction),
+    );
 
     await pumpApp(tester, const SearchScreen(), env: env);
     await type(tester, 'report');
@@ -172,17 +198,22 @@ void main() {
     expect(find.widgetWithText(FilterChip, 'Website'), findsOneWidget);
   });
 
-  testWidgets('a deleted selected project self-heals to all projects',
-      (tester) async {
+  testWidgets('a deleted selected project self-heals to all projects', (
+    tester,
+  ) async {
     useWideSurface(tester);
     await projects.upsert(_project(id: 'p1', title: 'Website'));
-    await items.upsert(anItem(
+    await items.upsert(
+      anItem(
         id: 'a',
         title: 'Report alpha',
         status: ItemStatus.nextAction,
-        projectId: 'p1'));
-    await items.upsert(anItem(
-        id: 'b', title: 'Report beta', status: ItemStatus.nextAction));
+        projectId: 'p1',
+      ),
+    );
+    await items.upsert(
+      anItem(id: 'b', title: 'Report beta', status: ItemStatus.nextAction),
+    );
 
     await pumpApp(tester, const SearchScreen(), env: env);
     await type(tester, 'report');

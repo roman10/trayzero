@@ -4,10 +4,15 @@ import 'package:cleartray/core/clock.dart';
 import 'package:cleartray/data/db/database.dart';
 import 'package:cleartray/data/repositories/area_repository.dart';
 import 'package:cleartray/data/repositories/context_repository.dart';
+import 'package:cleartray/data/repositories/tag_repository.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/data/repositories/project_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/application/backup_service.dart';
+import 'package:cleartray/data/repositories/attachment_repository.dart';
+import 'package:cleartray/data/repositories/review_repository.dart';
+import 'package:cleartray/core/id_generator.dart';
+import '../support/backup_files_fake.dart';
 
 void main() {
   late AppDatabase db;
@@ -18,9 +23,14 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     clock = FakeClock(DateTime(2026, 5, 14));
     backup = BackupService(
+      database: db,
+      attachments: AttachmentRepository(db, clock, FixedIdGenerator([])),
+      reviews: ReviewRepository(db),
+      files: MemoryBackupFiles(),
       items: ItemRepository(db, clock),
       projects: ProjectRepository(db),
       contexts: ContextRepository(db),
+      tags: TagRepository(db),
       areas: AreaRepository(db),
       clock: clock,
     );
@@ -77,6 +87,158 @@ void main() {
     expect(restored?.projectSortOrder, 3);
   });
 
+  test('round-trips Today focus and project review (format v7)', () async {
+    final items = ItemRepository(db, clock);
+    final projects = ProjectRepository(db);
+    final now = DateTime(2026, 5, 14);
+    final focusedAt = DateTime(2026, 5, 14, 8, 30);
+    final reviewedAt = DateTime(2026, 5, 10, 18);
+    await projects.upsert(Project(
+      id: 'p1',
+      title: 'Demo',
+      status: ProjectStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await projects.markReviewed('p1', reviewedAt);
+    await items.upsert(Item(
+      id: 'i1',
+      title: 'Call Bob',
+      status: ItemStatus.nextAction,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await items.setFocusedAt({'i1': focusedAt});
+
+    final snapshot = await backup.export();
+    expect(snapshot['version'], 8);
+    await items.delete('i1');
+    await projects.delete('p1');
+    await backup.import(snapshot);
+
+    expect((await items.getById('i1'))!.focusedAt, focusedAt);
+    expect((await projects.getById('p1'))!.lastReviewedAt, reviewedAt);
+  });
+
+  group('tags (format v8)', () {
+    late ItemRepository items;
+    late TagRepository tags;
+    final now = DateTime(2026, 5, 14);
+
+    setUp(() async {
+      items = ItemRepository(db, clock);
+      tags = TagRepository(db);
+      for (final id in ['i1', 'i2']) {
+        await items.upsert(Item(
+          id: id,
+          title: id,
+          status: ItemStatus.nextAction,
+          createdAt: now,
+          updatedAt: now,
+        ));
+      }
+      await tags.upsertAll(const [
+        Tag(id: 't1', name: 'Alice', isPerson: true),
+        Tag(id: 't2', name: 'Kitchen'),
+      ], createdAt: now);
+      await tags.replaceItemTags({
+        'i1': ['t1', 't2'],
+      });
+    });
+
+    test('round-trips tags, people, and item links', () async {
+      final snapshot = await backup.export();
+      expect(snapshot['version'], 8);
+      await items.deleteAll(['i1', 'i2']);
+      await tags.delete('t1');
+      await tags.delete('t2');
+
+      await backup.import(snapshot);
+
+      expect(await tags.all(), const [
+        Tag(id: 't1', name: 'Alice', isPerson: true),
+        Tag(id: 't2', name: 'Kitchen'),
+      ]);
+      expect((await tags.tagIdsFor('i1')).toSet(), {'t1', 't2'});
+      expect(await tags.tagIdsFor('i2'), isEmpty);
+    });
+
+    test('a tag with a local name merges instead of duplicating', () async {
+      final snapshot = await backup.export();
+      for (final m in (snapshot['tags'] as List).cast<Map>()) {
+        m['id'] = 'other-${m['id']}';
+      }
+      for (final m in (snapshot['items'] as List).cast<Map>()) {
+        m['tagIds'] = [for (final id in m['tagIds'] as List) 'other-$id'];
+      }
+      await tags.replaceItemTags({'i1': []});
+
+      await backup.import(snapshot);
+
+      expect((await tags.all()).map((t) => t.id), ['t1', 't2']);
+      expect((await tags.tagIdsFor('i1')).toSet(), {'t1', 't2'});
+    });
+
+    test('a v7 backup imports and leaves current tags alone', () async {
+      final snapshot = await backup.export();
+      snapshot['version'] = 7;
+      snapshot.remove('tags');
+      for (final m in (snapshot['items'] as List).cast<Map>()) {
+        m.remove('tagIds');
+      }
+
+      await backup.import(snapshot);
+
+      expect(await tags.all(), hasLength(2));
+      expect((await tags.tagIdsFor('i1')).toSet(), {'t1', 't2'});
+    });
+
+    test('an item linked to a tag not in the backup is rejected', () async {
+      final snapshot = await backup.export();
+      (snapshot['tags'] as List).removeWhere((m) => (m as Map)['id'] == 't2');
+      await items.deleteAll(['i1', 'i2']);
+
+      await expectLater(backup.import(snapshot), throwsFormatException);
+      expect(await items.getById('i1'), isNull);
+    });
+  });
+
+  test('imports a v6 backup without focus or review fields', () async {
+    final items = ItemRepository(db, clock);
+    final projects = ProjectRepository(db);
+    final now = DateTime(2026, 5, 14);
+    await projects.upsert(Project(
+      id: 'p1',
+      title: 'Demo',
+      status: ProjectStatus.active,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await items.upsert(Item(
+      id: 'i1',
+      title: 'Call Bob',
+      status: ItemStatus.nextAction,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    final snapshot = await backup.export();
+    snapshot['version'] = 6;
+    for (final m in (snapshot['items'] as List).cast<Map>()) {
+      m.remove('focusedAt');
+    }
+    for (final m in (snapshot['projects'] as List).cast<Map>()) {
+      m.remove('lastReviewedAt');
+    }
+    await items.delete('i1');
+    await projects.delete('p1');
+
+    await backup.import(snapshot);
+
+    expect((await items.getById('i1'))!.focusedAt, isNull);
+    expect((await projects.getById('p1'))!.lastReviewedAt, isNull);
+    expect((await items.getById('i1'))!.title, 'Call Bob');
+  });
+
   test('imports a legacy backup with no projectSortOrder field as 0',
       () async {
     final items = ItemRepository(db, clock);
@@ -120,7 +282,7 @@ void main() {
     ));
 
     final snapshot = await backup.export();
-    expect(snapshot['version'], 4);
+    expect(snapshot['version'], BackupService.formatVersion);
 
     await items.delete('r1');
     await backup.import(snapshot);
@@ -131,6 +293,35 @@ void main() {
     expect(restored?.recurrenceUntil, DateTime(2026, 12, 31));
     expect(restored?.recurrenceCount, 6);
     expect(restored?.recurrenceDoneCount, 2);
+  });
+
+  test('round-trips completed items so backup preserves history', () async {
+    final items = ItemRepository(db, clock);
+    final now = DateTime(2026, 5, 14, 9);
+    final completedAt = DateTime(2026, 5, 15, 17);
+    await items.upsert(
+      Item(
+        id: 'done-1',
+        title: 'Ship release',
+        status: ItemStatus.done,
+        previousStatus: ItemStatus.nextAction,
+        completedAt: completedAt,
+        createdAt: now,
+        updatedAt: completedAt,
+      ),
+    );
+
+    final snapshot = await backup.export();
+    final exportedItems = (snapshot['items'] as List).cast<Map>();
+    expect(exportedItems.map((m) => m['id']), contains('done-1'));
+
+    await items.delete('done-1');
+    await backup.import(snapshot);
+
+    final restored = await items.getById('done-1');
+    expect(restored?.status, ItemStatus.done);
+    expect(restored?.completedAt, completedAt);
+    expect(restored?.previousStatus, ItemStatus.nextAction);
   });
 
   test('round-trips structured recurrence qualifiers (format v4)', () async {
@@ -157,7 +348,7 @@ void main() {
     ));
 
     final snapshot = await backup.export();
-    expect(snapshot['version'], 4);
+    expect(snapshot['version'], BackupService.formatVersion);
 
     await items.delete('s1');
     await items.delete('s2');

@@ -7,19 +7,39 @@ import 'package:intl/intl.dart';
 import '../../application/providers.dart';
 import '../../core/clock.dart';
 import '../../core/id_generator.dart';
+import '../../data/repositories/project_repository.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/complete_with_undo.dart';
+import '../common/delete_with_undo.dart';
+import '../common/focus_star.dart';
 import '../common/item_card.dart';
+import '../common/localized_entity_labels.dart';
 import 'project_movement.dart';
+
+/// Selectable range for the project due-date picker. [firstDate] is the
+/// earlier of yesterday and the existing due date so an overdue project's
+/// `initialDate` never falls outside the range (a showDatePicker assertion);
+/// [lastDate] likewise covers a due date set far in the future.
+({DateTime first, DateTime last, DateTime initial}) projectDueDatePickerRange(
+  DateTime now,
+  DateTime? dueAt,
+) {
+  final yesterday = now.subtract(const Duration(days: 1));
+  final horizon = now.add(const Duration(days: 365 * 5));
+  final first = dueAt != null && dueAt.isBefore(yesterday) ? dueAt : yesterday;
+  final last = dueAt != null && dueAt.isAfter(horizon) ? dueAt : horizon;
+  return (first: first, last: last, initial: dueAt ?? now);
+}
+
+enum _ProjectMenuAction { addExisting, edit, status, delete }
 
 /// Applies a `ReorderableListView` move to an id list. `newIndex` is the
 /// destination index after the item at `oldIndex` is removed — matching the
 /// `onReorderItem` callback contract introduced in Flutter 3.42 (the older
 /// `onReorder` shifted `newIndex` by one when moving downward; that is now
 /// the framework's job). Pure so it is unit-testable without a widget tree.
-List<String> reorderedActionIds(
-    List<String> ids, int oldIndex, int newIndex) {
+List<String> reorderedActionIds(List<String> ids, int oldIndex, int newIndex) {
   final next = [...ids];
   next.insert(newIndex, next.removeAt(oldIndex));
   return next;
@@ -47,12 +67,14 @@ class ProjectDetailScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<ProjectDetailScreen> createState() =>
-      _ProjectDetailScreenState();
+      ProjectDetailScreenState();
 }
 
-class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
+class ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
   Project? _project;
   late TextEditingController _outcome;
+  String? _pendingOutcome;
+  Future<void>? _outcomeWrite;
 
   /// Optimistic next-action order: the id sequence the user just dropped.
   /// Rendered immediately so the list never snaps back while the batched
@@ -104,7 +126,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
 
   void _onReorderNextActions(List<Item> shown, int oldIndex, int newIndex) {
     final ids = reorderedActionIds(
-        shown.map((e) => e.id).toList(), oldIndex, newIndex);
+      shown.map((e) => e.id).toList(),
+      oldIndex,
+      newIndex,
+    );
     setState(() => _pendingOrderIds = ids);
     ref.read(reorderProjectActionsProvider).call(widget.projectId, ids);
   }
@@ -120,9 +145,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            hintText: l10n.addNextActionHint,
-          ),
+          decoration: InputDecoration(hintText: l10n.addNextActionHint),
         ),
         actions: [
           TextButton(
@@ -138,7 +161,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
     );
     if (ok != true || ctrl.text.trim().isEmpty) return;
     final now = ref.read(clockProvider).now();
-    await ref.read(itemRepositoryProvider).upsert(
+    await ref
+        .read(itemRepositoryProvider)
+        .upsert(
           Item(
             id: ref.read(idGeneratorProvider).newId(),
             title: ctrl.text.trim(),
@@ -159,11 +184,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
         .toList();
     if (loose.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.noUnassignedActionsMessage),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.noUnassignedActionsMessage)));
       return;
     }
     final selected = <String>{};
@@ -183,7 +206,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                   child: Text(
                     l10n.addExistingActions,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w600),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -237,23 +262,108 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
     }
   }
 
-  Future<void> _changeStatus(ProjectStatus s) async {
-    if (_project == null) return;
-    final updated =
-        _project!.copyWith(status: s, updatedAt: ref.read(clockProvider).now());
-    await ref.read(projectRepositoryProvider).upsert(updated);
-    if (mounted) setState(() => _project = updated);
+  Future<void> _onMenu(_ProjectMenuAction action, List<Area> areas) async {
+    switch (action) {
+      case _ProjectMenuAction.addExisting:
+        await _addExistingAction();
+      case _ProjectMenuAction.edit:
+        await _editProject(areas);
+      case _ProjectMenuAction.status:
+        await _pickStatus();
+      case _ProjectMenuAction.delete:
+        await _delete();
+    }
   }
 
-  Future<void> _saveOutcome() async {
-    if (_project == null) return;
-    final updated = _project!.copyWith(
-      outcome: _outcome.text.trim().isEmpty ? null : _outcome.text.trim(),
-      updatedAt: ref.read(clockProvider).now(),
-      clearOutcome: _outcome.text.trim().isEmpty,
+  Future<void> _pickStatus() async {
+    final current = _project?.status;
+    final l10n = AppLocalizations.of(context);
+    final picked = await showDialog<ProjectStatus>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(l10n.projectChangeStatus),
+        children: [
+          for (final s in ProjectStatus.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, s),
+              child: Row(
+                children: [
+                  Expanded(child: Text(s.localizedLabel(l10n))),
+                  if (s == current) const Icon(Icons.check, size: 20),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
-    await ref.read(projectRepositoryProvider).upsert(updated);
-    setState(() => _project = updated);
+    if (picked != null && picked != current) await _changeStatus(picked);
+  }
+
+  Future<void> _changeStatus(ProjectStatus s) async {
+    if (_project == null) return;
+    final now = ref.read(clockProvider).now();
+    await ref
+        .read(projectRepositoryProvider)
+        .changeStatus(widget.projectId, s, now);
+    if (mounted) {
+      setState(() => _project = _project!.copyWith(status: s, updatedAt: now));
+    }
+  }
+
+  Future<void> _saveOutcome(String text) async {
+    _pendingOutcome = text.trim();
+    try {
+      await commitOutcome();
+    } catch (_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.saveError),
+            action: SnackBarAction(
+              label: l10n.retry,
+              onPressed: () => _saveOutcome(_outcome.text),
+            ),
+          ),
+        );
+    }
+  }
+
+  /// Wait for the inline outcome write before leaving via main navigation.
+  Future<void> commitOutcome() {
+    if (_pendingOutcome == null) return Future.value();
+    return _outcomeWrite ??= _flushOutcome(
+      widget.projectId,
+      ref.read(projectRepositoryProvider),
+      ref.read(clockProvider),
+    ).whenComplete(() => _outcomeWrite = null);
+  }
+
+  Future<void> _flushOutcome(
+    String id,
+    ProjectRepository repository,
+    Clock clock,
+  ) async {
+    // An older write must finish before the latest edit can be persisted.
+    while (true) {
+      final text = _pendingOutcome;
+      if (text == null) return;
+      final outcome = text.isEmpty ? null : text;
+      final now = clock.now();
+      await repository.updateOutcome(id, outcome, now);
+      if (_pendingOutcome == text) _pendingOutcome = null;
+      if (mounted) {
+        setState(() {
+          _project = _project!.copyWith(
+            outcome: outcome,
+            updatedAt: now,
+            clearOutcome: outcome == null,
+          );
+        });
+      }
+    }
   }
 
   Future<void> _editProject(List<Area> areas) async {
@@ -283,7 +393,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                 Text(
                   l10n.editProject,
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w600),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -323,26 +435,31 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                 const SizedBox(height: 4),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.event_outlined,
-                      color: Theme.of(context).colorScheme.primary),
+                  leading: Icon(
+                    Icons.event_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   title: Text(l10n.dueDate),
-                  subtitle: Text(dueAt == null
-                      ? l10n.notSet
-                      : DateFormat.yMMMd().format(dueAt!)),
+                  subtitle: Text(
+                    dueAt == null
+                        ? l10n.notSet
+                        : DateFormat.yMMMd().format(dueAt!),
+                  ),
                   trailing: dueAt == null
                       ? const Icon(Icons.add)
                       : IconButton(
+                          tooltip: l10n.clearDate,
                           icon: const Icon(Icons.close),
-                          onPressed: () =>
-                              setSheetState(() => dueAt = null),
+                          onPressed: () => setSheetState(() => dueAt = null),
                         ),
                   onTap: () async {
                     final now = ref.read(clockProvider).now();
+                    final range = projectDueDatePickerRange(now, dueAt);
                     final picked = await showDatePicker(
                       context: context,
-                      firstDate: now.subtract(const Duration(days: 1)),
-                      lastDate: now.add(const Duration(days: 365 * 5)),
-                      initialDate: dueAt ?? now,
+                      firstDate: range.first,
+                      lastDate: range.last,
+                      initialDate: range.initial,
                     );
                     if (picked == null) return;
                     setSheetState(() => dueAt = picked);
@@ -380,16 +497,26 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
     final title = titleCtrl.text.trim();
     titleCtrl.dispose();
     if (ok != true || title.isEmpty) return;
-    final updated = p.copyWith(
+    final now = ref.read(clockProvider).now();
+    await ref.read(projectRepositoryProvider).updateDetails(
+      widget.projectId,
       title: title,
       areaId: areaId,
-      clearArea: areaId == null,
       dueAt: dueAt,
-      clearDueAt: dueAt == null,
-      updatedAt: ref.read(clockProvider).now(),
+      now: now,
     );
-    await ref.read(projectRepositoryProvider).upsert(updated);
-    if (mounted) setState(() => _project = updated);
+    if (mounted) {
+      setState(() {
+        _project = _project!.copyWith(
+          title: title,
+          areaId: areaId,
+          clearArea: areaId == null,
+          dueAt: dueAt,
+          clearDueAt: dueAt == null,
+          updatedAt: now,
+        );
+      });
+    }
   }
 
   Future<void> _delete() async {
@@ -401,11 +528,13 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
         content: Text(l10n.deleteProjectWarning),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.cancel)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(l10n.delete),
           ),
@@ -413,9 +542,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
       ),
     );
     if (ok != true) return;
-    await ref
-        .read(projectRepositoryProvider)
-        .delete(widget.projectId);
+    await ref.read(projectRepositoryProvider).delete(widget.projectId);
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -431,30 +558,32 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
       _reconcilePendingOrder(live);
     });
     if (_project == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final p = _project!;
     final items =
         ref.watch(projectItemsProvider(widget.projectId)).valueOrNull ??
-            const [];
-    final liveNextActions =
-        items.where((i) => i.status == ItemStatus.nextAction).toList();
+        const [];
+    final liveNextActions = items
+        .where((i) => i.status == ItemStatus.nextAction)
+        .toList();
     final nextActions = applyManualOrder(liveNextActions, _pendingOrderIds);
-    final waiting =
-        items.where((i) => i.status == ItemStatus.waiting).toList();
-    final scheduled =
-        items.where((i) => i.status == ItemStatus.calendar).toList();
-    final reference =
-        items.where((i) => i.status == ItemStatus.reference).toList();
-    final someday =
-        items.where((i) => i.status == ItemStatus.someday).toList();
-    final needsClarifying =
-        items.where((i) => i.status == ItemStatus.inbox).toList();
+    final waiting = items.where((i) => i.status == ItemStatus.waiting).toList();
+    final scheduled = items
+        .where((i) => i.status == ItemStatus.calendar)
+        .toList();
+    final reference = items
+        .where((i) => i.status == ItemStatus.reference)
+        .toList();
+    final someday = items.where((i) => i.status == ItemStatus.someday).toList();
+    final needsClarifying = items
+        .where((i) => i.status == ItemStatus.inbox)
+        .toList();
     final completed =
-        ref.watch(completedProjectItemsProvider(widget.projectId)).valueOrNull ??
-            const <Item>[];
+        ref
+            .watch(completedProjectItemsProvider(widget.projectId))
+            .valueOrNull ??
+        const <Item>[];
     final movement = projectMovement(items);
     final showBanner =
         p.status == ProjectStatus.active && movement != ProjectMovement.healthy;
@@ -464,32 +593,31 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(p.title),
+        // Titles are user-written outcomes; allow two lines before ellipsis
+        // since the actions collapse into a single overflow menu.
+        title: Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis),
         actions: [
-          IconButton(
-            tooltip: l10n.addExistingActions,
-            icon: const Icon(Icons.playlist_add),
-            onPressed: _addExistingAction,
-          ),
-          IconButton(
-            tooltip: l10n.editProject,
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => _editProject(areas),
-          ),
-          PopupMenuButton<ProjectStatus>(
-            tooltip: l10n.statusTooltip,
-            initialValue: p.status,
-            onSelected: _changeStatus,
+          PopupMenuButton<_ProjectMenuAction>(
+            key: const Key('project-menu'),
+            onSelected: (a) => _onMenu(a, areas),
             itemBuilder: (_) => [
-              for (final s in ProjectStatus.values)
-                PopupMenuItem(value: s, child: Text(s.label)),
+              PopupMenuItem(
+                value: _ProjectMenuAction.addExisting,
+                child: Text(l10n.addExistingActions),
+              ),
+              PopupMenuItem(
+                value: _ProjectMenuAction.edit,
+                child: Text(l10n.editProject),
+              ),
+              PopupMenuItem(
+                value: _ProjectMenuAction.status,
+                child: Text(l10n.projectChangeStatus),
+              ),
+              PopupMenuItem(
+                value: _ProjectMenuAction.delete,
+                child: Text(l10n.delete, style: TextStyle(color: scheme.error)),
+              ),
             ],
-            icon: const Icon(Icons.flag_outlined),
-          ),
-          IconButton(
-            tooltip: l10n.delete,
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _delete,
           ),
         ],
       ),
@@ -498,140 +626,157 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
         icon: const Icon(Icons.add_task),
         label: Text(l10n.addActionFab),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          if (showBanner) _MovementBanner(movement: movement),
-          if (showBanner) const SizedBox(height: 12),
-          _SectionHeader(l10n.outcomeSection),
-          TextField(
-            controller: _outcome,
-            minLines: 2,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: l10n.projectOutcomeHint,
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          children: [
+            if (showBanner) _MovementBanner(movement: movement),
+            if (showBanner) const SizedBox(height: 12),
+            _SectionHeader(l10n.outcomeSection),
+            TextField(
+              controller: _outcome,
+              minLines: 2,
+              maxLines: 4,
+              decoration: InputDecoration(hintText: l10n.projectOutcomeHint),
+              onChanged: _saveOutcome,
             ),
-            onChanged: (_) => _saveOutcome(),
-          ),
-          const SizedBox(height: 20),
-          _SectionHeader(l10n.nextActionsSection),
-          if (nextActions.isEmpty)
-            Text(
-              l10n.noNextActionsMessage,
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            ),
-          if (nextActions.isNotEmpty)
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              onReorderItem: (oldIndex, newIndex) =>
-                  _onReorderNextActions(nextActions, oldIndex, newIndex),
-              children: [
-                for (var i = 0; i < nextActions.length; i++)
-                  Padding(
-                    key: ValueKey(nextActions[i].id),
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ItemCard(
-                            item: nextActions[i],
-                            showProject: false,
-                            onTap: () =>
-                                context.push('/item/${nextActions[i].id}'),
-                            onComplete: () => completeWithUndo(
-                                context, ref, nextActions[i].id),
-                            onDelete: () => ref
-                                .read(deleteItemProvider)
-                                .call(nextActions[i].id),
-                          ),
-                        ),
-                        ReorderableDragStartListener(
-                          index: i,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4),
-                            child: Icon(Icons.drag_handle,
-                                color: scheme.onSurfaceVariant),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          if (waiting.isNotEmpty) ...[
             const SizedBox(height: 20),
-            _SectionHeader(l10n.waitingFor),
-            for (final w in waiting) _liveCard(w),
-          ],
-          // Secondary lists. Everything tied to the project that isn't an
-          // active commitment lives here, collapsed by default so the screen
-          // stays focused on what to do next while still being the single
-          // home for the project's reference, deferred and finished work.
-          if (scheduled.isNotEmpty)
-            _CollapsibleSection(
-              key: const ValueKey('section-scheduled'),
-              label: l10n.scheduled,
-              count: scheduled.length,
-              children: [for (final i in scheduled) _liveCard(i)],
-            ),
-          if (needsClarifying.isNotEmpty)
-            _CollapsibleSection(
-              key: const ValueKey('section-needs-clarifying'),
-              label: l10n.needsClarifying,
-              count: needsClarifying.length,
-              children: [for (final i in needsClarifying) _liveCard(i)],
-            ),
-          if (reference.isNotEmpty)
-            _CollapsibleSection(
-              key: const ValueKey('section-reference'),
-              label: l10n.reference,
-              count: reference.length,
-              children: [for (final i in reference) _liveCard(i)],
-            ),
-          if (someday.isNotEmpty)
-            _CollapsibleSection(
-              key: const ValueKey('section-someday'),
-              label: l10n.someday,
-              count: someday.length,
-              children: [for (final i in someday) _liveCard(i)],
-            ),
-          if (completed.isNotEmpty)
-            _CollapsibleSection(
-              key: const ValueKey('section-completed'),
-              label: l10n.completed,
-              count: completed.length,
-              children: [
-                for (final i in completed)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: ItemCard(
-                      item: i,
-                      showProject: false,
-                      onTap: () => context.push('/item/${i.id}'),
+            _SectionHeader(l10n.nextActionsSection),
+            if (nextActions.isEmpty)
+              Text(
+                l10n.noNextActionsMessage,
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            if (nextActions.isNotEmpty)
+              ReorderableListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                buildDefaultDragHandles: false,
+                onReorderItem: (oldIndex, newIndex) =>
+                    _onReorderNextActions(nextActions, oldIndex, newIndex),
+                children: [
+                  for (var i = 0; i < nextActions.length; i++)
+                    Padding(
+                      key: ValueKey(nextActions[i].id),
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ItemCard(
+                              item: nextActions[i],
+                              showProject: false,
+                              onTap: () =>
+                                  _openItem(nextActions[i].id),
+                              onComplete: () => completeWithUndo(
+                                context,
+                                ref,
+                                nextActions[i].id,
+                              ),
+                              onDelete: () =>
+                                  deleteWithUndo(context, ref, nextActions[i].id),
+                              onToggleFocus: () =>
+                                  toggleTodayFocus(context, ref, nextActions[i]),
+                            ),
+                          ),
+                          ReorderableDragStartListener(
+                            index: i,
+                            child: Semantics(
+                              label: l10n.reorderHandle,
+                              child: SizedBox(
+                                width: kMinInteractiveDimension,
+                                height: kMinInteractiveDimension,
+                                child: Icon(
+                                  Icons.drag_handle,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            ),
-        ],
+                ],
+              ),
+            if (waiting.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _SectionHeader(l10n.waitingFor),
+              for (final w in waiting) _liveCard(w),
+            ],
+            // Secondary lists. Everything tied to the project that isn't an
+            // active commitment lives here, collapsed by default so the screen
+            // stays focused on what to do next while still being the single
+            // home for the project's reference, deferred and finished work.
+            if (scheduled.isNotEmpty)
+              _CollapsibleSection(
+                key: const ValueKey('section-scheduled'),
+                label: l10n.scheduled,
+                count: scheduled.length,
+                children: [for (final i in scheduled) _liveCard(i)],
+              ),
+            if (needsClarifying.isNotEmpty)
+              _CollapsibleSection(
+                key: const ValueKey('section-needs-clarifying'),
+                label: l10n.needsClarifying,
+                count: needsClarifying.length,
+                children: [for (final i in needsClarifying) _liveCard(i)],
+              ),
+            if (reference.isNotEmpty)
+              _CollapsibleSection(
+                key: const ValueKey('section-reference'),
+                label: l10n.reference,
+                count: reference.length,
+                children: [for (final i in reference) _liveCard(i)],
+              ),
+            if (someday.isNotEmpty)
+              _CollapsibleSection(
+                key: const ValueKey('section-someday'),
+                label: l10n.someday,
+                count: someday.length,
+                children: [for (final i in someday) _liveCard(i)],
+              ),
+            if (completed.isNotEmpty)
+              _CollapsibleSection(
+                key: const ValueKey('section-completed'),
+                label: l10n.completed,
+                count: completed.length,
+                children: [
+                  for (final i in completed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ItemCard(
+                        item: i,
+                        showProject: false,
+                        onTap: () => _openItem(i.id),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
+
+  void _openItem(String id) => context.push(Uri(
+    path: '/item/$id',
+    queryParameters: {'project': widget.projectId},
+  ).toString());
 
   /// A card for a non-active project item (scheduled / inbox / reference /
   /// someday). Mirrors the "Waiting for" idiom: tap opens the item, swipe
   /// deletes. No complete affordance — these aren't next actions.
   Widget _liveCard(Item item) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: ItemCard(
-          item: item,
-          showProject: false,
-          onTap: () => context.push('/item/${item.id}'),
-          onDelete: () => ref.read(deleteItemProvider).call(item.id),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: ItemCard(
+      item: item,
+      showProject: false,
+      onTap: () => _openItem(item.id),
+      onDelete: () => deleteWithUndo(context, ref, item.id),
+      // Shown only for Waiting and Calendar Items (see `canFocus`).
+      onToggleFocus: () => toggleTodayFocus(context, ref, item),
+    ),
+  );
 }
 
 /// A section whose body collapses behind its header. Used for the project's
@@ -684,10 +829,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
             ),
           ),
         ),
-        if (_expanded) ...[
-          const SizedBox(height: 8),
-          ...widget.children,
-        ],
+        if (_expanded) ...[const SizedBox(height: 8), ...widget.children],
       ],
     );
   }
@@ -696,23 +838,23 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
 /// The shared look of every section label on this screen (plain headers and
 /// collapsible ones alike), so the two never drift apart.
 TextStyle _sectionLabelStyle(ColorScheme scheme) => TextStyle(
-      fontSize: 11.5,
-      letterSpacing: 0.6,
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurfaceVariant,
-    );
+  fontSize: 11.5,
+  letterSpacing: 0.6,
+  fontWeight: FontWeight.w600,
+  color: scheme.onSurfaceVariant,
+);
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.label);
   final String label;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          label.toUpperCase(),
-          style: _sectionLabelStyle(Theme.of(context).colorScheme),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      label.toUpperCase(),
+      style: _sectionLabelStyle(Theme.of(context).colorScheme),
+    ),
+  );
 }
 
 class _MovementBanner extends StatelessWidget {
@@ -724,22 +866,20 @@ class _MovementBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final (bg, fg, icon, message) = switch (movement) {
       ProjectMovement.stalled => (
-          scheme.errorContainer,
-          scheme.onErrorContainer,
-          Icons.warning_amber_rounded,
-          'Stalled — no next action, waiting, or scheduled item defined. '
-              'Add a next action to get this moving.',
-        ),
+        scheme.errorContainer,
+        scheme.onErrorContainer,
+        Icons.warning_amber_rounded,
+        AppLocalizations.of(context).projectStalledBanner,
+      ),
       ProjectMovement.awaiting => (
-          scheme.tertiaryContainer,
-          scheme.onTertiaryContainer,
-          Icons.hourglass_bottom_rounded,
-          'This project is moving through waiting or scheduled items only. '
-              'Consider adding a follow-up next action so it doesn\'t stall '
-              'when those clear.',
-        ),
-      ProjectMovement.healthy =>
-        throw StateError('healthy movement should not render a banner'),
+        scheme.tertiaryContainer,
+        scheme.onTertiaryContainer,
+        Icons.hourglass_bottom_rounded,
+        AppLocalizations.of(context).projectAwaitingBanner,
+      ),
+      ProjectMovement.healthy => throw StateError(
+        'healthy movement should not render a banner',
+      ),
     };
     return Container(
       padding: const EdgeInsets.all(12),

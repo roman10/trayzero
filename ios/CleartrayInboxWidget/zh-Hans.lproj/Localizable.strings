@@ -1,0 +1,22 @@
+/* Widgets and controls (ADR 0009). Follows the system language. */
+
+"Today" = "今天";
+"%lld done" = "已完成 %lld 项";
+"+%lld more" = "还有 %lld 项";
+"Complete %@" = "完成“%@”";
+"All done for today" = "今天的事项都完成了";
+"Nothing focused yet" = "尚未聚焦任何事项";
+"Plan your day" = "规划今天";
+"Your focused items for today. Tap a circle to complete." = "今天聚焦的事项。点按圆圈即可完成。";
+"Complete Item" = "完成事项";
+"Item" = "事项";
+"Capture to Trayzero" = "收集到 Trayzero";
+"Open Quick Capture" = "打开快速收集";
+"Opens Trayzero's quick capture sheet." = "打开 Trayzero 的快速收集面板。";
+"Show Today" = "查看今天";
+"Opens the items you focused for today." = "打开今天聚焦的事项。";
+"item in Inbox" = "项在收件箱";
+"items in Inbox" = "项在收件箱";
+"+ Capture" = "+ 收集";
+"Trayzero Inbox" = "Trayzero 收件箱";
+"See your unprocessed inbox count and capture in one tap." = "查看收件箱中待处理的数量，一点即可收集。";

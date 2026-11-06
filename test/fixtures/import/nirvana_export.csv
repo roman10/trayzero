@@ -1,0 +1,11 @@
+ID,TYPE,STATE,PARENTID,NAME,TAGS,NOTE,ENERGY,ETIME,WAITINGFOR,STARTDATE,DUEDATE,RECURRING,COMPLETED,CANCELLED
+p1,1,11,,Plan trip,,Two weeks in Japan,0,0,,,,,0,0
+p2,1,4,,Write a novel,,,0,0,,,,,0,0
+t1,0,0,,Read email from Sam,,,0,0,,,,,0,0
+t2,0,1,p1,Book flights,"computer,errands",,2,30,,,20261115,,0,0
+t3,0,2,p1,Visa paperwork,,,0,0,Embassy,,,,0,0
+t4,0,3,p1,Pack bags,,,1,0,,20261201,,,0,0
+t5,0,7,p1,Renew passport,,,0,0,,,,,1700000000,0
+t6,0,5,,Learn to juggle,,,3,0,,,,,0,0
+t7,0,9,,Water plants,,,0,0,,,,"{""freq"":""weekly"",""interval"":1,""nextdate"":""20261102"",""paused"":false}",0,0
+t8,0,1,p2,Outline chapter one,,,0,0,,,,,0,0

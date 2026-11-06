@@ -41,16 +41,20 @@ final class SaveItem {
     // canonical item: a next action's `dueAt` is dropped here, which makes the
     // `else { cancel(dueId) }` branch correctly tear down any stale "Due:"
     // reminder instead of scheduling one we'd never honour.
-    final stamped = enforceStatusDateInvariant(updated)
+    final stamped = enforceItemInvariants(updated)
         .copyWith(updatedAt: _clock.now());
     await _items.upsert(stamped);
-    await reconcileItemReminders(
-      stamped,
-      scheduler: _scheduler,
-      now: _clock.now(),
-      leadTimeMinutes: _leadTimeMinutes,
-      deferSurfaceMinutes: _deferSurfaceMinutes,
-    );
+    await reconcileReminders(stamped);
     return stamped;
   }
+
+  /// Reconcile an already-persisted item without writing it again. Used
+  /// after atomic completion has committed its recurrence successor.
+  Future<void> reconcileReminders(Item item) => reconcileItemReminders(
+    item,
+    scheduler: _scheduler,
+    now: _clock.now(),
+    leadTimeMinutes: _leadTimeMinutes,
+    deferSurfaceMinutes: _deferSurfaceMinutes,
+  );
 }
