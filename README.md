@@ -7,6 +7,7 @@ Reflect → Engage. No account, no servers, no ads. Your data lives on your devi
 - **Website:** <https://trayzero.app>
 - **App Store (iOS):** <https://apps.apple.com/app/id6771756447>
 - **Google Play (Android):** search "Trayzero" (package `app.cleartray`)
+- **Video tutorials:** [Trayzero on YouTube](https://www.youtube.com/@trayzeroapp)
 - **Privacy policy:** <https://trayzero.app/privacy>
 
 Built with Flutter, so one codebase ships to both iOS and Android. (App store
