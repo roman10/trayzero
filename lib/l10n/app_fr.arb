@@ -631,7 +631,7 @@
   "moreRestoredEntries": "{count, plural, =1{1 entrée restaurée} other{{count} entrées restaurées}}.",
   "moreBackupEmpty": "Cette sauvegarde ne contient aucune entrée à restaurer.",
   "moreCouldntOpenLink": "Impossible d'ouvrir le lien",
-  "moreVersionBuild": "{version} (build {build})",
+  "moreVersionBuild": "{version} (compilation {build})",
   "supportBestValue": "Meilleure offre",
   "importListIntro": "Choisissez où se trouvent vos tâches. Vous verrez un aperçu avant tout ajout.",
   "importGroupDirect": "Connexion directe",
@@ -786,7 +786,13 @@
   "backupPromptAction": "Choisir un dossier",
   "backupPromptDismiss": "Non merci",
   "backupCardHealthy": "Sauvegardé {date}",
-  "@backupCardHealthy": {"placeholders": {"date": {"type": "String"}}},
+  "@backupCardHealthy": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "backupCardOffBody": "Activez pour enregistrer une copie dans un dossier après chaque modification.",
   "backupCardTurnOn": "Activer",
   "backupCardChooseAgain": "Rechoisir le dossier",
@@ -832,7 +838,21 @@
   "calendarNeedsAttention": "Action requise",
   "calendarPauseHelp": "Les événements existants sont conservés. Les modifications attendront la reprise des mises à jour ou le choix de Mettre à jour.",
   "calendarLinkedCount": "{count} événements liés",
+  "@calendarLinkedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "calendarLastUpdated": "Dernière mise à jour : {when}",
+  "@calendarLastUpdated": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "calendarChangesWaiting": "Modifications en attente",
   "calendarUpdateNow": "Mettre à jour",
   "calendarManage": "Gérer la connexion",
@@ -841,12 +861,26 @@
   "calendarUpdateFailed": "Certaines modifications n’ont pas pu être appliquées. La dernière mise à jour réussie apparaît ci-dessus. Réessayez.",
   "calendarRemovalPending": "Suppression en attente",
   "calendarRemoveFailed": "{count} événements n’ont pas pu être supprimés. Les mises à jour automatiques sont arrêtées. Réessayez ou déconnectez en conservant les événements restants.",
+  "@calendarRemoveFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "calendarSaveFailed": "Impossible d’enregistrer cette modification. Vérifiez les paramètres de connexion et réessayez.",
   "calendarNoWritable": "Aucun calendrier modifiable disponible. Ajoutez-en un dans les réglages de calendrier de votre appareil, puis réessayez.",
   "calendarChangeDestination": "Changer de destination",
   "calendarChooseDestination": "Choisir un calendrier",
   "calendarMoveHelp": "Les événements liés seront déplacés vers le nouveau calendrier. Les autres resteront en place. Le réglage actuel des mises à jour automatiques sera conservé.",
   "calendarSetupCount": "{count} éléments planifiés seront publiés. Les liens existants seront réutilisés si possible.",
+  "@calendarSetupCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "calendarMoveEvents": "Déplacer les événements liés",
   "calendarConnectAndAdd": "Connecter et ajouter les événements",
   "calendarDisconnect": "Déconnecter le calendrier",
@@ -855,6 +889,13 @@
   "calendarKeepEvents": "Conserver les événements dans mon calendrier",
   "calendarKeepHelp": "Arrêter les mises à jour et conserver les événements. Une reconnexion peut réutiliser ces liens.",
   "calendarRemoveEvents": "Supprimer {count} événements liés",
+  "@calendarRemoveEvents": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "calendarRemoveHelp": "Supprimer uniquement les événements liés à cette connexion. Les suppressions échouées restent disponibles pour réessayer.",
   "calendarHowItWorks": "Fonctionnement des événements liés",
   "calendarRules": "Trayzero publie les éléments planifiés du Calendrier dans le calendrier choisi de votre appareil. Les échéances ordinaires sont exclues.\n\nModifiez les titres, notes, horaires et répétitions dans Trayzero. Une mise à jour peut remplacer les modifications de votre application de calendrier. Les événements durent actuellement une heure.\n\nTerminer, mettre à la corbeille ou retirer un élément du Calendrier supprime son événement à la prochaine mise à jour. Une série récurrente passe à l’occurrence suivante.\n\nLa pause conserve les événements et leurs liens. La déconnexion permet de conserver ou supprimer les événements liés. Elle ne supprime jamais les éléments Trayzero.",
@@ -864,49 +905,14 @@
   "calendarImportSource": "Choisir le calendrier source",
   "calendarImportDestination": "Ajouter les événements sélectionnés à",
   "calendarAddSelected": "Ajouter {count} événements",
-  "calendarNoImportEvents": "Aucun nouvel événement à importer. Ceux déjà ajoutés ou liés à Trayzero sont exclus. Période : les 7 derniers jours et l’année à venir.",
-  "calendarImportFailed": "Impossible d’importer les événements. Vérifiez l’accès au calendrier et réessayez.",
-  "calendarDeviceHelp": "Utilise le calendrier de l’appareil. Aucun compte Trayzero requis. Un calendrier partagé peut être visible par les autres personnes qui y ont accès.",
-  "@calendarLinkedCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@calendarLastUpdated": {
-    "placeholders": {
-      "when": {
-        "type": "String"
-      }
-    }
-  },
-  "@calendarRemoveFailed": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@calendarSetupCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "@calendarRemoveEvents": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "@calendarAddSelected": {
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
-  }
+  },
+  "calendarNoImportEvents": "Aucun nouvel événement à importer. Ceux déjà ajoutés ou liés à Trayzero sont exclus. Période : les 7 derniers jours et l’année à venir.",
+  "calendarImportFailed": "Impossible d’importer les événements. Vérifiez l’accès au calendrier et réessayez.",
+  "calendarDeviceHelp": "Utilise le calendrier de l’appareil. Aucun compte Trayzero requis. Un calendrier partagé peut être visible par les autres personnes qui y ont accès."
 }
