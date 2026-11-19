@@ -2499,7 +2499,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String moreVersionBuild(String version, String build) {
-    return '$version (build $build)';
+    return '$version (compilation $build)';
   }
 
   @override

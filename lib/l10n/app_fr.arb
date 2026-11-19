@@ -634,7 +634,7 @@
   "moreRestoredEntries": "{count, plural, =1{1 entrée restaurée} other{{count} entrées restaurées}}.",
   "moreBackupEmpty": "Cette sauvegarde ne contient aucune entrée à restaurer.",
   "moreCouldntOpenLink": "Impossible d'ouvrir le lien",
-  "moreVersionBuild": "{version} (build {build})",
+  "moreVersionBuild": "{version} (compilation {build})",
   "supportBestValue": "Meilleure offre",
   "importListIntro": "Choisissez où se trouvent vos tâches. Vous verrez un aperçu avant tout ajout.",
   "importGroupDirect": "Connexion directe",
