@@ -145,6 +145,11 @@ conventions — read it before contributing.
 
 ## Contributing
 
+To suggest a translation or improve existing wording, choose your language in
+[Trayzero on Hosted Weblate](https://hosted.weblate.org/projects/trayzero/app/).
+Keep placeholders and plural forms intact. If a string needs context, comment
+with the screen where it appears.
+
 UI labels live in the ARB files for all ten supported languages. Recurrence
 summaries, item-card metadata, and dates use the shared presentation formatters
 in `features/common/`; domain recurrence rules retain their pure Dart date math.
