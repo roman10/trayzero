@@ -554,4 +554,40 @@ void main() {
       expect(order, ['a', 'b', 'c']);
     });
   });
+
+  test('watchProjectStatusCounts matches watchForProject per project',
+      () async {
+    final now = DateTime(2026, 5, 14);
+    Future<void> add(String id, ItemStatus status, String? project) =>
+        repo.upsert(Item(
+          id: id,
+          title: id,
+          status: status,
+          projectId: project,
+          createdAt: now,
+          updatedAt: now,
+        ));
+    await add('n1', ItemStatus.nextAction, 'p');
+    await add('n2', ItemStatus.nextAction, 'p');
+    await add('w', ItemStatus.waiting, 'p');
+    await add('s', ItemStatus.someday, 'q');
+    await add('t', ItemStatus.trashed, 'q');
+    await add('d', ItemStatus.nextAction, 'q');
+    await repo.markCompleted('d', now);
+    await add('loose', ItemStatus.nextAction, null);
+
+    final counts = await repo.watchProjectStatusCounts().first;
+    expect(counts, {
+      'p': {ItemStatus.nextAction: 2, ItemStatus.waiting: 1},
+      'q': {ItemStatus.someday: 1},
+    });
+    for (final project in ['p', 'q']) {
+      final open = await repo.watchForProject(project).first;
+      final expected = <ItemStatus, int>{};
+      for (final item in open) {
+        expected[item.status] = (expected[item.status] ?? 0) + 1;
+      }
+      expect(counts[project], expected);
+    }
+  });
 }

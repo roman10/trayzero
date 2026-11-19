@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:cleartray/core/clock.dart';
+import 'package:cleartray/core/search_text.dart';
 import 'package:cleartray/data/db/database.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/data/repositories/project_repository.dart';
@@ -9,14 +12,111 @@ import 'package:cleartray/data/repositories/review_repository.dart';
 import 'package:cleartray/data/repositories/tag_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 
-/// End-to-end test of the real schema upgrade — not the migration helpers in
-/// isolation, but the actual `onUpgrade` blocks drift runs when an existing
-/// user's old database is opened by this build. A single in-memory sqlite
-/// handle is shared across two `AppDatabase` instances so the second sees the
-/// first's data at an older schema version. One upgrade covers both seams:
-///   - v6 → v7: `addColumn(searchText)` + `backfillSearchText`
-///   - v7 → v8: `migrateNextActionDueDates` (stray next-action `dueAt`)
+/// Opens older SQLite schemas through the same Drift migration used by the app.
 void main() {
+  test(
+    'v14 → v15 adds Item indexes and keeps every row and column unchanged',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('migration_v14_');
+      addTearDown(() => directory.delete(recursive: true));
+      final file = await File('test/fixtures/migrations/v14.sqlite').copy(
+        '${directory.path}/cleartray.sqlite',
+      );
+      final raw = sqlite3.open(file.path, mode: OpenMode.readOnly);
+      addTearDown(raw.dispose);
+      expect(raw.select('PRAGMA user_version').single['user_version'], 14);
+
+      const newIndexes = {
+        'index:items_project_id',
+        'index:items_status_completed_at',
+      };
+      final tables = [
+        for (final row in raw.select(
+          "SELECT name FROM sqlite_master WHERE type = 'table' "
+          "AND name NOT LIKE 'sqlite_%' ORDER BY name",
+        ))
+          row['name'] as String,
+      ];
+      Map<String, String?> schemaOf(Database db) => {
+        for (final row in db.select(
+          'SELECT type, name, sql FROM sqlite_master ORDER BY name',
+        ))
+          '${row['type']}:${row['name']}': row['sql'] as String?,
+      };
+      Map<String, List<Map<String, Object?>>> snapshot() => {
+        for (final table in tables)
+          table: [
+            for (final row in raw.select(
+              'SELECT rowid AS _rowid, * FROM "$table" ORDER BY rowid',
+            ))
+              Map.of(row),
+          ],
+      };
+      final rowsBefore = snapshot();
+      final schemaBefore = schemaOf(raw);
+      expect(schemaBefore.keys.toSet().intersection(newIndexes), isEmpty);
+
+      // Keep the fixture representative of every v14 table and column.
+      for (final entry in rowsBefore.entries) {
+        final table = entry.key;
+        expect(entry.value, isNotEmpty, reason: '$table has fixture rows');
+        for (final column in raw.select('PRAGMA table_info("$table")')) {
+          final name = column['name'] as String;
+          final values = entry.value.map((row) => row[name]);
+          expect(values, contains(isNotNull), reason: '$table.$name has a value');
+          if (column['notnull'] == 0 && column['pk'] == 0) {
+            expect(values, contains(isNull), reason: '$table.$name has a null');
+          }
+        }
+      }
+
+      // Open the copy with the same background SQLite executor as the app.
+      final migrated = AppDatabase.forTesting(
+        NativeDatabase.createInBackground(file),
+      );
+      try {
+        final completedAt = DateTime.fromMillisecondsSinceEpoch(1794994200000);
+        final repo = ItemRepository(migrated, FakeClock(completedAt));
+        expect(
+          (await repo.watchForProject('p').first).single.title,
+          'Visit the Café',
+        );
+        expect((await repo.getById('b'))!.completedAt, completedAt);
+        expect(await repo.watchProjectStatusCounts().first, {
+          'p': {ItemStatus.nextAction: 1},
+        });
+      } finally {
+        await migrated.close();
+      }
+
+      expect(raw.select('PRAGMA user_version').single['user_version'], 15);
+      expect(snapshot(), rowsBefore);
+      final schemaAfter = schemaOf(raw);
+      expect(
+        schemaAfter.keys.toSet().difference(schemaBefore.keys.toSet()),
+        newIndexes,
+      );
+      expect(
+        Map.of(schemaAfter)..removeWhere((key, _) => newIndexes.contains(key)),
+        schemaBefore,
+      );
+      expect(raw.select('PRAGMA foreign_key_check'), isEmpty);
+      expect(raw.select('PRAGMA integrity_check').single.values.single, 'ok');
+
+      final fresh = sqlite3.openInMemory();
+      addTearDown(fresh.dispose);
+      final freshDb = AppDatabase.forTesting(
+        NativeDatabase.opened(fresh, closeUnderlyingOnClose: false),
+      );
+      try {
+        await freshDb.customSelect('SELECT 1').get();
+      } finally {
+        await freshDb.close();
+      }
+      expect(schemaOf(fresh), schemaAfter);
+    },
+  );
+
   test(
     'v13 → v14 adds persistent import history without changing items',
     () async {
@@ -228,10 +328,15 @@ void main() {
     },
   );
 
-  test('full upgrade runs the search backfill and the next-action dueAt fix',
+  test('failed v6 upgrade rolls back its schema and data and can be retried',
       () async {
-    final raw = sqlite3.openInMemory();
+    final directory = await Directory.systemTemp.createTemp('schema_retry_');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/cleartray.sqlite');
+    final raw = sqlite3.open(file.path);
     addTearDown(raw.dispose);
+    AppDatabase open() =>
+        AppDatabase.forTesting(NativeDatabase.createInBackground(file));
 
     final now = DateTime(2026, 5, 14);
     final dueDate = DateTime(2026, 5, 20, 9);
@@ -287,7 +392,10 @@ void main() {
     //    legacy state v8 retires), and reset the schema version.
     raw.execute('ALTER TABLE items DROP COLUMN search_text');
     raw.execute('ALTER TABLE items DROP COLUMN project_sort_order');
-    raw.execute("UPDATE items SET status = 'nextAction' WHERE id = 'cal'");
+    raw.execute(
+      "UPDATE items SET status = 'nextAction', calendar_event_id = 'event' "
+      "WHERE id = 'cal'",
+    );
     raw.execute('DROP TABLE calendar_mirrors');
     raw.execute('ALTER TABLE items DROP COLUMN focused_at');
     raw.execute('ALTER TABLE projects DROP COLUMN last_reviewed_at');
@@ -295,14 +403,43 @@ void main() {
     raw.execute('DROP TABLE item_tags');
     raw.execute('DROP TABLE tags');
     raw.execute('DROP TABLE import_batches');
+    raw.execute('DROP INDEX items_project_id');
+    raw.execute('DROP INDEX items_status_completed_at');
     raw.execute('PRAGMA user_version = 6');
-    expect(raw.select('PRAGMA user_version').first['user_version'], 6);
 
-    // 3. Reopen as the current AppDatabase: drift sees the db is below the
-    //    current schema and runs onUpgrade end to end (the `from < 7` and
-    //    `from < 8` blocks). The first query forces the lazy migration.
-    final migrated = AppDatabase.forTesting(
-        NativeDatabase.opened(raw, closeUnderlyingOnClose: false));
+    // Fail after the schema changes and search backfill have run.
+    raw.execute('''
+      CREATE TRIGGER fail_upgrade BEFORE UPDATE OF due_at ON items
+      BEGIN
+        SELECT RAISE(ABORT, 'injected migration failure');
+      END
+    ''');
+    List<Map<String, Object?>> snapshot(String sql) =>
+        raw.select(sql).map((row) => Map.of(row)).toList();
+    const schemaSql = 'SELECT * FROM sqlite_master ORDER BY name';
+    const itemsSql = 'SELECT rowid, * FROM items ORDER BY rowid';
+    final schemaBefore = snapshot(schemaSql);
+    final itemsBefore = snapshot(itemsSql);
+
+    final failing = open();
+    try {
+      await expectLater(
+        failing.customSelect('SELECT 1').get(),
+        throwsA(
+          predicate<Object>(
+            (error) => error.toString().contains('injected migration failure'),
+          ),
+        ),
+      );
+    } finally {
+      await failing.close();
+    }
+    expect(raw.select('PRAGMA user_version').single['user_version'], 6);
+    expect(snapshot(schemaSql), schemaBefore);
+    expect(snapshot(itemsSql), itemsBefore);
+
+    raw.execute('DROP TRIGGER fail_upgrade');
+    final migrated = open();
     addTearDown(migrated.close);
     final repo = ItemRepository(migrated, FakeClock(now));
 
@@ -319,6 +456,19 @@ void main() {
     expect(cal.dueAt, isNull, reason: 'hard dueAt retired from a next action');
     expect(cal.deferUntil, dueDate,
         reason: 'date preserved as the defer anchor by the v7→v8 migration');
+
+    final originalColumns = itemsBefore.first.keys.map((name) => '"$name"');
+    final expectedItems = [
+      for (final row in itemsBefore)
+        if (row['id'] == 'cal')
+          {...row, 'due_at': null, 'defer_until': row['due_at']}
+        else
+          row,
+    ];
+    expect(
+      snapshot('SELECT ${originalColumns.join(', ')} FROM items ORDER BY rowid'),
+      expectedItems,
+    );
 
     // v8 → v9: the additive `projectSortOrder` column is non-destructive.
     // No rows lost, every pre-existing field preserved, and the all-zero
@@ -338,10 +488,67 @@ void main() {
         reason: 'all-zero projectSortOrder falls back to createdAt ASC — '
             'identical to the pre-v9 project ordering');
 
+    final mirror = raw.select('SELECT * FROM calendar_mirrors').single;
+    expect(mirror['event_id'], 'event');
+    expect(mirror['item_id'], 'cal');
+    expect(raw.select('PRAGMA foreign_key_check'), isEmpty);
+    expect(raw.select('PRAGMA integrity_check').single.values.single, 'ok');
+
     // Pinned to the current schemaVersion, not a literal, so this stays
     // green as later migrations are added on top.
     expect(raw.select('PRAGMA user_version').first['user_version'],
         migrated.schemaVersion,
         reason: 'schema fully upgraded to current version');
+  });
+
+  test('resumes a legacy upgrade with changes already committed', () async {
+    final raw = sqlite3.openInMemory();
+    addTearDown(raw.dispose);
+    AppDatabase open() => AppDatabase.forTesting(
+      NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+    );
+    final seed = open();
+    await seed.customSelect('SELECT 1').get();
+    await seed.close();
+
+    // Model an older migrator interrupted after its schema changes and
+    // backfills, but before it could update user_version.
+    raw.execute('DROP INDEX items_project_id');
+    raw.execute('DROP INDEX items_status_completed_at');
+    raw.execute('PRAGMA user_version = 6');
+    raw.execute('''
+      INSERT INTO items (
+        id, title, status, created_at, updated_at, defer_until, search_text,
+        calendar_event_id
+      ) VALUES ('a', 'Visit the Café', 'nextAction', 1, 2, 3, ?, 'event')
+    ''', [searchTextFor('Visit the Café', null)]);
+    raw.execute('''
+      INSERT INTO calendar_mirrors (calendar_id, event_id, item_id, is_current)
+      VALUES ('', 'event', 'a', 0)
+    ''');
+    final rowsBefore = raw
+        .select('SELECT rowid, * FROM items')
+        .map(Map.of)
+        .toList();
+    final mirrorsBefore = raw
+        .select('SELECT rowid, * FROM calendar_mirrors')
+        .map(Map.of)
+        .toList();
+
+    final migrated = open();
+    addTearDown(migrated.close);
+    await migrated.customSelect('SELECT 1').get();
+
+    expect(raw.select('PRAGMA user_version').single['user_version'], 15);
+    expect(
+      raw.select('SELECT rowid, * FROM items').map(Map.of).toList(),
+      rowsBefore,
+    );
+    expect(
+      raw.select('SELECT rowid, * FROM calendar_mirrors').map(Map.of).toList(),
+      mirrorsBefore,
+    );
+    expect(raw.select('PRAGMA foreign_key_check'), isEmpty);
+    expect(raw.select('PRAGMA integrity_check').single.values.single, 'ok');
   });
 }

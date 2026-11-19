@@ -124,6 +124,7 @@
   "hardLandscape": "캘린더",
   "hardLandscapeSubtitle": "오늘 마감 및 기한 초과",
   "filterAllContexts": "모든 컨텍스트",
+  "filterNoContext": "컨텍스트 없음",
   "filterAnyTime": "시간 무관",
   "filterUnder5m": "5분 이내",
   "filterUnder15m": "15분 이내",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count}개 할 일의 첨부 파일, 알림 설정 또는 상태는 가져오지 않습니다.",
   "moreGroupOrganize": "정리",
   "moreGroupPreferences": "환경설정",
+  "skipDelegationTitle": "명확화에서 위임 단계 건너뛰기",
+  "skipDelegationDescription": "2분 규칙 다음에 바로 한 가지 행동으로 끝낼 수 있는지 확인합니다.",
   "moreGroupData": "데이터",
   "moreOn": "켜짐",
   "moreOff": "꺼짐",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "후속 확인: {date}",
+  "planScheduledOnDate": "예정: {date}",
+  "rateTrayzero": "Trayzero 평가하기",
+  "sendFeedback": "의견 보내기"
 }

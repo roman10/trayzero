@@ -124,6 +124,7 @@
   "hardLandscape": "Calendario",
   "hardLandscapeSubtitle": "Vencen hoy & Atrasadas",
   "filterAllContexts": "Todos los contextos",
+  "filterNoContext": "Sin contexto",
   "filterAnyTime": "Cualquier duración",
   "filterUnder5m": "< 5 min",
   "filterUnder15m": "< 15 min",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count, plural, =1{1 tarea tiene archivos adjuntos, ajustes de recordatorio o un estado que no se importan} other{{count} tareas tienen archivos adjuntos, ajustes de recordatorio o estados que no se importan}}",
   "moreGroupOrganize": "Organizar",
   "moreGroupPreferences": "Preferencias",
+  "skipDelegationTitle": "Omitir la delegación al aclarar",
+  "skipDelegationDescription": "Pasa directamente a la pregunta sobre la acción única después del paso de los dos minutos.",
   "moreGroupData": "Datos",
   "moreOn": "Sí",
   "moreOff": "No",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "Hacer seguimiento el {date}",
+  "planScheduledOnDate": "Programado para el {date}",
+  "rateTrayzero": "Valorar Trayzero",
+  "sendFeedback": "Enviar comentarios"
 }

@@ -209,7 +209,6 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     }
     final notes = _notes.text.trim();
     final capture = ref.read(captureItemProvider);
-    final haptics = ref.read(hapticsEnabledProvider);
     setState(() {
       _saving = true;
       _savingAndContinuing = continueCapture;
@@ -239,7 +238,9 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           _dictationFailed = false;
         }
       });
-      if (haptics) unawaited(HapticFeedback.mediumImpact());
+      if (ref.read(hapticsEnabledProvider)) {
+        unawaited(HapticFeedback.mediumImpact());
+      }
       if (continueCapture) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _titleFocus.requestFocus();

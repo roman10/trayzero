@@ -1,0 +1,1 @@
+Make delegation optional in Settings for a shorter inbox flow. Find tasks without a context using the No context filter in Search. Work through your Weekly Review and resume where you left off. Undo completion from the item editor. The Today widget is easier to resize and gives feedback when you complete a task.

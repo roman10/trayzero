@@ -20,43 +20,48 @@ void main() {
       expect(HomeWidgetBridgeImpl.decodeQueue(null), isEmpty);
     });
 
-    test('removes only the entries read, keeping concurrent appends', () {
-      final taken = [
-        {'id': 'a', 'at': 1},
-        {'id': 'a', 'at': 1},
-      ];
-      final latest = [
-        {'id': 'a', 'at': 1},
-        {'id': 'a', 'at': 1},
-        {'id': 'a', 'at': 1}, // A third, identical tap appended meanwhile.
-        {'id': 'b', 'at': 2},
-      ];
-      expect(HomeWidgetBridgeImpl.removeTaken(latest, taken), [
-        {'id': 'a', 'at': 1},
-        {'id': 'b', 'at': 2},
-      ]);
-    });
-
     test('parses completions and captures; rejects malformed entries', () {
       final at = DateTime.fromMillisecondsSinceEpoch(1761465600000);
       expect(
-        HomeWidgetBridgeImpl.completionFrom({'id': 'a', 'at': 1761465600000}),
-        (id: 'a', at: at),
+        HomeWidgetBridgeImpl.completionFrom({
+          'receipt': 'a1',
+          'id': 'a',
+          'at': 1761465600000,
+        }),
+        (receipt: 'a1', id: 'a', at: at),
       );
-      expect(HomeWidgetBridgeImpl.completionFrom({'id': '', 'at': 1}), isNull);
-      expect(HomeWidgetBridgeImpl.completionFrom({'id': 'a'}), isNull);
+      expect(
+        HomeWidgetBridgeImpl.completionFrom({
+          'receipt': 'a1',
+          'id': '',
+          'at': 1,
+        }),
+        isNull,
+      );
+      expect(
+        HomeWidgetBridgeImpl.completionFrom({'receipt': 'a1', 'id': 'a'}),
+        isNull,
+      );
       expect(
         HomeWidgetBridgeImpl.captureFrom({
+          'receipt': 'milk1',
           'text': 'milk',
           'at': 1761465600000.0,
         }),
-        (text: 'milk', at: at),
+        (receipt: 'milk1', text: 'milk', at: at),
       );
-      expect(HomeWidgetBridgeImpl.captureFrom({'text': 3, 'at': 1}), isNull);
+      expect(
+        HomeWidgetBridgeImpl.captureFrom({
+          'receipt': 'milk1',
+          'text': 3,
+          'at': 1,
+        }),
+        isNull,
+      );
     });
   });
 
-  group('launch links', () {
+  group('platform bridge', () {
     setUp(() {
       messenger.setMockMethodCallHandler(
         const MethodChannel('home_widget'),
@@ -79,6 +84,62 @@ void main() {
       );
       messenger.setMockMethodCallHandler(launch, null);
     });
+
+    test(
+      'reads pending work and acknowledges it by receipt over the native channel',
+      () async {
+        final calls = <MethodCall>[];
+        messenger.setMockMethodCallHandler(launch, (call) async {
+          calls.add(call);
+          if (call.method == 'readExternalQueue') {
+            if (call.arguments == 'today_completions') {
+              return '[{"receipt":"tap1","id":"task1","at":1},'
+                  '{"receipt":"corrupt","id":"","at":1}]';
+            }
+            return '[{"receipt":"capture1","text":"milk","at":2}]';
+          }
+          return null;
+        });
+        final bridge = HomeWidgetBridgeImpl();
+        final queue = await bridge.readQueue();
+
+        expect(queue.completions.single.receipt, 'tap1');
+        expect(queue.captures.single.receipt, 'capture1');
+        expect(
+          calls
+              .where((call) => call.method == 'acknowledgeExternalQueue')
+              .map((call) => call.arguments),
+          [
+            {
+              'key': 'today_completions',
+              'receipts': ['corrupt'],
+            },
+          ],
+        );
+
+        await bridge.acknowledgeQueue(
+          completionReceipts: [queue.completions.single.receipt],
+          captureReceipts: [queue.captures.single.receipt],
+        );
+
+        expect(
+          calls
+              .where((call) => call.method == 'acknowledgeExternalQueue')
+              .skip(1)
+              .map((call) => call.arguments),
+          [
+            {
+              'key': 'today_completions',
+              'receipts': ['tap1'],
+            },
+            {
+              'key': 'inbox_captures',
+              'receipts': ['capture1'],
+            },
+          ],
+        );
+      },
+    );
 
     test(
       'a pending App Intent link is held until the router listens',

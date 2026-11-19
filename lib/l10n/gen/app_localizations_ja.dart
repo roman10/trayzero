@@ -438,6 +438,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get filterAllContexts => 'すべての状況';
 
   @override
+  String get filterNoContext => '状況なし';
+
+  @override
   String get filterAnyTime => '時間問わず';
 
   @override
@@ -2265,6 +2268,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get moreGroupPreferences => '環境設定';
 
   @override
+  String get skipDelegationTitle => '明確化で委任のステップを省略';
+
+  @override
+  String get skipDelegationDescription => '2分ルールの次に、1つの行動で済むかを確認します。';
+
+  @override
   String get moreGroupData => 'データ';
 
   @override
@@ -3242,4 +3251,20 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get calendarDeviceHelp =>
       '端末のカレンダーを使用します。Trayzero アカウントは不要です。共有カレンダーの予定は、アクセス権のあるほかの人にも表示される場合があります。';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return 'フォローアップ：$date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return '予定：$date';
+  }
+
+  @override
+  String get rateTrayzero => 'Trayzeroを評価';
+
+  @override
+  String get sendFeedback => 'フィードバックを送信';
 }

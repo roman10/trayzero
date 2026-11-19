@@ -1,3 +1,4 @@
+import 'package:cleartray/core/haptic_feedback.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/features/inbox/inbox_screen.dart';
@@ -39,18 +40,28 @@ void main() {
   testWidgets('swipe-left Done completes the item without triage',
       (tester) async {
     await items.upsert(anItem(id: 'a', title: 'Already did this'));
-    await pumpApp(tester, const InboxScreen(), env: env);
+    final cues = <HapticCue>[];
+    await pumpApp(
+      tester,
+      const InboxScreen(),
+      env: env,
+      extraOverrides: [
+        playHapticCueProvider.overrideWithValue((cue) async => cues.add(cue)),
+      ],
+    );
     // Let the staggered entrance animation finish so the card is hit-testable.
     await tester.pumpAndSettle();
 
     await tester.drag(find.text('Already did this'), const Offset(-300, 0));
     await tester.pumpAndSettle();
+    expect(cues, isEmpty);
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
 
     final done = await items.getById('a');
     expect(done!.status, ItemStatus.done);
     expect(done.completedAt, isNotNull);
+    expect(cues, [HapticCue.taskCompleted]);
     expect(find.text('Already did this'), findsNothing);
     expect(find.text('Inbox zero'), findsOneWidget);
     expect(find.text('Completed'), findsOneWidget);
@@ -208,10 +219,12 @@ void main() {
       await tester.pumpAndSettle();
       expect((await items.getById('Plain'))!.status, ItemStatus.done);
       expect((await items.getById('Daily'))!.status, ItemStatus.done);
-      // The only thing left in the inbox is the recurring item's successor.
-      final afterDone = await inboxIds();
-      expect(afterDone, hasLength(1));
-      expect(afterDone.single, isNot('Daily'));
+      // The recurring item's successor is clarified work: it spawns as a
+      // next action, not back into the inbox.
+      expect(await inboxIds(), isEmpty);
+      final successor = (await items.allActive()).single;
+      expect(successor.id, isNot('Daily'));
+      expect(successor.status, ItemStatus.nextAction);
 
       await tester.tap(find.text('Undo'));
       await tester.pumpAndSettle();
@@ -220,6 +233,7 @@ void main() {
       expect(await inboxIds(), ['Daily', 'Plain']);
       expect((await items.getById('Plain'))!.completedAt, isNull);
       expect((await items.getById('Daily'))!.completedAt, isNull);
+      expect(await items.getById(successor.id), isNull);
 
       await drainSnackBar(tester);
     });

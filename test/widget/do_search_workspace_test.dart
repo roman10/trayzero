@@ -98,6 +98,94 @@ void main() {
     return container;
   }
 
+  testWidgets('Do mounts nearby rows and reveals a far workspace selection', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.reset);
+    await items.upsertAll([
+      anItem(
+        id: 'meeting',
+        title: 'Team meeting',
+        status: ItemStatus.calendar,
+        dueAt: env.clock.now(),
+      ),
+      for (var i = 0; i < 1000; i++)
+        anItem(
+          id: 'backlog-$i',
+          title: i.isEven
+              ? 'Task $i'
+              : 'Task $i with a long description to coordinate the complete '
+                    'launch with regional partners and all supporting materials',
+          status: ItemStatus.nextAction,
+        ).copyWith(energy: Energy.low, sortOrder: i + 1),
+    ]);
+    final container = await openApp(tester, 'do');
+    final list = find.byKey(const PageStorageKey('do-next-actions'));
+    // Count cached cards as well as the cards actually in the viewport.
+    final cards = find.descendant(
+      of: list,
+      matching: find.byType(ItemCard, skipOffstage: false),
+      skipOffstage: false,
+    );
+    final meeting = find.widgetWithText(ItemCard, 'Team meeting');
+    final alpha = find.widgetWithText(ItemCard, 'Task alpha');
+    final beta = find.widgetWithText(ItemCard, 'Task beta');
+    final result = find.byWidgetPredicate(
+      (w) => w is ItemCard && w.item.id == 'backlog-750',
+    );
+    expect(meeting, findsOneWidget);
+    expect(tester.getTopLeft(meeting).dy, lessThan(tester.getTopLeft(beta).dy));
+    expect(cards.evaluate().length, lessThan(30));
+    expect(result, findsNothing);
+
+    // Removing a different row shifts the visible action without replacing
+    // its element (and therefore its swipe and animation state).
+    final betaElement = tester.element(beta);
+    await items.delete('alpha');
+    await settle(tester);
+    expect(alpha, findsNothing);
+    expect(tester.element(beta), same(betaElement));
+
+    tester.view.physicalSize = const Size(1100, 1000);
+    await tester.pumpAndSettle();
+    final sourceScroll = tester.widget<CustomScrollView>(list).controller!;
+    sourceScroll.jumpTo(1600);
+    await tester.pumpAndSettle();
+    final sourceOffset = sourceScroll.offset;
+    expect(sourceOffset, greaterThan(0));
+    expect(result, findsNothing);
+
+    void expectSelectedVisible() {
+      final rowBounds = tester.getRect(result);
+      final viewport = tester.getRect(list);
+      expect(rowBounds.top, greaterThanOrEqualTo(viewport.top - 1));
+      expect(rowBounds.bottom, lessThanOrEqualTo(viewport.bottom + 1));
+    }
+
+    final router = container.read(routerProvider);
+    unawaited(
+      router.push('/item/backlog-750?workspace=do', extra: sourceOffset),
+    );
+    await tester.pumpAndSettle();
+    expect(result, findsOneWidget);
+    expect(tester.widget<ItemCard>(result).highlighted, isTrue);
+    expectSelectedVisible();
+    expect(cards.evaluate().length, lessThan(30));
+
+    tester.view.physicalSize = const Size(669, 951);
+    await tester.pumpAndSettle();
+    expectSelectedVisible();
+
+    tester.view.physicalSize = const Size(1100, 1000);
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await settle(tester);
+    expect(sourceScroll.offset, closeTo(sourceOffset, 1));
+    expect(result, findsNothing);
+  });
+
   testWidgets('Time and Energy stays visible alongside scrolling contexts', (
     tester,
   ) async {

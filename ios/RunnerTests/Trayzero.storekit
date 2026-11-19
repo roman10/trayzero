@@ -1,0 +1,94 @@
+{
+  "identifier": "F4A15B15-18B2-4563-BC74-65B8792EF556",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "11000001",
+      "localizations": [
+        {
+          "description": "Support Trayzero",
+          "displayName": "Small tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "tip_small",
+      "referenceName": "Small tip",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "11000002",
+      "localizations": [
+        {
+          "description": "Support Trayzero",
+          "displayName": "Large tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "tip_large",
+      "referenceName": "Large tip",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_timeRate": 0
+  },
+  "subscriptionGroups": [
+    {
+      "id": "11000000",
+      "localizations": [],
+      "name": "Supporter",
+      "subscriptions": [
+        {
+          "displayPrice": "0.99",
+          "familyShareable": false,
+          "internalID": "11000003",
+          "localizations": [
+            {
+              "description": "Support Trayzero",
+              "displayName": "Monthly Supporter",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "supporter_monthly",
+          "referenceName": "Monthly Supporter",
+          "type": "RecurringSubscription",
+          "adHocOffers": [],
+          "codeOffers": [],
+          "groupNumber": 1,
+          "recurringSubscriptionPeriod": "P1M",
+          "subscriptionGroupID": "11000000"
+        },
+        {
+          "displayPrice": "7.99",
+          "familyShareable": false,
+          "internalID": "11000004",
+          "localizations": [
+            {
+              "description": "Support Trayzero",
+              "displayName": "Yearly Supporter",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "supporter_yearly",
+          "referenceName": "Yearly Supporter",
+          "type": "RecurringSubscription",
+          "adHocOffers": [],
+          "codeOffers": [],
+          "groupNumber": 1,
+          "recurringSubscriptionPeriod": "P1Y",
+          "subscriptionGroupID": "11000000"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

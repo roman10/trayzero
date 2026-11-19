@@ -86,19 +86,25 @@ before.
 ### 3. Queues instead of background database access
 
 The **Add to Inbox** intent and the widget checkbox write small JSON queues
-to shared storage. On iOS this is App Group `UserDefaults`; on Android it is
-home_widget's `SharedPreferences`. The app drains the queues through the
-normal use cases:
+to shared storage. iOS uses atomically replaced App Group files with a
+cross-process file lock. Android uses home_widget's `SharedPreferences` and
+serializes queue changes in the app process. Previously queued actions are
+migrated on first read. The app drains the queues through the normal use cases.
 
-- `inbox_captures`: `[{"text", "at"}]`
-- `today_completions`: `[{"id", "at"}]`
+- `inbox_captures` contains `{ "receipt", "text", "at" }` entries.
+- `today_completions` contains `{ "receipt", "id", "at" }` entries.
 
 `DrainExternalQueue` runs at startup, on every resume, and when native code
 signals `queueChanged`. Android signals while the Flutter engine is alive,
-so a widget tap with the app in the background applies immediately. On iOS,
-the in-app Add to Inbox intent signals too. The drain removes only the
-entries it read: it reads the key again just before writing and drops only
-matching entries. A write that arrives during the drain is therefore kept.
+so a widget tap with the app in the background can apply immediately. On iOS,
+the in-app Add to Inbox intent signals too.
+
+The drain acknowledges each successful or redundant action by its unique
+receipt after applying the use case. Failed actions stay queued for the next
+drain. Native acknowledgment reads and updates its queue under the same
+lock as append, so a concurrent tap remains queued. A retried capture uses
+the same Item ID and recognizes an Item saved before its receipt was
+acknowledged.
 
 A home_widget background Dart callback that completes the Item directly was
 rejected:
@@ -163,10 +169,13 @@ user's commitments, matching the Today list.
 
 **Optimistic state.** Native code renders the snapshot with the pending
 completion queue applied. A queued row shows a filled check and dimmed
-title, and `done` counts it. When the app drains and republishes, the row
-disappears. Completion from the widget is final. Accidental taps are
-reversible in the app (Done list → reopen). Undo on a small home-screen row
-was judged more confusing than useful.
+title, and its completion control is disabled. The header distinguishes
+pending taps from saved completions. When the app drains and republishes,
+the row disappears. The drain reads and publishes the committed focus list
+before acknowledgment, including when Android is waiting for a foreground
+frame to update the reactive list. Completion from the widget is final.
+Accidental taps are reversible in the app (Done list → reopen). Undo on a
+small home-screen row was judged more confusing than useful.
 
 **Rollover.** When `day` is not the widget's current local date, the
 snapshot is stale. Every listed Item is now carry-over from an earlier day,
@@ -178,21 +187,24 @@ local date.
 
 **Layout.**
 
-- *Header:* "Today" and "N done".
+- *Header:* "Today" with saved and pending counts. On Android, the pending
+  count takes precedence while there are queued taps.
 - *Rows:* a checkbox (complete) and the title (opens the Item).
 - *Footer:* "+N more" (opens Today).
 - *Empty state:* "Nothing focused yet", or "All done for today" when
   something was done, plus a **Plan your day** button that opens the daily
   plan.
 
-On Android, the RemoteViews layout uses five fixed row slots. It avoids
-`Space` (see `63789df`) and uses an `ImageView` checkbox, because
-`CompoundButton` needs API 31. Row actions are explicit broadcasts to a
-**non-exported** receiver, so other apps cannot complete Items. On iOS the
-widget requires iOS 17, for `Button(intent:)`. It supports the medium size
-(3 rows) and large size (8 rows); a small widget is too narrow for a
-checkbox list. The Inbox widget keeps its kind and behavior. It gains
-`containerBackground` so iOS 17 and later render it correctly.
+On Android, the RemoteViews layout fits rows to each launcher size and
+reserves room for its overflow link. Each checkbox has a 48dp touch area.
+The widget picker uses sample rows. The layout avoids `Space` (see `63789df`)
+and uses an `ImageView` checkbox to support releases before API 31. Row
+actions are explicit broadcasts to a **non-exported** receiver, so other apps
+cannot complete Items. On iOS the widget requires iOS 17 for `Button(intent:)`.
+The medium and large widgets fit as many 44pt rows as their available
+height allows. The iOS gallery shows sample tasks. The Inbox widget keeps
+its kind and behavior. It gains `containerBackground` so iOS 17 and later
+render it correctly.
 
 **Appearance.** The existing Inbox widget does not follow the selected app
 color or icon, so neither does the Today widget. It uses a system light or
@@ -217,8 +229,9 @@ run. Dart gains no new user-facing strings.
 
 ## Accessibility
 
-- Checkbox targets are at least 44pt or 48dp, and each is labelled
-  "Complete <title>". Rows are labelled with the title.
+- Checkbox targets are at least 44pt or 48dp. Open items are labelled
+  "Complete <title>" and queued items announce that completion is pending.
+  Titles link separately to their items.
 - iOS widget text uses Dynamic Type styles; Android uses `sp` sizes.
 - The tile, shortcuts, and control have text labels and monochrome icons.
 
@@ -226,8 +239,9 @@ run. Dart gains no new user-facing strings.
 
 - *Simplest?* Every entry point is a link or a queue entry. No new database
   access paths, no headless engines, and no new Dart dependency.
-- *Could a widget tap be lost?* Only to a torn write, as with the
-  notification journal. Drains remove matched entries, not the whole key.
+- *What happens on retry?* An unacknowledged tap stays queued. The drain
+  retries it and removes it after the use case succeeds or reports that
+  the action has already taken effect.
 - *Could it double-complete?* Already-done Items are skipped, and the
   repository completion is transactional.
 - *Maintainability.* Shared Swift lives in `ios/TrayzeroShared`, and
@@ -245,7 +259,8 @@ run. Dart gains no new user-facing strings.
   - the queue drain: missing, done, and trashed Items, the tap-time
     completion stamp, raw capture, and long-text split;
   - link resolution;
-  - the bridge's JSON round trip and partial removal over mocked channels.
+  - replay after an acknowledgment failure, retention after a failed write,
+    and acknowledgment by receipt over mocked channels.
 - Builds: `flutter build apk --debug` and `flutter build ios --no-codesign
   --debug`.
 - Emulator checks: the tile, shortcuts, widget completion with the app dead

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
 
-/// A snackbar with an "Undo" action and the standard 5 s window. A null
-/// [onUndo] gives a plain message with no action.
+/// A dismissible snackbar with an "Undo" action and the standard 5 s window.
+/// A null [onUndo] gives a plain message with no action.
 ///
 /// `persist: false` because Flutter otherwise keeps any snackbar with an
 /// action on screen until dismissed. The overflow threshold is divided by the
@@ -18,6 +18,7 @@ SnackBar undoSnackBar(
   final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
   return SnackBar(
     content: Text(message),
+    showCloseIcon: true,
     persist: false,
     duration: const Duration(seconds: 5),
     actionOverflowThreshold: (0.25 / (scale < 1 ? 1 : scale)).clamp(0.0, 1.0),

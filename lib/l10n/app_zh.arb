@@ -124,6 +124,7 @@
   "hardLandscape": "日历",
   "hardLandscapeSubtitle": "今日到期及逾期",
   "filterAllContexts": "全部情境",
+  "filterNoContext": "无情境",
   "filterAnyTime": "任意时长",
   "filterUnder5m": "< 5 分钟",
   "filterUnder15m": "< 15 分钟",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count} 个任务包含不会导入的附件、提醒设置或状态。",
   "moreGroupOrganize": "整理",
   "moreGroupPreferences": "偏好设置",
+  "skipDelegationTitle": "理清时跳过委派",
+  "skipDelegationDescription": "在两分钟规则之后，直接询问是否只需一步行动。",
   "moreGroupData": "数据",
   "moreOn": "开",
   "moreOff": "关",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "跟进日期：{date}",
+  "planScheduledOnDate": "安排日期：{date}",
+  "rateTrayzero": "为 Trayzero 评分",
+  "sendFeedback": "发送反馈"
 }

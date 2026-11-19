@@ -441,6 +441,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get filterAllContexts => '全部情境';
 
   @override
+  String get filterNoContext => '无情境';
+
+  @override
   String get filterAnyTime => '任意时长';
 
   @override
@@ -2244,6 +2247,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moreGroupPreferences => '偏好设置';
 
   @override
+  String get skipDelegationTitle => '理清时跳过委派';
+
+  @override
+  String get skipDelegationDescription => '在两分钟规则之后，直接询问是否只需一步行动。';
+
+  @override
   String get moreGroupData => '数据';
 
   @override
@@ -3202,6 +3211,22 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get calendarDeviceHelp =>
       '使用设备的日历，无需 Trayzero 账号。共享日历中的事件可能对有访问权限的其他人可见。';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return '跟进日期：$date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return '安排日期：$date';
+  }
+
+  @override
+  String get rateTrayzero => '为 Trayzero 评分';
+
+  @override
+  String get sendFeedback => '发送反馈';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3639,6 +3664,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get filterAllContexts => '全部情境';
+
+  @override
+  String get filterNoContext => '無情境';
 
   @override
   String get filterAnyTime => '任意時長';
@@ -5445,6 +5473,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get moreGroupPreferences => '偏好設定';
 
   @override
+  String get skipDelegationTitle => '釐清時跳過委派';
+
+  @override
+  String get skipDelegationDescription => '在兩分鐘規則之後，直接詢問是否只需一步行動。';
+
+  @override
   String get moreGroupData => '資料';
 
   @override
@@ -6404,4 +6438,20 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get calendarDeviceHelp =>
       '使用裝置的行事曆，無需 Trayzero 帳號。共享行事曆中的事件可能對有存取權限的其他人可見。';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return '跟進日期：$date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return '安排日期：$date';
+  }
+
+  @override
+  String get rateTrayzero => '為 Trayzero 評分';
+
+  @override
+  String get sendFeedback => '傳送意見';
 }

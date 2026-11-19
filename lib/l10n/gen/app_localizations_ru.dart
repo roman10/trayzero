@@ -465,6 +465,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get filterAllContexts => 'Все контексты';
 
   @override
+  String get filterNoContext => 'Без контекста';
+
+  @override
   String get filterAnyTime => 'Любое время';
 
   @override
@@ -2468,6 +2471,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreGroupPreferences => 'Настройки';
 
   @override
+  String get skipDelegationTitle => 'Пропускать делегирование при уточнении';
+
+  @override
+  String get skipDelegationDescription =>
+      'После шага с правилом двух минут сразу переходить к вопросу об одном действии.';
+
+  @override
   String get moreGroupData => 'Данные';
 
   @override
@@ -3564,4 +3574,20 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get calendarDeviceHelp =>
       'Используется календарь устройства. Аккаунт Trayzero не нужен. Общий календарь могут видеть другие люди с доступом к нему.';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return 'Связаться $date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return 'Запланировано на $date';
+  }
+
+  @override
+  String get rateTrayzero => 'Оценить Trayzero';
+
+  @override
+  String get sendFeedback => 'Отправить отзыв';
 }

@@ -37,6 +37,9 @@ import flutter_local_notifications
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AppleRemindersPlugin") {
       AppleRemindersPlugin.register(with: registrar)
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "TrayzeroStoreKitPlugin") {
+      TrayzeroStoreKitPlugin.register(with: registrar)
+    }
     // cleartray:// links and App Intent launches (ADR 0009).
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "TrayzeroLaunchLink") {
       LaunchLinkRelay.shared.register(with: registrar)

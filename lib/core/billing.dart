@@ -1,7 +1,4 @@
-/// Billing domain: the small, store-agnostic surface the rest of the app
-/// talks to. The concrete implementation (RevenueCat) lives in
-/// `infrastructure/revenuecat_billing_gateway.dart`, mirroring the
-/// gateway/implementation split used for calendar and notifications.
+/// Store-agnostic billing contracts for tips and the Supporter badge.
 ///
 /// Monetisation rule: NOTHING here gates a feature. Tips are consumable
 /// thank-yous; the `supporter` entitlement only unlocks cosmetic perks.
@@ -14,9 +11,7 @@ enum TipTier { small, large }
 /// entitlement; only the billing period differs.
 enum SupporterPlan { monthly, yearly }
 
-/// Store product identifiers, configured 1:1 in App Store Connect / Play
-/// Console and imported into RevenueCat. Centralised so UI, gateway and
-/// store config can never drift. snake_case keeps both stores happy.
+/// Product identifiers configured in App Store Connect and Play Console.
 class BillingIds {
   BillingIds._();
 
@@ -26,21 +21,15 @@ class BillingIds {
   static const supporterMonthly = 'supporter_monthly';
   static const supporterYearly = 'supporter_yearly';
 
-  /// RevenueCat entitlement granted by any supporter purchase.
-  static const supporterEntitlement = 'supporter';
-
-  /// RevenueCat offering that bundles every purchasable package.
-  static const defaultOffering = 'default';
-
   static String forTip(TipTier t) => switch (t) {
-        TipTier.small => tipSmall,
-        TipTier.large => tipLarge,
-      };
+    TipTier.small => tipSmall,
+    TipTier.large => tipLarge,
+  };
 
   static String forPlan(SupporterPlan p) => switch (p) {
-        SupporterPlan.monthly => supporterMonthly,
-        SupporterPlan.yearly => supporterYearly,
-      };
+    SupporterPlan.monthly => supporterMonthly,
+    SupporterPlan.yearly => supporterYearly,
+  };
 }
 
 /// A purchasable product carrying the store-localised price string. The
@@ -66,11 +55,7 @@ class BillingProduct {
 /// Everything the user can buy, resolved from the live offering. Any field
 /// can be null if that product is missing/unapproved in a given storefront.
 class BillingOfferings {
-  const BillingOfferings({
-    this.tips = const [],
-    this.monthly,
-    this.yearly,
-  });
+  const BillingOfferings({this.tips = const [], this.monthly, this.yearly});
 
   /// Tip products, ordered small to large.
   final List<BillingProduct> tips;
@@ -89,9 +74,9 @@ class SupporterStatus {
   });
 
   const SupporterStatus.none()
-      : isSupporter = false,
-        activePlan = null,
-        expiresAt = null;
+    : isSupporter = false,
+      activePlan = null,
+      expiresAt = null;
 
   final bool isSupporter;
 
@@ -140,14 +125,14 @@ class PurchaseFailed extends PurchaseOutcome {
 }
 
 /// Store-agnostic billing port. Implementations must degrade gracefully when
-/// not configured (no API key): [isConfigured] is false and reads return
+/// unavailable: [isConfigured] is false and reads return
 /// empty/none rather than throwing, so the app runs identically with billing
 /// switched off.
 abstract class BillingGateway {
-  /// True once a valid RevenueCat key was supplied and [configure] ran.
+  /// True once the billing gateway has been initialized.
   bool get isConfigured;
 
-  /// Initialise the SDK. Safe to call once at startup; a no-op when no key.
+  /// Initialise billing. Safe to call at startup.
   Future<void> configure();
 
   /// Live offering, or null when unavailable/unconfigured.
@@ -166,7 +151,7 @@ abstract class BillingGateway {
   Future<PurchaseOutcome> restore();
 }
 
-/// Inert gateway used when billing is disabled (no key). Lets the whole app —
+/// Inert gateway used when billing is disabled. Lets the whole app —
 /// including tests — run without touching the stores.
 class DisabledBillingGateway implements BillingGateway {
   const DisabledBillingGateway();

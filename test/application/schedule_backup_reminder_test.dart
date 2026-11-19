@@ -1,5 +1,6 @@
 import 'package:cleartray/application/schedule_backup_reminder.dart';
 import 'package:cleartray/core/clock.dart';
+import 'package:cleartray/core/notification_intent.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,9 +39,9 @@ void main() {
   });
 
   group('CancelBackupReminder', () {
-    test('cancels exactly the backup reminder id', () async {
+    test('cancels the backup reminder and its Snooze', () async {
       await CancelBackupReminder(scheduler: scheduler).call();
-      expect(scheduler.cancelled, [backupReminderId]);
+      expect(scheduler.cancelled, [backupReminderId, backupSnoozeId]);
       expect(scheduler.scheduled, isEmpty);
     });
   });

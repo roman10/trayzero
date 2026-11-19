@@ -40,6 +40,22 @@ final class LaunchLinkRelay: NSObject, FlutterSceneLifeCycleDelegate {
                 let link = self.pending ?? TrayzeroShared.takePendingLaunch()
                 self.pending = nil
                 result(link)
+            case "readExternalQueue":
+                do {
+                    result(try TrayzeroShared.encodedQueue(call.arguments as? String ?? ""))
+                } catch {
+                    result(FlutterError(code: "external_queue_failed", message: error.localizedDescription, details: nil))
+                }
+            case "acknowledgeExternalQueue":
+                do {
+                    let args = call.arguments as? [String: Any]
+                    let key = args?["key"] as? String ?? ""
+                    let receipts = args?["receipts"] as? [String] ?? []
+                    try TrayzeroShared.acknowledge(Set(receipts), in: key)
+                    result(nil)
+                } catch {
+                    result(FlutterError(code: "external_queue_failed", message: error.localizedDescription, details: nil))
+                }
             default:
                 result(FlutterMethodNotImplemented)
             }

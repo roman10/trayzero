@@ -291,6 +291,21 @@ void main() {
     expect(next!.status, ItemStatus.nextAction);
   });
 
+  test('a recurring Inbox item completed directly spawns a next action, '
+      'not another Inbox row', () {
+    // e.g. "Do it now" in Process Inbox on an imported daily task.
+    final completed = base(
+      r: Recurrence.daily,
+      dueAt: DateTime(2026, 5, 14, 9),
+    ).copyWith(status: ItemStatus.inbox);
+    final next = nextRecurrenceOf(completed,
+        completedAt: DateTime(2026, 5, 14), newId: 'n');
+    expect(next!.status, ItemStatus.nextAction);
+    // Next actions anchor on deferUntil, so the advanced due folds there.
+    expect(next.dueAt, isNull);
+    expect(next.deferUntil, DateTime(2026, 5, 15, 9));
+  });
+
   group('Option A — next-action anchor folding', () {
     test('a recurring next action advances via deferUntil, never dueAt', () {
       final completed = base(

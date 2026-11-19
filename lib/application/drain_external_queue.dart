@@ -11,25 +11,28 @@ import 'complete_item.dart';
 /// open the database, so they append to a shared queue; this use case runs
 /// each entry through the same use case an in-app action would hit.
 ///
-/// Best-effort like [DrainPendingNotificationIntents]: one failing entry
-/// must not abort the rest or the app launch. Concurrent drains (startup,
-/// resume, and a native signal can overlap) are coalesced into one run
-/// followed by at most one re-run.
+/// Acknowledges successfully applied or redundant entries after the use cases
+/// return. Failed entries remain queued for the next drain. Concurrent drains
+/// (startup, resume, or a native signal) coalesce into one run and a re-run
+/// if another request arrives while that run is in progress.
 final class DrainExternalQueue {
   DrainExternalQueue({
     required HomeWidgetBridge bridge,
     required ItemRepository items,
     required CompleteItem completeItem,
     required CaptureItem captureItem,
+    Future<void> Function()? publishTodayAfterCompletion,
   }) : _bridge = bridge,
        _items = items,
        _completeItem = completeItem,
-       _captureItem = captureItem;
+       _captureItem = captureItem,
+       _publishTodayAfterCompletion = publishTodayAfterCompletion;
 
   final HomeWidgetBridge _bridge;
   final ItemRepository _items;
   final CompleteItem _completeItem;
   final CaptureItem _captureItem;
+  final Future<void> Function()? _publishTodayAfterCompletion;
 
   Future<void>? _running;
   bool _again = false;
@@ -53,23 +56,43 @@ final class DrainExternalQueue {
   Future<void> _drainOnce() async {
     ExternalQueue queue;
     try {
-      queue = await _bridge.takeQueue();
+      queue = await _bridge.readQueue();
     } catch (e, st) {
       debugPrint('[widget] queue read FAILED: $e\n$st');
       return;
     }
+    final completionReceipts = <String>[];
     for (final c in queue.completions) {
       try {
         await _complete(c);
+        completionReceipts.add(c.receipt);
       } catch (e, st) {
         debugPrint('[widget] queued completion FAILED: $e\n$st');
       }
     }
+    if (completionReceipts.isNotEmpty) {
+      try {
+        // Publish committed state before clearing the widget's pending overlay.
+        await _publishTodayAfterCompletion?.call();
+        await _bridge.acknowledgeQueue(completionReceipts: completionReceipts);
+      } catch (e, st) {
+        debugPrint('[widget] completion acknowledgment FAILED: $e\n$st');
+      }
+    }
+    final captureReceipts = <String>[];
     for (final c in queue.captures) {
       try {
         await _capture(c);
+        captureReceipts.add(c.receipt);
       } catch (e, st) {
         debugPrint('[widget] queued capture FAILED: $e\n$st');
+      }
+    }
+    if (captureReceipts.isNotEmpty) {
+      try {
+        await _bridge.acknowledgeQueue(captureReceipts: captureReceipts);
+      } catch (e, st) {
+        debugPrint('[widget] capture acknowledgment FAILED: $e\n$st');
       }
     }
   }
@@ -97,6 +120,7 @@ final class DrainExternalQueue {
     await _captureItem(
       title: long ? '${_cut(text, _maxTitle - 3)}…' : text,
       notes: long ? text : null,
+      queuedCaptureId: 'widget-capture-${c.receipt}',
     );
   }
 

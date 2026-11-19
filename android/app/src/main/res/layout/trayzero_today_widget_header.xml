@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/today_header"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/today_widget_header_height"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp">
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="@string/today_widget_title"
+        android:textColor="@color/today_widget_accent"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/today_status"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:maxWidth="120dp"
+        android:textColor="@color/today_widget_text_muted"
+        android:textSize="13sp" />
+</LinearLayout>

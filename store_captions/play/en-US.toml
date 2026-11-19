@@ -1,0 +1,48 @@
+# Google Play en-US phone screenshot captions (storefront: us -> aso/targets/us.txt).
+# Rendered by mobile/tool/caption_screenshots.py; see mobile/store_captions/README.md.
+# One short benefit headline per screenshot. "\n" forces a line break; otherwise text wraps.
+# Keywords are noted per line for review; keep them natural, never a list.
+
+source_dir = "docs/mobile/play-store-listing/releases/1.0.8-52"   # live 1.0.8 gallery, raw 1080x1920 UI
+output_dir = "mobile/fastlane/metadata/android/en-US/images/phoneScreenshots"
+canvas = [1080, 1920]   # 9:16, within Play's 2:1 limit
+
+[[screens]]
+source = "01-process-inbox.png"
+output = "01_process-inbox.png"
+headline = "Getting Things Done,\nstep by step"          # getting things done
+
+[[screens]]
+source = "02-inbox.png"
+output = "02_inbox.png"
+headline = "Brain dump it all.\nGet to inbox zero."     # brain dump, inbox zero
+
+[[screens]]
+source = "03-next-actions.png"
+output = "03_next-actions.png"
+headline = "Your to-do list,\nsorted by context"         # to-do list (UI shows Next actions)
+
+[[screens]]
+source = "04-projects.png"
+output = "04_projects.png"
+headline = "A GTD task manager\nfor real projects"       # gtd task manager, task manager, gtd manager (words)
+
+[[screens]]
+source = "05-project-detail.png"
+output = "05_project-detail.png"
+headline = "Know every project's\nnext action"           # next actions (UI); singular reads better here
+
+[[screens]]
+source = "06-review.png"
+output = "06_review.png"
+headline = "Keep it current with\na weekly review"       # weekly review
+
+[[screens]]
+source = "07-import.png"
+output = "07_import.png"
+headline = "Switch from your old\ntask manager"          # task manager
+
+[[screens]]
+source = "08-backup.png"
+output = "08_backup.png"
+headline = "Your backups.\nNo account needed."           # positioning: private, no Trayzero account

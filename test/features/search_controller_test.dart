@@ -103,14 +103,16 @@ void main() {
       );
     });
 
-    test('filters by context; null = any', () {
+    test('filters by an assigned context', () {
       final scoped = [
         _item(id: 'a', contextId: 'home'),
         _item(id: 'b', contextId: 'work'),
       ];
       expect(
-        applySearchFilter(scoped, const SearchFilter(contextId: 'home'))
-            .map((i) => i.id),
+        applySearchFilter(
+          scoped,
+          const SearchFilter(context: SearchContextFilter.assigned('home')),
+        ).map((i) => i.id),
         ['a'],
       );
     });
@@ -126,7 +128,7 @@ void main() {
         const SearchFilter(
           statuses: {ItemStatus.waiting},
           projectId: 'p1',
-          contextId: 'home',
+          context: SearchContextFilter.assigned('home'),
         ),
       );
       expect(r.map((i) => i.id), ['hit']);
@@ -151,16 +153,20 @@ void main() {
         ..toggleStatus(ItemStatus.inbox)
         ..setIncludeCompleted(true)
         ..setProject('p1')
-        ..setContext('home');
+        ..setContext(const SearchContextFilter.assigned('home'));
       expect(c.state.isEmpty, isFalse);
       expect(c.state.activeCount, 4);
 
-      c.setContext(null);
-      expect(c.state.contextId, isNull);
+      c.setContext(const SearchContextFilter.unassigned());
+      expect(c.state.context.isUnassigned, isTrue);
+      expect(c.state.activeCount, 4);
+      c.setProject(null);
+      expect(c.state.context.isUnassigned, isTrue);
       expect(c.state.includeCompleted, isTrue, reason: 'others preserved');
 
       c.clear();
       expect(c.state.isEmpty, isTrue);
+      expect(c.state.context.isAll, isTrue);
       expect(c.state.activeCount, 0);
     });
 
@@ -189,7 +195,7 @@ void main() {
           statuses: {ItemStatus.inbox},
           includeCompleted: true,
           projectId: 'p',
-          contextId: 'c',
+          context: SearchContextFilter.assigned('c'),
         ).activeCount,
         4,
       );

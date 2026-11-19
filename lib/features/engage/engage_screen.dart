@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../application/providers.dart';
+import '../../application/maybe_request_app_review.dart';
+import '../../application/review_prompt_scheduler.dart';
 import '../../application/current_time.dart';
 import '../../core/due_status.dart';
 import '../../domain/entities/entities.dart';
@@ -117,9 +119,7 @@ class _EngageScreenState extends ConsumerState<EngageScreen> {
                   showGtdWorkflowSheet(context, highlight: GtdStage.engage),
             ),
           if (!_readOnly)
-            SearchShortcutButton(
-              onPressed: () => context.push('/search'),
-            ),
+            SearchShortcutButton(onPressed: () => context.push('/search')),
         ],
       ),
       floatingActionButton: _readOnly
@@ -215,6 +215,41 @@ class _NextActionsView extends ConsumerWidget {
     onToggleFocus: readOnly ? null : () => toggleTodayFocus(context, ref, item),
   );
 
+  SliverList _actionsSliver(
+    BuildContext context,
+    WidgetRef ref,
+    List<Item> actions,
+  ) {
+    final indexById = {
+      for (var i = 0; i < actions.length; i++) actions[i].id: i,
+    };
+    return SliverList.builder(
+      itemCount: actions.length,
+      findChildIndexCallback: (key) =>
+          indexById[(key as ValueKey<String>).value],
+      itemBuilder: (_, i) {
+        final item = actions[i];
+        final card = _actionCard(context, ref, item);
+        return Padding(
+          key: ValueKey(item.id),
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
+          child: readOnly
+              ? card
+              : AnimationConfiguration.staggeredList(
+                  // The first built row can have a large index after restoring
+                  // the scroll position. Cap the initial animation delay.
+                  position: i.clamp(0, 10),
+                  duration: const Duration(milliseconds: 250),
+                  child: SlideAnimation(
+                    verticalOffset: 16,
+                    child: FadeInAnimation(child: card),
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final actions = ref.watch(filteredNextActionsProvider);
@@ -276,76 +311,68 @@ class _NextActionsView extends ConsumerWidget {
                 );
               }
 
-              return WorkspaceListViewport(
+              final scrollView = CustomScrollView(
+                key: const PageStorageKey('do-next-actions'),
                 controller: scrollController,
-                child: ListView(
-                  key: const PageStorageKey('do-next-actions'),
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-                  children: [
-                    if (band.isNotEmpty) ...[
-                      _HardLandscapeBand(
-                        items: band,
-                        onOpenItem: onOpenItem,
-                        selectedItemId: selectedItemId,
-                        readOnly: readOnly,
-                        scrollController: scrollController,
+                semanticChildCount: filtered.length,
+                slivers: [
+                  if (band.isNotEmpty)
+                    SliverPadding(
+                      key: const ValueKey('do-calendar-band'),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                      sliver: SliverToBoxAdapter(
+                        child: _HardLandscapeBand(
+                          items: band,
+                          onOpenItem: onOpenItem,
+                          selectedItemId: selectedItemId,
+                          readOnly: readOnly,
+                          scrollController: scrollController,
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                    if (!actionsEmpty)
-                      // Stagger only the discretionary list; the band above
-                      // is static (it doesn't react to the filters).
-                      AnimationLimiter(
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < filtered.length; i++) ...[
-                              if (i != 0) const SizedBox(height: 8),
-                              if (readOnly)
-                                _actionCard(context, ref, filtered[i])
-                              else
-                                AnimationConfiguration.staggeredList(
-                                  position: i,
-                                  duration: const Duration(milliseconds: 250),
-                                  child: SlideAnimation(
-                                    verticalOffset: 16,
-                                    child: FadeInAnimation(
-                                      child: _actionCard(
-                                        context,
-                                        ref,
-                                        filtered[i],
-                                      ),
+                    ),
+                  SliverPadding(
+                    key: const ValueKey('do-action-list'),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      band.isEmpty ? 12 : 0,
+                      16,
+                      96,
+                    ),
+                    sliver: actionsEmpty
+                        ? SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    totalActions == 0
+                                        ? l.engageInlineEmpty
+                                        : l.engageHiddenByFilters(hiddenCount),
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
                                     ),
                                   ),
-                                ),
-                            ],
-                          ],
-                        ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Column(
-                          children: [
-                            Text(
-                              totalActions == 0
-                                  ? l.engageInlineEmpty
-                                  : l.engageHiddenByFilters(hiddenCount),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: scheme.onSurfaceVariant),
-                            ),
-                            if (totalActions > 0)
-                              TextButton(
-                                onPressed: ref
-                                    .read(engageFilterProvider.notifier)
-                                    .clear,
-                                child: Text(l.clearFilters),
+                                  if (totalActions > 0)
+                                    TextButton(
+                                      onPressed: ref
+                                          .read(engageFilterProvider.notifier)
+                                          .clear,
+                                      child: Text(l.clearFilters),
+                                    ),
+                                ],
                               ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+                            ),
+                          )
+                        : _actionsSliver(context, ref, filtered),
+                  ),
+                ],
+              );
+              return WorkspaceListViewport(
+                controller: scrollController,
+                child: readOnly
+                    ? scrollView
+                    : AnimationLimiter(child: scrollView),
               );
             },
           ),
@@ -367,12 +394,14 @@ class _HardLandscapeBand extends ConsumerWidget {
     required this.onOpenItem,
     this.selectedItemId,
     this.readOnly = false,
+    this.onComplete,
     required this.scrollController,
   });
   final WorkspaceScrollController scrollController;
   final ValueChanged<String> onOpenItem;
   final String? selectedItemId;
   final bool readOnly;
+  final ValueChanged<String>? onComplete;
   final List<Item> items;
 
   @override
@@ -444,6 +473,7 @@ class _HardLandscapeBand extends ConsumerWidget {
               onOpenItem: onOpenItem,
               selected: item.id == selectedItemId,
               readOnly: readOnly,
+              onComplete: onComplete,
               itemKey: readOnly ? scrollController.itemKey(item.id) : null,
               overdue: dueStatusOf(item.dueAt!, now).phase == DuePhase.overdue,
             ),
@@ -464,12 +494,14 @@ class _BandTile extends ConsumerWidget {
     required this.onOpenItem,
     this.selected = false,
     this.readOnly = false,
+    this.onComplete,
     this.itemKey,
   });
   final Key? itemKey;
   final ValueChanged<String> onOpenItem;
   final bool selected;
   final bool readOnly;
+  final ValueChanged<String>? onComplete;
   final Item item;
   final bool overdue;
 
@@ -485,7 +517,9 @@ class _BandTile extends ConsumerWidget {
           onTap: selected ? null : () => onOpenItem(item.id),
           onComplete: overdue || readOnly
               ? null
-              : () => completeWithUndo(context, ref, item.id),
+              : () => onComplete != null
+                    ? onComplete!(item.id)
+                    : completeWithUndo(context, ref, item.id),
         ),
         if (overdue && !readOnly)
           Padding(
@@ -752,6 +786,38 @@ class _TodayView extends ConsumerWidget {
   final String? selectedItemId;
   final bool readOnly;
 
+  void _complete(BuildContext context, WidgetRef ref, String id) {
+    final route = ModalRoute.of(context);
+    completeWithUndo(
+      context,
+      ref,
+      id,
+      onCompleted: (settled) {
+        ref
+            .read(reviewPromptSchedulerProvider)
+            .schedule(
+              ReviewMoment.todayFinished,
+              settled: settled,
+              isRelevant: () {
+                if (!context.mounted ||
+                    !(route?.isCurrent ?? false) ||
+                    ref.read(doViewProvider) != DoView.today ||
+                    readOnly) {
+                  return false;
+                }
+                final view = ref.read(todayViewProvider).valueOrNull;
+                return ref.read(plannedTodayProvider) &&
+                    view != null &&
+                    view.doneToday >= 3 &&
+                    view.focused.isEmpty &&
+                    view.carriedOver.isEmpty &&
+                    ref.read(engageCalendarBandProvider).isEmpty;
+              },
+            );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final today = ref.watch(todayViewProvider);
@@ -810,6 +876,7 @@ class _TodayView extends ConsumerWidget {
               if (band.isNotEmpty) ...[
                 _HardLandscapeBand(
                   items: band,
+                  onComplete: (id) => _complete(context, ref, id),
                   onOpenItem: onOpenItem,
                   selectedItemId: selectedItemId,
                   readOnly: readOnly,
@@ -838,7 +905,7 @@ class _TodayView extends ConsumerWidget {
                         : () => onOpenItem(item.id),
                     onComplete: readOnly
                         ? null
-                        : () => completeWithUndo(context, ref, item.id),
+                        : () => _complete(context, ref, item.id),
                     onToggleFocus: readOnly
                         ? null
                         : () => toggleTodayFocus(context, ref, item),

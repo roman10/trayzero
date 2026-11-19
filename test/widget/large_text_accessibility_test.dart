@@ -186,7 +186,7 @@ void main() {
         find.text('Prepare a proposal'),
         250,
         scrollable: find.descendant(
-          of: find.byType(ListView),
+          of: find.byKey(const PageStorageKey('do-next-actions')),
           matching: find.byType(Scrollable),
         ),
       );

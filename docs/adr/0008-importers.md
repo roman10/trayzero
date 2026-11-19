@@ -161,8 +161,8 @@ scrolling list that wraps at large text sizes. Counts use ICU plurals.
 
 ## Validation
 
-The [test fixture manifest](../../test/fixtures/import/README.md) documents
-the provenance and coverage of the importer samples.
+Current per-source automated/device results, fixture provenance and remaining
+release checks are maintained in [the importer testing record](../importer-testing.md).
 
 - Unit tests per source with fixture files under `test/fixtures/import/`,
   covering BOM, CRLF, quoted commas, multiline fields, non-ASCII, malformed

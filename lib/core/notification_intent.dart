@@ -180,6 +180,24 @@ List<NotificationAction> actionsForKind(NotificationKind kind) {
 /// in, so the rule is intentionally trivial and pure.
 DateTime snoozeTarget(DateTime now) => now.add(const Duration(days: 1));
 
+/// OS ids reserved for a Snoozed standing reminder. The standing reminders
+/// repeat weekly under their own ids (`weeklyReviewReminderId` /
+/// `backupReminderId` in the application layer); a one-shot Snooze re-posted
+/// under that id would replace the weekly repeat, so each standing kind
+/// snoozes under its own id. Snoozing a Snooze replaces it in place. Kept in
+/// core because the headless background isolate posts Snoozes too.
+const int weeklyReviewSnoozeId = 990003;
+const int backupSnoozeId = 990004;
+
+/// The OS id a Snooze of notification [id] of [kind] is posted under: the
+/// reserved Snooze id for standing kinds, otherwise [id] itself, so an Item
+/// reminder's Snooze replaces, not duplicates, the original.
+int snoozeNotificationId(int id, NotificationKind kind) => switch (kind) {
+  NotificationKind.weeklyReview => weeklyReviewSnoozeId,
+  NotificationKind.backup => backupSnoozeId,
+  NotificationKind.due || NotificationKind.soon || NotificationKind.ready => id,
+};
+
 /// Where a body tap on a [payload]'s notification should navigate.
 String routeForPayload(NotificationPayload payload) {
   switch (payload.kind) {

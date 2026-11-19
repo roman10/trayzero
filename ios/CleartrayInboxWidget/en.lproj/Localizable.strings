@@ -4,6 +4,12 @@
 "%lld done" = "%lld done";
 "+%lld more" = "+%lld more";
 "Complete %@" = "Complete %@";
+"%lld pending" = "%lld pending";
+"Completion pending for %@" = "Completion pending for %@";
+"Review notes" = "Review notes";
+"Send the agenda" = "Send the agenda";
+"Water the plants" = "Water the plants";
+"Plan tomorrow" = "Plan tomorrow";
 "All done for today" = "All done for today";
 "Nothing focused yet" = "Nothing focused yet";
 "Plan your day" = "Plan your day";

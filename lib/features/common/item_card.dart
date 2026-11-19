@@ -12,14 +12,16 @@ import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import 'complete_circle.dart';
 import 'focus_star.dart';
+import 'item_card_appearance.dart';
+import 'item_metadata_label.dart';
 import 'localized_dates.dart';
 import 'localized_due_label.dart';
 import 'localized_entity_labels.dart';
 import 'localized_recurrence.dart';
 import 'notes_text.dart';
 
-const _cardPadding = 14.0;
-const _cardBorderWidth = 1.0;
+const _cardPadding = ItemCardAppearance.padding;
+const _cardBorderWidth = ItemCardAppearance.borderWidth;
 
 /// Distance from the card's outer edge to its content.
 const _cardInset = _cardPadding + _cardBorderWidth;
@@ -113,20 +115,12 @@ class ItemCard extends ConsumerWidget {
 
     final body = InkWell(
       onTap: selectionMode ? onToggleSelected : onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: ItemCardAppearance.radius,
       child: Container(
         padding: const EdgeInsets.all(_cardPadding),
-        decoration: BoxDecoration(
-          color: (selectionMode && selected) || highlighted
-              ? scheme.primaryContainer
-              : scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: (selectionMode && selected) || highlighted
-                ? scheme.primary
-                : scheme.outlineVariant.withValues(alpha: 0.5),
-            width: _cardBorderWidth,
-          ),
+        decoration: ItemCardAppearance.decoration(
+          scheme,
+          highlighted: (selectionMode && selected) || highlighted,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,14 +148,7 @@ class ItemCard extends ConsumerWidget {
                     height: CompleteCircle.diameter,
                   ),
                 Expanded(
-                  child: Text(
-                    item.title,
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w500,
-                      height: 1.3,
-                    ),
-                  ),
+                  child: Text(item.title, style: ItemCardAppearance.titleStyle),
                 ),
                 if (item.isTwoMin)
                   Container(
@@ -560,26 +547,15 @@ class ItemCard extends ConsumerWidget {
           color: fill,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 12, color: fg),
-              const SizedBox(width: 4),
-            ],
-            Flexible(
-              child: Text(
-                text,
-                maxLines: maxLines,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  color: fg,
-                  fontWeight: filled ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
+        child: ItemMetadataLabel(
+          text: text,
+          icon: icon,
+          maxLines: maxLines,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: fg,
+            fontWeight: filled ? FontWeight.w600 : FontWeight.w500,
+          ),
         ),
       ),
     );

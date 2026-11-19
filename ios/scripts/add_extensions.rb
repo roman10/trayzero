@@ -5,7 +5,7 @@
 # Runner.xcodeproj, plus the capture-anywhere / Today widget sources and
 # localizations (ADR 0009). Idempotent — running twice is a no-op.
 #
-# Run from the repo root:
+# Run from the repo root or from mobile/ios:
 #   ruby ios/scripts/add_extensions.rb
 #
 # Requires the `xcodeproj` gem (ships with CocoaPods).

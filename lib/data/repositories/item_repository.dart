@@ -199,6 +199,18 @@ class ItemRepository {
         .map((rows) => rows.map((r) => r.toEntity()).toList());
   }
 
+  /// Browse items without a context when there is no text query.
+  Stream<List<Item>> watchSearchWithoutContext() {
+    final query = _db.select(_db.items)
+      ..where(
+        (t) =>
+            t.contextId.isNull() &
+            t.status.equals(ItemStatus.trashed.name).not(),
+      )
+      ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]);
+    return query.watch().map((rows) => rows.map((r) => r.toEntity()).toList());
+  }
+
   /// Inserts or saves an ordinary edit of [item].
   ///
   /// An existing row keeps its stored Today focus: callers save from an
@@ -299,7 +311,14 @@ class ItemRepository {
   /// carry-over stays visible, plus those completed since [since] for the
   /// "done today" count. Older done rows keep their stamp for Undo but are
   /// excluded so the stream does not grow with history.
-  Stream<List<Item>> watchFocused({required DateTime since}) {
+  Stream<List<Item>> watchFocused({required DateTime since}) =>
+      _focusedItems(since).watch();
+
+  /// Reads the committed rows even while the app's reactive UI is suspended.
+  Future<List<Item>> getFocused({required DateTime since}) =>
+      _focusedItems(since).get();
+
+  Selectable<Item> _focusedItems(DateTime since) {
     final focusable = ItemStatus.values
         .where(canHoldFocus)
         .map((s) => s.name)
@@ -315,7 +334,7 @@ class ItemRepository {
         (t) => OrderingTerm.asc(t.focusedAt),
         (t) => OrderingTerm.asc(t.createdAt),
       ]);
-    return query.watch().map((rows) => rows.map((r) => r.toEntity()).toList());
+    return query.map((row) => row.toEntity());
   }
 
   /// Latest `updatedAt` per Project across its non-trashed Items, open or
@@ -337,6 +356,31 @@ class ItemRepository {
             row.read(_db.items.projectId)!: row.read(latest)!,
       },
     );
+  }
+
+  /// Open-Item counts per status for every Project, with the same open filter
+  /// as [watchForProject]. One grouped stream lets the Projects list render
+  /// every tile without a per-Project item query.
+  Stream<Map<String, Map<ItemStatus, int>>> watchProjectStatusCounts() {
+    final count = _db.items.id.count();
+    final query = _db.selectOnly(_db.items)
+      ..addColumns([_db.items.projectId, _db.items.status, count])
+      ..where(
+        _db.items.projectId.isNotNull() &
+            _db.items.completedAt.isNull() &
+            _db.items.status.equals(ItemStatus.trashed.name).not(),
+      )
+      ..groupBy([_db.items.projectId, _db.items.status]);
+    return query.watch().map((rows) {
+      final result = <String, Map<ItemStatus, int>>{};
+      for (final row in rows) {
+        final projectId = row.read(_db.items.projectId)!;
+        final status = row.readWithConverter(_db.items.status)!;
+        final byStatus = result.putIfAbsent(projectId, () => {});
+        byStatus[status] = (byStatus[status] ?? 0) + (row.read(count) ?? 0);
+      }
+      return result;
+    });
   }
 
   /// Deletes the row. Its tag links cascade; deleting them explicitly too
@@ -444,13 +488,29 @@ class ItemRepository {
     return query.watch().map((rows) => rows.map((r) => r.toEntity()).toList());
   }
 
+  /// Candidates for calendar mirror-out. The service checks the current row
+  /// before publishing each event.
+  Future<List<String>> calendarMirrorCandidateIds() {
+    final query = _db.selectOnly(_db.items)
+      ..addColumns([_db.items.id])
+      ..where(
+        _db.items.status.equals(ItemStatus.calendar.name) &
+            _db.items.completedAt.isNull() &
+            _db.items.dueAt.isNotNull(),
+      );
+    return query.map((row) => row.read(_db.items.id)!).get();
+  }
+
   /// Items that currently hold a mirrored calendar event id, regardless of
-  /// status. Calendar sync uses this to find events to delete when their
-  /// item was completed, trashed, or had its due date cleared.
-  Future<List<Item>> withCalendarEventId() async {
-    final rows = await (_db.select(_db.items)
-          ..where((t) => t.calendarEventId.isNotNull()))
-        .get();
+  /// status. Cleanup can look up just the event being reconciled.
+  Future<List<Item>> withCalendarEventId({String? eventId}) async {
+    final query = _db.select(_db.items)
+      ..where(
+        (t) => eventId == null
+            ? t.calendarEventId.isNotNull()
+            : t.calendarEventId.equals(eventId),
+      );
+    final rows = await query.get();
     return rows.map((r) => r.toEntity()).toList();
   }
 
@@ -477,6 +537,26 @@ class ItemRepository {
               t.status.equals(ItemStatus.done.name).not()))
         .get();
     return rows.map((r) => r.toEntity()).toList();
+  }
+
+  /// IDs for the launch reminder pass. Keep past dates in scope so the pass
+  /// can cancel stale reminders while preserving unexpired snoozes.
+  Future<List<String>> reminderCandidateIds({
+    required String importedCalendarIdPrefix,
+  }) {
+    final items = _db.items;
+    final query = _db.selectOnly(items)
+      ..addColumns([items.id])
+      ..where(
+        items.status.isNotIn([ItemStatus.done.name, ItemStatus.trashed.name]) &
+            items.completedAt.isNull() &
+            (items.dueAt.isNotNull() | items.deferUntil.isNotNull()) &
+            items.id
+                .substr(1, importedCalendarIdPrefix.length)
+                .equals(importedCalendarIdPrefix)
+                .not(),
+      );
+    return query.map((row) => row.read(items.id)!).get();
   }
 
   /// Rows that should survive an export/import round trip. Completed items

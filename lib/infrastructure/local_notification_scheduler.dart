@@ -324,6 +324,9 @@ fln.NotificationDetails _detailsFor(
       channelName,
       channelDescription: 'Trayzero reminders for tasks and reviews',
       icon: 'ic_stat_trayzero',
+      // Android 16 emulator honors this accent for individual notifications;
+      // its auto-group header uses a system tint. OPPO/ColorOS may instead
+      // show the original package icon even when this color is correct.
       color: accent,
       importance: fln.Importance.high,
       priority: fln.Priority.high,
@@ -458,9 +461,12 @@ Future<void> _completeHeadless(
         ),
       ),
     );
-    await plugin.cancel(notificationIdFor(itemId, 1));
-    await plugin.cancel(notificationIdFor(itemId, 2));
-    await plugin.cancel(notificationIdFor(itemId, 3));
+    for (final salt in [1, 2, 3]) {
+      await plugin.cancel(notificationIdFor(itemId, salt));
+      // An updated app not yet launched still holds requests under the old
+      // ids until the launch re-arm moves them.
+      await plugin.cancel(_legacyNotificationIdFor(itemId, salt));
+    }
   } catch (e, st) {
     debugPrint(
       '[notif] background complete-cancel FAILED item=$itemId: $e\n$st',
@@ -484,7 +490,9 @@ Future<void> _rescheduleHeadless(int? id, RescheduleAt decision) async {
       ),
     );
     await plugin.zonedSchedule(
-      id,
+      // Same id rule as the foreground handler: standing reminders snooze
+      // under a reserved id so the weekly repeat is not replaced.
+      snoozeNotificationId(id, decision.payload.kind),
       decision.payload.title,
       decision.payload.body,
       tz.TZDateTime.from(decision.at, tz.local),
@@ -506,4 +514,19 @@ Future<void> _rescheduleHeadless(int? id, RescheduleAt decision) async {
   } catch (e, st) {
     debugPrint('[notif] background snooze FAILED id=$id: $e\n$st');
   }
+}
+
+/// The previous Item reminder id scheme (29-bit hash + salt), kept only so a
+/// headless Done before the first launch after an upgrade still cancels.
+int _legacyNotificationIdFor(String s, int salt) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) {
+    h = 0x1fffffff & (h + s.codeUnitAt(i));
+    h = 0x1fffffff & (h + ((0x0007ffff & h) << 10));
+    h ^= h >> 6;
+  }
+  h = 0x1fffffff & (h + ((0x03ffffff & h) << 3));
+  h ^= h >> 11;
+  h = 0x1fffffff & (h + ((0x00003fff & h) << 15));
+  return (h + salt).abs() % 0x7fffffff;
 }

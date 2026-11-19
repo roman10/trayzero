@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/clock.dart';
+import '../../core/haptic_feedback.dart';
 import '../../core/notification_scheduler.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/item_invariants.dart';
@@ -15,6 +16,7 @@ import '../common/exact_alarm_permission_recovery.dart';
 import '../common/notification_permission_recovery.dart';
 import '../common/localized_entity_labels.dart';
 import '../common/localized_recurrence.dart';
+import '../common/play_haptic.dart';
 import '../common/undo_snack_bar.dart';
 import '../common/tag_picker.dart';
 import 'attachments_section.dart';
@@ -41,6 +43,7 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
   bool _controllersSeeded = false;
   bool _justSaved = false;
   bool _remindersWarned = false;
+  bool _changingStatus = false;
   Timer? _debounce;
 
   @override
@@ -220,19 +223,25 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
     final undo = ref.read(undoCompleteProvider);
     final id = widget.itemId;
     String? spawnedId;
-    return _runStatusAction(
-      (n) async => spawnedId = await n.complete(),
-      onError: AppLocalizations.of(context).completeError,
-      onSuccess: undoSnackBar(
-        context,
-        message: AppLocalizations.of(context).completed,
-        onUndo: () => undo(id, spawnedRecurrenceId: spawnedId),
-      ),
+    final snackBar = undoSnackBar(
+      context,
+      message: AppLocalizations.of(context).completed,
+      onUndo: () => undo(id, spawnedRecurrenceId: spawnedId),
     );
+    return _runStatusAction((n) async {
+      final completion = await n.complete();
+      if (completion == null) return null;
+      spawnedId = completion.spawnedRecurrenceId;
+      if (mounted) playHaptic(ref, HapticCue.taskCompleted);
+      return snackBar;
+    }, onError: AppLocalizations.of(context).completeError);
   }
 
   Future<void> _onReopen() => _runStatusAction(
-    (n) => n.reopen(),
+    (n) async {
+      await n.reopen();
+      return null;
+    },
     onError: AppLocalizations.of(context).reopenError,
   );
 
@@ -241,28 +250,36 @@ class _ItemEditScreenState extends ConsumerState<ItemEditScreen> {
   /// This is wired to a synchronous `onPressed`, so an uncaught throw here
   /// would surface as an invisible dead button; never let that happen.
   Future<void> _runStatusAction(
-    Future<void> Function(ItemEditController) action, {
+    Future<SnackBar?> Function(ItemEditController) action, {
     required String onError,
-    SnackBar? onSuccess,
   }) async {
+    if (_changingStatus) return;
+    _changingStatus = true;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
       await _commit(propagateError: true);
-      await action(
+      if (!mounted) return;
+      final onSuccess = await action(
         ref.read(itemEditControllerProvider(widget.itemId).notifier),
       );
-      if (onSuccess != null) {
+      if (onSuccess != null && messenger.mounted) {
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(onSuccess);
       }
     } catch (_) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(onError)));
+      if (messenger.mounted) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(onError)));
+      }
     }
-    if (mounted) navigator.pop();
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? true)) {
+      navigator.pop();
+    } else {
+      _changingStatus = false;
+    }
   }
 
   void _seedControllers(Item item) {

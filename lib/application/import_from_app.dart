@@ -216,6 +216,13 @@ final class ImportFromApp {
     var remindersFailed = false;
     for (final item in resolved.items) {
       if (item.dueAt == null && item.deferUntil == null) continue;
+      // Finished or trashed rows have no reminders to arm; skipping them
+      // keeps large history imports (e.g. Takeout) from stalling here.
+      if (item.status == ItemStatus.done ||
+          item.status == ItemStatus.trashed ||
+          item.completedAt != null) {
+        continue;
+      }
       try {
         await _reconcileReminders?.call(item);
       } catch (_) {

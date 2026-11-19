@@ -99,6 +99,30 @@ void main() {
     });
   });
 
+  group('snoozeNotificationId', () {
+    test('Item reminders snooze in place', () {
+      for (final k in [
+        NotificationKind.due,
+        NotificationKind.soon,
+        NotificationKind.ready,
+      ]) {
+        expect(snoozeNotificationId(555, k), 555);
+      }
+    });
+
+    test('standing reminders snooze under their reserved ids', () {
+      expect(
+        snoozeNotificationId(555, NotificationKind.weeklyReview),
+        weeklyReviewSnoozeId,
+      );
+      expect(
+        snoozeNotificationId(555, NotificationKind.backup),
+        backupSnoozeId,
+      );
+      expect(weeklyReviewSnoozeId, isNot(backupSnoozeId));
+    });
+  });
+
   group('routeForPayload', () {
     NotificationPayload p(NotificationKind k, {String? id}) =>
         NotificationPayload(kind: k, itemId: id, title: 't', body: 'b');

@@ -26,16 +26,23 @@ abstract class HomeWidgetBridge {
   /// not listening. Delivered through [widgetTaps]. Called on resume.
   Future<void> checkPendingLaunch();
 
-  /// Reads the work queued by widgets and App Intents and removes exactly
-  /// the entries returned. Entries queued concurrently are kept.
-  Future<ExternalQueue> takeQueue();
+  /// Reads pending actions without removing them. Receipts are stable across
+  /// retries and unique to the queued action.
+  Future<ExternalQueue> readQueue();
+
+  /// Removes only the acknowledged entries. Native writers may append while
+  /// the app is applying an earlier batch.
+  Future<void> acknowledgeQueue({
+    List<String> completionReceipts = const [],
+    List<String> captureReceipts = const [],
+  });
 }
 
 /// A widget checkbox tap: complete Item [id], tapped at [at].
-typedef QueuedCompletion = ({String id, DateTime at});
+typedef QueuedCompletion = ({String receipt, String id, DateTime at});
 
 /// Text captured without opening the app (iOS "Add to Inbox" intent).
-typedef QueuedCapture = ({String text, DateTime at});
+typedef QueuedCapture = ({String receipt, String text, DateTime at});
 
 /// Work queued outside the app, drained through the normal use cases.
 class ExternalQueue {

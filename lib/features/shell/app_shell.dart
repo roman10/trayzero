@@ -87,7 +87,13 @@ class AppShell extends ConsumerWidget {
                 padding: EdgeInsetsDirectional.only(
                   start: rail ? railWidth : 0,
                 ),
-                child: child,
+                // Main routes are nested under the navigation Scaffold below.
+                // Scope their floating feedback to the route's own FAB. Detail
+                // workspaces have no outer Scaffold and share the root
+                // messenger with their route-level save/error callbacks.
+                child: detailBodyWidth == null
+                    ? ScaffoldMessenger(child: child)
+                    : child,
               ),
               // Paint after the nested Navigator so its route semantics
               // cannot hide the shell destinations from accessibility.

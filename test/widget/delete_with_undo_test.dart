@@ -72,8 +72,9 @@ void main() {
     expect(await items.getById('a'), isNotNull);
   });
 
-  testWidgets('the row is permanently deleted once the snackbar closes',
-      (tester) async {
+  testWidgets('the row is permanently deleted once the snackbar closes', (
+    tester,
+  ) async {
     await items.upsert(anItem(id: 'a', status: ItemStatus.nextAction));
     await pumpApp(tester, const _Host('a'), env: env);
 
@@ -83,6 +84,21 @@ void main() {
 
     await drainSnackBar(tester);
 
+    expect(await items.getById('a'), isNull);
+  });
+
+  testWidgets('Close dismisses promptly and finalizes deletion without Undo', (
+    tester,
+  ) async {
+    await items.upsert(anItem(id: 'a', status: ItemStatus.nextAction));
+    await pumpApp(tester, const _Host('a'), env: env);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsNothing);
     expect(await items.getById('a'), isNull);
   });
 }

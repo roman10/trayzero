@@ -1,6 +1,5 @@
 import 'package:cleartray/features/common/complete_circle.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/harness.dart';
@@ -25,25 +24,6 @@ void main() {
     ),
     env: env,
   );
-
-  /// Records the haptic feedback types requested through the platform channel.
-  List<Object?> recordHaptics(WidgetTester tester) {
-    final types = <Object?>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (call) async {
-        if (call.method == 'HapticFeedback.vibrate') types.add(call.arguments);
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-    return types;
-  }
 
   group('touch target', () {
     testWidgets('is 48dp square around the smaller visible ring', (
@@ -140,32 +120,6 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(CompleteCircle.feedbackDuration);
 
-      expect(completed, 1);
-    });
-  });
-
-  group('haptics', () {
-    testWidgets('clicks when haptics are enabled', (tester) async {
-      final haptics = recordHaptics(tester);
-      await pumpCircle(tester);
-
-      await tester.tap(find.byType(CompleteCircle));
-      await tester.pump(CompleteCircle.feedbackDuration);
-
-      expect(haptics, ['HapticFeedbackType.selectionClick']);
-    });
-
-    testWidgets('stays silent when haptics are disabled in settings', (
-      tester,
-    ) async {
-      final haptics = recordHaptics(tester);
-      await env.prefs.setBool('haptics_enabled', false);
-      await pumpCircle(tester);
-
-      await tester.tap(find.byType(CompleteCircle));
-      await tester.pump(CompleteCircle.feedbackDuration);
-
-      expect(haptics, isEmpty);
       expect(completed, 1);
     });
   });

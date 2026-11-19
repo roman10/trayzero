@@ -1,40 +1,35 @@
-Trayzero brings David Allen's Getting Things Done (GTD) method to your phone. Free, open source, no ads, no account, no sign-up. Your data lives on your device. Always.
+Trayzero is a private, offline GTD task manager and to-do list built around the Getting Things Done method. Get to inbox zero by turning loose thoughts into clear next actions.
 
-THE FIVE GTD STEPS, BUILT IN
+Your tasks, notes and attachments are stored on your device. No Trayzero account is required. Every feature is available without a purchase, and there are no ads.
 
-Capture — one tap, anywhere.
-A floating Capture button on every screen. Share anything from any app straight into your inbox. Voice-to-text for hands-free thoughts. A home-screen widget for the fastest possible "add to inbox."
+Capture what is on your mind
+Add tasks from anywhere in the app, share text and links into your inbox, or use the home-screen widget. Dictate a thought with your device's speech recognizer, and attach photos or voice memos.
 
-Clarify — the killer flow.
-Process Inbox runs you through your captures one at a time, card-stack style. Each card walks the full GTD decision tree: actionable? Two-minute rule? Delegate? Single step or a project? When? Where? You hit inbox-zero faster than you thought possible.
+Clarify your inbox
+Process Inbox guides you through each item: Is it actionable? Can you do it in two minutes? Is it a next action, a project, something to delegate, or something for later? Clear your GTD inbox by deciding what each item means.
 
-Organize — the canonical GTD lists.
-Inbox, Next Actions, Projects, Waiting For, Someday/Maybe, Calendar, Reference. Plus a real Project type with outcome, next-action warning, and Active / On Hold / Someday / Done / Dropped status. Seven default @-contexts you can extend (@phone, @computer, @errands, @home, @office, @anywhere, @waiting). Areas of Responsibility for the higher altitudes.
+Organize your commitments
+Keep Next Actions, Projects, Waiting For, Someday/Maybe, Calendar and Reference in dedicated lists. Give projects an outcome and see which ones need a next action. Use contexts, tags and Areas of Responsibility to organize work and life.
 
-Reflect — a Weekly Review wizard.
-A seven-step review walks you through the canonical GTD pass: clear inbox, review next actions, check waiting-for, scan calendar, review someday/maybe, look at projects, set next week's intentions. Daily review supported too.
+Choose the next action
+Filter actions by context, available time and energy. Build a daily plan and find work that fits the moment, whether you have five minutes at home or an hour at your computer.
 
-Engage — do now.
-The Engage tab filters Next Actions by Context, Energy (low / medium / high), and Time Available (<5m / <15m / <30m / <1h). Pull up the actions that match the moment you're in.
+Keep your system current
+A guided Weekly Review helps you capture loose ends, clear your inbox, and review actions, waiting items, projects, your calendar and Someday/Maybe. Save your progress and continue later.
 
-REMINDERS THAT ACTUALLY WORK
-Due-date, defer-until, waiting-for follow-up, and weekly-review nudges fire as system notifications with action buttons — Done, Snooze, Move to Next Actions. Reminders survive reboots and app updates. Opt-in two-way calendar sync mirrors dated items into your system calendar.
+Remember what matters
+Set due dates, deferred actions, waiting-for follow-ups and repeating tasks. Reminder notifications offer actions such as Done and Snooze. You can manually publish scheduled items to your chosen system calendar. Notification delivery depends on your device permissions and settings.
 
-VOICE, PHOTOS, AUDIO
-Capture by voice. Attach photos or voice memos to any item.
+Bring your tasks with you
+Import supported exports from Todoist, TickTick, Nirvana, Google Tasks, Things 3 and OmniFocus, or paste a plain-text list. You can also connect to Microsoft To Do for a one-time import. Preview before importing and undo an import if needed. Export formats and supported fields vary by source.
 
-PRIVACY YOU DON'T HAVE TO THINK ABOUT
-- 100% on-device. SQLite under the hood.
-- No account, no servers, no analytics.
-- Crash reporting is opt-in and off by default.
-- Backup/restore as plain JSON: you own your data, you can take it anywhere.
+Own your backups
+Export and restore portable JSON backups, including attachments. Enable automatic backups to a folder you choose. Backups are unencrypted; if you choose a cloud-synced folder, its provider handles synchronization. Trayzero does not provide cross-device task sync.
 
-MATERIAL 3, LIGHT + DARK
-A sunrise-amber palette, slidable rows, accessibility-friendly text scaling and TalkBack labels.
+Privacy with clear choices
+Your task content is not sent to a Trayzero server. Optional Microsoft imports, system-calendar integration, speech recognition and cloud-folder backups use the services you choose. Optional tips and Supporter subscriptions are processed by Google Play. Trayzero verifies purchases on your device. See the privacy policy for details.
 
-WHO IT'S FOR
-- GTD practitioners who want a clean, focused app that respects the method.
-- Anyone tired of cloud-syncing personal task data through someone else's servers.
-- People who want their tasks where their phone is — and nowhere else.
+Free and open source
+Light and dark themes, adjustable appearance, and accessibility support are included. Optional tips and a supporter subscription help the independent developer; they do not unlock features. Explore the source at github.com/roman10/trayzero.
 
-Trayzero is an independent app inspired by the Getting Things Done methodology. It is not affiliated with, endorsed by, or sponsored by David Allen Company. "Getting Things Done" and "GTD" are trademarks of the David Allen Company.
+Trayzero is an independent app, not affiliated with, endorsed by, or sponsored by the David Allen Company. "Getting Things Done" and "GTD" are trademarks of the David Allen Company.

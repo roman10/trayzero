@@ -39,6 +39,7 @@ void main() {
     final trashItem =
         TrashItem(items: items, scheduler: scheduler, clock: clock);
     final convertToProject = ConvertToProject(
+      database: db,
       projects: projects,
       saveItem: saveItem,
       clock: clock,
@@ -90,6 +91,19 @@ void main() {
     final fetched = await items.getById('inbox-1');
     expect(fetched?.status, ItemStatus.done);
     expect(fetched?.isTwoMin, true);
+  });
+
+  test('DoItNow on a repeating Inbox item spawns a next action, not Inbox',
+      () async {
+    final item = (await seed()).copyWith(
+      recurrence: Recurrence.daily,
+      dueAt: DateTime(2026, 5, 14, 9),
+    );
+    await items.upsert(item);
+    final spawnedId = await decide(item, const DoItNowDecision());
+    final spawned = await items.getById(spawnedId!);
+    expect(spawned?.status, ItemStatus.nextAction);
+    expect(spawned?.deferUntil, DateTime(2026, 5, 15, 9));
   });
 
   test('Waiting records who we are waiting on', () async {

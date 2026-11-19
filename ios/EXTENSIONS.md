@@ -13,6 +13,7 @@ If `Runner.xcodeproj/project.pbxproj` is ever regenerated from scratch
 extension targets in Xcode), re-attach by running:
 
 ```bash
+cd mobile
 /usr/bin/ruby ios/scripts/add_extensions.rb
 flutter clean && flutter build ios --no-codesign --debug
 ```
@@ -74,6 +75,7 @@ to all three App IDs (`app.cleartray`, `app.cleartray.CleartrayInboxWidget`,
 ## Verify
 
 ```bash
+cd mobile
 flutter clean
 flutter build ios --no-codesign --debug
 ```
@@ -146,6 +148,7 @@ procedure is preserved below in case something blocks the script.
 ## 4. Verify
 
 ```bash
+cd mobile
 flutter clean
 flutter build ios --no-codesign --debug
 ```

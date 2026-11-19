@@ -18,11 +18,13 @@ import '../core/clock.dart';
 import '../core/things_snapshot_reader.dart';
 import 'sqlite_things_snapshot_reader.dart';
 import '../core/dictation.dart';
+import '../core/haptic_feedback.dart';
 import '../core/home_widget_bridge.dart';
 import '../core/id_generator.dart';
 import '../core/notification_scheduler.dart';
 import '../core/system_settings.dart';
 import 'device_calendar_gateway.dart';
+import 'device_haptics.dart';
 import 'home_widget_bridge_impl.dart';
 import 'local_notification_scheduler.dart';
 import 'permission_handler_system_settings.dart';
@@ -49,6 +51,7 @@ List<Override> defaultInfrastructureOverrides() => [
   appIconGatewayProvider.overrideWithValue(const MethodChannelAppIconGateway()),
   appReviewPrompterProvider.overrideWithValue(const InAppReviewPrompter()),
   dictationFactoryProvider.overrideWithValue(SpeechToTextDictation.new),
+  playHapticCueProvider.overrideWithValue(playDeviceHaptic),
   backupFilesProvider.overrideWithValue(
     DeviceBackupFiles(ids: const UuidIdGenerator()),
   ),

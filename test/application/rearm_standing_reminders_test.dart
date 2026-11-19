@@ -2,6 +2,7 @@ import 'package:cleartray/application/rearm_standing_reminders.dart';
 import 'package:cleartray/application/schedule_backup_reminder.dart';
 import 'package:cleartray/application/schedule_weekly_review_reminder.dart';
 import 'package:cleartray/core/clock.dart';
+import 'package:cleartray/core/notification_intent.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,7 +18,6 @@ void main() {
   }) =>
       RearmStandingReminders(
         scheduler: scheduler,
-        clock: clock,
         scheduleWeeklyReview:
             ScheduleWeeklyReviewReminder(scheduler: scheduler, clock: clock),
         scheduleBackup:
@@ -57,5 +57,15 @@ void main() {
   test('schedules nothing when both are disabled', () async {
     await rearm(weeklyReviewEnabled: false, backupEnabled: false).call();
     expect(scheduler.scheduled, isEmpty);
+  });
+
+  test('disabled reminders cancel their weekly request and Snooze', () async {
+    await rearm(weeklyReviewEnabled: false, backupEnabled: false).call();
+    expect(scheduler.cancelled, [
+      weeklyReviewReminderId,
+      weeklyReviewSnoozeId,
+      backupReminderId,
+      backupSnoozeId,
+    ]);
   });
 }

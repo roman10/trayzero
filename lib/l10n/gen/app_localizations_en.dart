@@ -451,6 +451,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterAllContexts => 'All contexts';
 
   @override
+  String get filterNoContext => 'No context';
+
+  @override
   String get filterAnyTime => 'Any time';
 
   @override
@@ -2382,6 +2385,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreGroupPreferences => 'Preferences';
 
   @override
+  String get skipDelegationTitle => 'Skip delegation in Clarify';
+
+  @override
+  String get skipDelegationDescription =>
+      'Go straight to the single-action question after the two-minute step.';
+
+  @override
   String get moreGroupData => 'Data';
 
   @override
@@ -3431,4 +3441,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get calendarDeviceHelp =>
       'Uses your device’s calendar. No Trayzero account needed. A shared calendar may be visible to other people with access to it.';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return 'Follow up $date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return 'Scheduled $date';
+  }
+
+  @override
+  String get rateTrayzero => 'Rate Trayzero';
+
+  @override
+  String get sendFeedback => 'Send feedback';
 }

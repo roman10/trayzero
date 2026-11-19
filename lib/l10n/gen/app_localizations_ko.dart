@@ -439,6 +439,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get filterAllContexts => '모든 컨텍스트';
 
   @override
+  String get filterNoContext => '컨텍스트 없음';
+
+  @override
   String get filterAnyTime => '시간 무관';
 
   @override
@@ -2267,6 +2270,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get moreGroupPreferences => '환경설정';
 
   @override
+  String get skipDelegationTitle => '명확화에서 위임 단계 건너뛰기';
+
+  @override
+  String get skipDelegationDescription =>
+      '2분 규칙 다음에 바로 한 가지 행동으로 끝낼 수 있는지 확인합니다.';
+
+  @override
   String get moreGroupData => '데이터';
 
   @override
@@ -3249,4 +3259,20 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get calendarDeviceHelp =>
       '기기의 캘린더를 사용합니다. Trayzero 계정이 필요하지 않습니다. 공유 캘린더의 일정은 접근 권한이 있는 다른 사람에게 보일 수 있습니다.';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return '후속 확인: $date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return '예정: $date';
+  }
+
+  @override
+  String get rateTrayzero => 'Trayzero 평가하기';
+
+  @override
+  String get sendFeedback => '의견 보내기';
 }

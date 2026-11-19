@@ -43,7 +43,11 @@ final class CancelWeeklyReviewReminder {
       : _scheduler = scheduler;
   final NotificationScheduler _scheduler;
 
-  Future<void> call() => _scheduler.cancel(weeklyReviewReminderId);
+  /// Also cancels a pending Snooze, which lives under its own id.
+  Future<void> call() async {
+    await _scheduler.cancel(weeklyReviewReminderId);
+    await _scheduler.cancel(weeklyReviewSnoozeId);
+  }
 }
 
 /// Next Friday at 16:00, jumping a week if the current moment already

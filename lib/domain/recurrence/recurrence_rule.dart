@@ -118,7 +118,7 @@ class RecurrenceRule {
 
   /// The first occurrence strictly after [base], preserving its time of day.
   DateTime nextAfter(DateTime base) => switch (frequency) {
-        Recurrence.daily => base.add(Duration(days: interval)),
+        Recurrence.daily => _addDays(base, interval),
         Recurrence.weekly => _nextWeekly(base),
         Recurrence.monthly => monthlyMode == MonthlyMode.nthWeekday
             ? _nthWeekdayInShiftedMonth(base)
@@ -128,19 +128,36 @@ class RecurrenceRule {
 
   DateTime _nextWeekly(DateTime base) {
     if (byWeekdays.isEmpty) {
-      return base.add(Duration(days: 7 * interval));
+      return _addDays(base, 7 * interval);
     }
     final sorted = byWeekdays.toList()..sort();
     // A selected weekday still ahead in the current Mon–Sun week.
     for (final w in sorted) {
       if (w > base.weekday) {
-        return base.add(Duration(days: w - base.weekday));
+        return _addDays(base, w - base.weekday);
       }
     }
     // None left this week: jump to the first selected weekday in the week
     // `interval` weeks ahead (Monday-aligned blocks, matching RRULE).
     final daysToBlockStart = (8 - base.weekday) + (interval - 1) * 7;
-    return base.add(Duration(days: daysToBlockStart + (sorted.first - 1)));
+    return _addDays(base, daysToBlockStart + (sorted.first - 1));
+  }
+
+  /// Shift [base] by [days] calendar days, keeping its wall-clock time.
+  /// `base.add(Duration(days: n))` adds fixed 24h blocks, which drifts the
+  /// time of day (and, for midnight anchors, the date) across a DST change.
+  static DateTime _addDays(DateTime base, int days) {
+    final make = base.isUtc ? DateTime.utc : DateTime.new;
+    return make(
+      base.year,
+      base.month,
+      base.day + days,
+      base.hour,
+      base.minute,
+      base.second,
+      base.millisecond,
+      base.microsecond,
+    );
   }
 
   DateTime _nthWeekdayInShiftedMonth(DateTime base) {

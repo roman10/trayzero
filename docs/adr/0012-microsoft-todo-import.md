@@ -40,9 +40,10 @@
 
 ## Configuration and release verification
 
-Trayzero's public client uses this Microsoft Entra configuration:
+Trayzero's public client is registered in the owner's Default Directory:
 
 - Application (client) ID: `a17f0981-ccba-4ff6-9445-2e09297f88c8`
+- Directory (tenant) ID: `c3c0a340-c120-419e-8706-d0acf25d26db`
 - Account audience: organizational and personal Microsoft accounts.
 - Delegated Graph permission: `Tasks.Read` only; default `User.Read` removed.
 - No client secret or tenant-wide admin consent.
@@ -95,6 +96,32 @@ High-confidence review fixes:
 - Count unsupported attachments/reminder settings/statuses separately from
   priorities so preview warnings describe the actual information loss.
 
+Verified locally: 1,113 unit/widget tests, the new parser tests under
+`TZ=America/Los_Angeles`, `flutter analyze`, Android debug APK, and iOS simulator
+builds through both CocoaPods and the existing Swift Package Manager setup.
+AppAuth 2.1.0 is pinned in both existing SPM lockfiles. The local SDK's unrelated
+Xcode project compatibility rewrites were discarded.
+
+Live personal-account sign-in was verified in the iOS 18.5 simulator on
+2026-11-03: email-code authentication returned to Trayzero, the native PKCE code
+exchange succeeded, and the read-only Graph import finished with "No open tasks
+found to import" for this account. No local tasks were added. An earlier browser
+attempt returned `AADSTS900561` (GET on a POST-only endpoint); restarting the
+authorization session resolved it without a code change. Its cause is not known.
+Physical Android/iOS sign-in and populated personal/work accounts still need
+release verification.
+The publisher is currently unverified. The portal warns that end-user consent
+for new multitenant apps can be blocked; work/school rollout needs verification
+or administrator approval according to the customer's tenant policy. Publisher
+verification requires a verified custom domain and a matching Partner Center
+account, and has not been completed by this setup.
+
+Registration configuration validation: 57 focused Microsoft import tests passed,
+including the production provider wiring; five auth tests also passed with an
+explicitly empty client-ID override. `flutter analyze` passed, and default-ID
+Android debug and iOS simulator builds succeeded. SDK-generated Xcode/lockfile
+churn was discarded.
+
 Follow-up review on 2026-11-03 also fixed two data/retry issues, with regression
 coverage: adjacent HTML blocks and table cells retain separators in task notes;
 `Retry-After` accepts HTTP dates as well as seconds, including long, expired,
@@ -103,6 +130,9 @@ structured Things import, and Apple Reminders list selection/disposal guards.
 The source-list widget test now allows enough scrolling for all importers at
 2× text size on a compact phone. This ADR uses 0012 because 0011 was assigned
 to Apple Reminders before the Microsoft branch merged.
+
+Final combined Dart validation: 1,177 tests passed; `flutter analyze` reported
+no issues.
 
 ## Android callback task correction — 2026-11-04
 
@@ -120,6 +150,21 @@ Existing component names, callback schemes and launch modes are retained.
 Debug/release use their respective application IDs as affinities, keeping their
 sessions separate. This follows [AppAuth's redirect troubleshooting guidance](https://pub.dev/packages/flutter_appauth/versions/12.1.0#troubleshooting).
 
-A native regression test covers the Flutter host, all seven icon launchers,
-both AppAuth activities, and callback resolution for the separate debug and
-release schemes.
+Validation:
+
+- A new native regression test failed against the old APK's empty host affinity
+  and passed against the fixed APK. It checks host, all seven launchers, both
+  AppAuth activities, and callback resolution/isolation between debug/release.
+- Seven native tests passed on the emulator, including icon switching, host
+  reuse and notification/deep-link entrypoints. An initial host-resume timeout
+  passed on both an isolated rerun and the subsequent complete seven-test run.
+- Both merged debug and release manifests inherit the shared affinity for all
+  ten host/launcher/AppAuth activities. Debug and instrumentation APKs built.
+- 57 focused Microsoft importer Dart tests passed.
+- On the connected physical phone, the separate debug install completed
+  personal-account sign-in, returned to the original authorization activity in
+  the same task, read Graph and displayed a four-task import preview. Browser
+  cancellation and subsequent sign-in were also checked. No import was
+  confirmed; the existing release install and its data were left untouched.
+
+Physical work/school-account and release-build sign-in remain release checks.

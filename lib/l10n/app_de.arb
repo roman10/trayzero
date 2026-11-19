@@ -124,6 +124,7 @@
   "hardLandscape": "Kalender",
   "hardLandscapeSubtitle": "Heute fällig & Überfällig",
   "filterAllContexts": "Alle Kontexte",
+  "filterNoContext": "Ohne Kontext",
   "filterAnyTime": "Beliebige Dauer",
   "filterUnder5m": "< 5 Min.",
   "filterUnder15m": "< 15 Min.",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count, plural, =1{1 Aufgabe hat Anhänge, Erinnerungseinstellungen oder einen Status, die nicht importiert werden} other{{count} Aufgaben haben Anhänge, Erinnerungseinstellungen oder einen Status, die nicht importiert werden}}",
   "moreGroupOrganize": "Organisieren",
   "moreGroupPreferences": "Einstellungen",
+  "skipDelegationTitle": "Delegieren beim Klären überspringen",
+  "skipDelegationDescription": "Nach der Zwei-Minuten-Frage direkt zur Frage nach der Einzelaktion.",
   "moreGroupData": "Daten",
   "moreOn": "An",
   "moreOff": "Aus",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "Nachfassen am {date}",
+  "planScheduledOnDate": "Geplant für {date}",
+  "rateTrayzero": "Trayzero bewerten",
+  "sendFeedback": "Feedback senden"
 }

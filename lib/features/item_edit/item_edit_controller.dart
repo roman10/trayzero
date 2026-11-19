@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/complete_item.dart';
 import '../../application/providers.dart';
 import '../../application/save_item.dart';
 import '../../domain/entities/entities.dart';
@@ -86,13 +87,12 @@ class ItemEditController extends AutoDisposeFamilyAsyncNotifier<Item, String> {
     await ref.read(deleteItemProvider).call(cur.id);
   }
 
-  /// Completes the item; returns the id of the recurrence instance this
-  /// spawned, if any, so the caller can offer Undo.
-  Future<String?> complete() async {
+  /// Completes the item and returns the result needed for Undo.
+  Future<ItemCompletion?> complete() async {
     await commit();
     final cur = state.valueOrNull;
     if (cur == null) return null;
-    return ref.read(completeItemProvider).call(cur.id);
+    return ref.read(completeItemProvider).complete(cur.id);
   }
 
   Future<void> reopen() async {

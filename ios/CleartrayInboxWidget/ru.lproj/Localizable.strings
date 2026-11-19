@@ -4,6 +4,12 @@
 "%lld done" = "Выполнено: %lld";
 "+%lld more" = "Ещё %lld";
 "Complete %@" = "Выполнить «%@»";
+"%lld pending" = "%lld в ожидании";
+"Completion pending for %@" = "Завершение ожидает применения: %@";
+"Review notes" = "Просмотреть заметки";
+"Send the agenda" = "Отправить повестку";
+"Water the plants" = "Полить растения";
+"Plan tomorrow" = "Спланировать завтрашний день";
 "All done for today" = "На сегодня всё сделано";
 "Nothing focused yet" = "Пока ничего в фокусе";
 "Plan your day" = "Спланировать день";

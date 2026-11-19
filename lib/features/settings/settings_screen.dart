@@ -16,14 +16,14 @@ import '../../l10n/gen/app_localizations.dart';
 import '../common/gtd_workflow_diagram.dart';
 import '../common/localized_dates.dart';
 import 'app_color_picker.dart';
+import 'feedback_links.dart';
 import 'reminders_status.dart';
 import 'settings_controller.dart';
 import 'settings_tiles.dart';
 
 export 'legal_links.dart' show kPrivacyPolicyUrl, kTermsOfUseUrl;
 
-/// The More tab: a flat, grouped hub that links to focused subpages. It holds
-/// no settings logic of its own - each subpage owns its side-effects.
+/// The More tab: a grouped hub for preferences and focused settings pages.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -32,6 +32,7 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final appearance = ref.watch(appearanceProvider);
     final locale = ref.watch(localeOverrideProvider);
+    final skipDelegation = ref.watch(skipDelegationProvider);
     final remindersBlocked = ref.watch(remindersBlockedProvider);
     final folderBackup = ref.watch(automaticFolderBackupProvider);
     final supporter =
@@ -176,6 +177,13 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
+              SettingsSwitchRow(
+                icon: Icons.person_outline,
+                title: l10n.skipDelegationTitle,
+                subtitle: l10n.skipDelegationDescription,
+                value: skipDelegation,
+                onChanged: ref.read(skipDelegationProvider.notifier).set,
+              ),
             ],
           ),
           SettingsGroup(
@@ -216,6 +224,7 @@ class SettingsScreen extends ConsumerWidget {
                     : l10n.moreSupportTrailing,
                 onTap: () => context.push('/settings/support'),
               ),
+              const FeedbackSettingsRows(),
               SettingsRow(
                 icon: Icons.menu_book_outlined,
                 title: l10n.moreHowGtdWorks,

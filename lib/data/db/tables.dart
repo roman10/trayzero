@@ -52,7 +52,11 @@ class RecurrenceConverter extends TypeConverter<Recurrence, String> {
   String toSql(Recurrence value) => value.name;
 }
 
+/// Hot filters (schema v15): every project view filters on `project_id`, and
+/// the list/count streams filter on `status` + `completed_at`.
 @DataClassName('ItemRow')
+@TableIndex(name: 'items_project_id', columns: {#projectId})
+@TableIndex(name: 'items_status_completed_at', columns: {#status, #completedAt})
 class Items extends Table {
   TextColumn get id => text()();
   TextColumn get title => text()();

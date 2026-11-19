@@ -7,12 +7,10 @@ import WidgetKit
 /// optimistically. A snapshot from an earlier local day renders empty: its
 /// Items are carry-over until the app republishes.
 
-private let visibleRows = 5
-
 struct TodayRow: Identifiable, Hashable {
     let id: String
     let title: String
-    let completed: Bool
+    let pending: Bool
 }
 
 struct TodayEntry: TimelineEntry {
@@ -20,6 +18,11 @@ struct TodayEntry: TimelineEntry {
     let rows: [TodayRow]
     let more: Int
     let done: Int
+    var isPreview = false
+
+    var pendingCount: Int {
+        rows.filter(\.pending).count
+    }
 }
 
 enum TodaySnapshotReader {
@@ -36,7 +39,7 @@ enum TodaySnapshotReader {
         Set(TrayzeroShared.readQueue(TrayzeroShared.todayCompletionsKey).compactMap { $0["id"] as? String })
     }
 
-    static func entry(at date: Date, maxRows: Int) -> TodayEntry {
+    static func entry(at date: Date) -> TodayEntry {
         var items: [(String, String)] = []
         var snapshotDone = 0
         var snapshotMore = 0
@@ -53,28 +56,22 @@ enum TodaySnapshotReader {
             snapshotMore = json["more"] as? Int ?? 0
         }
         let pending = pendingCompletionIds()
-        let rows = items.map { TodayRow(id: $0.0, title: $0.1, completed: pending.contains($0.0)) }
-        return TodayEntry(
-            date: date,
-            rows: Array(rows.prefix(maxRows)),
-            more: snapshotMore + max(0, rows.count - maxRows),
-            done: snapshotDone + rows.filter(\.completed).count
-        )
+        let rows = items.map { TodayRow(id: $0.0, title: $0.1, pending: pending.contains($0.0)) }
+        return TodayEntry(date: date, rows: rows, more: snapshotMore, done: snapshotDone)
     }
 }
 
 struct TodayProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodayEntry {
-        TodayEntry(date: Date(), rows: [], more: 0, done: 0)
+        previewEntry()
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TodayEntry) -> Void) {
-        completion(TodaySnapshotReader.entry(at: Date(), maxRows: rowLimit(context.family)))
+        completion(context.isPreview ? previewEntry() : TodaySnapshotReader.entry(at: Date()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayEntry>) -> Void) {
         let now = Date()
-        let limit = rowLimit(context.family)
         // A second entry at midnight empties yesterday's list even if the app
         // never runs. The app reloads the timeline whenever focus changes.
         let midnight = Calendar.current.nextDate(
@@ -84,15 +81,24 @@ struct TodayProvider: TimelineProvider {
         ) ?? now.addingTimeInterval(3600)
         completion(Timeline(
             entries: [
-                TodaySnapshotReader.entry(at: now, maxRows: limit),
-                TodaySnapshotReader.entry(at: midnight, maxRows: limit),
+                TodaySnapshotReader.entry(at: now),
+                TodaySnapshotReader.entry(at: midnight),
             ],
             policy: .after(midnight)
         ))
     }
 
-    private func rowLimit(_ family: WidgetFamily) -> Int {
-        family == .systemLarge ? 8 : 3
+    private func previewEntry() -> TodayEntry {
+        let titles = [
+            String(localized: "Review notes"),
+            String(localized: "Send the agenda"),
+            String(localized: "Water the plants"),
+            String(localized: "Plan tomorrow"),
+        ]
+        let rows = titles.enumerated().map {
+            TodayRow(id: "preview-\($0.offset)", title: $0.element, pending: false)
+        }
+        return TodayEntry(date: Date(), rows: rows, more: 0, done: 1, isPreview: true)
     }
 }
 
@@ -128,6 +134,12 @@ struct CompleteTodayItemIntent: AppIntent {
 struct TrayzeroTodayWidgetView: View {
     var entry: TodayEntry
 
+    @Environment(\.widgetContentMargins) private var margins
+
+    private static let todayURL = URL(string: "cleartray://today")!
+    private static let planURL = URL(string: "cleartray://plan")!
+    private static let completionTarget: CGFloat = 44
+
     /// Brand accent, lighter in dark mode (matches the Android widget).
     private static let brand = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
@@ -136,58 +148,106 @@ struct TrayzeroTodayWidgetView: View {
     })
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Link(destination: URL(string: "cleartray://today")!) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Today")
-                        .font(.headline)
-                        .foregroundStyle(Self.brand)
-                    Spacer()
-                    if entry.done > 0 {
-                        Text("\(entry.done) done")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+        Group {
+            if entry.rows.isEmpty && entry.more == 0 {
+                VStack(alignment: .leading, spacing: 6) {
+                    header
+                    emptyState
                 }
-            }
-            if entry.rows.isEmpty {
-                emptyState
             } else {
-                ForEach(entry.rows) { row in
-                    rowView(row)
-                }
-                Spacer(minLength: 0)
-                if entry.more > 0 {
-                    Link(destination: URL(string: "cleartray://today")!) {
-                        Text("+\(entry.more) more")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                ViewThatFits(in: .vertical) {
+                    ForEach((0...entry.rows.count).reversed(), id: \.self) { count in
+                        taskList(showing: count)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // Leave room for two full touch targets and the overflow link in a medium widget.
+        .padding(EdgeInsets(
+            top: min(margins.top, 8),
+            leading: margins.leading,
+            bottom: min(margins.bottom, 8),
+            trailing: margins.trailing
+        ))
+    }
+
+    private var header: some View {
+        widgetLink(to: Self.todayURL) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text("Today")
+                    .font(.headline)
+                    .foregroundStyle(Self.brand)
+                Spacer(minLength: 0)
+                if entry.done > 0 {
+                    Text("\(entry.done) done")
+                }
+                if entry.pendingCount > 0 {
+                    Text("\(entry.pendingCount) pending")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+        }
+    }
+
+    private func taskList(showing count: Int) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            header
+            if count > 0 {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(entry.rows.prefix(count)) { row in
+                        rowView(row)
+                    }
+                }
+            }
+            let remaining = entry.more + entry.rows.count - count
+            if remaining > 0 {
+                widgetLink(to: Self.todayURL) {
+                    Text("+\(remaining) more")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
     }
 
     private func rowView(_ row: TodayRow) -> some View {
-        HStack(spacing: 8) {
-            Button(intent: CompleteTodayItemIntent(itemId: row.id)) {
-                Image(systemName: row.completed ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(row.completed ? Self.brand.opacity(0.6) : Self.brand)
+        HStack(spacing: 4) {
+            if entry.isPreview {
+                checkmark(row)
+                    .accessibilityHidden(true)
+            } else if row.pending {
+                checkmark(row)
+                    .accessibilityLabel(Text("Completion pending for \(row.title)"))
+            } else {
+                Button(intent: CompleteTodayItemIntent(itemId: row.id)) {
+                    checkmark(row)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Complete \(row.title)"))
             }
-            .buttonStyle(.plain)
-            .disabled(row.completed)
-            .accessibilityLabel(Text("Complete \(row.title)"))
-            Link(destination: itemURL(row.id)) {
+            widgetLink(to: itemURL(row.id)) {
                 Text(row.title)
                     .font(.subheadline)
                     .lineLimit(1)
-                    .strikethrough(row.completed)
-                    .foregroundStyle(row.completed ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .strikethrough(row.pending)
+                    .foregroundStyle(row.pending ? .secondary : .primary)
+                    .frame(maxWidth: .infinity, minHeight: Self.completionTarget, alignment: .leading)
+                    .contentShape(Rectangle())
             }
         }
+    }
+
+    private func checkmark(_ row: TodayRow) -> some View {
+        Image(systemName: row.pending ? "checkmark.circle.fill" : "circle")
+            .font(.title3)
+            .foregroundStyle(row.pending ? Self.brand.opacity(0.6) : Self.brand)
+            .frame(width: Self.completionTarget, height: Self.completionTarget)
+            .contentShape(Rectangle())
     }
 
     private var emptyState: some View {
@@ -196,7 +256,7 @@ struct TrayzeroTodayWidgetView: View {
             Text(entry.done > 0 ? "All done for today" : "Nothing focused yet")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Link(destination: URL(string: "cleartray://plan")!) {
+            widgetLink(to: Self.planURL) {
                 Text("Plan your day")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color(UIColor.systemBackground))
@@ -208,12 +268,21 @@ struct TrayzeroTodayWidgetView: View {
         }
     }
 
+    @ViewBuilder
+    private func widgetLink<Label: View>(to url: URL, @ViewBuilder label: () -> Label) -> some View {
+        if entry.isPreview {
+            label()
+        } else {
+            Link(destination: url, label: label)
+        }
+    }
+
     private func itemURL(_ id: String) -> URL {
         var components = URLComponents()
         components.scheme = "cleartray"
         components.host = "item"
         components.queryItems = [URLQueryItem(name: "id", value: id)]
-        return components.url ?? URL(string: "cleartray://today")!
+        return components.url ?? Self.todayURL
     }
 }
 
@@ -226,6 +295,7 @@ struct TrayzeroTodayWidget: Widget {
             TrayzeroTodayWidgetView(entry: entry)
                 .containerBackground(.background, for: .widget)
         }
+        .contentMarginsDisabled()
         .configurationDisplayName("Today")
         .description("Your focused items for today. Tap a circle to complete.")
         .supportedFamilies([.systemMedium, .systemLarge])

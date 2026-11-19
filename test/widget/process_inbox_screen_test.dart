@@ -1,7 +1,6 @@
 import 'package:cleartray/application/providers.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
-import 'package:cleartray/features/process/process_inbox_controller.dart';
 import 'package:cleartray/features/process/process_inbox_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,7 +48,7 @@ void main() {
     expect(find.text('Call the dentist'), findsOneWidget);
     expect(find.text('CAPTURED'), findsOneWidget);
     expect(find.text('Is this actionable?'), findsOneWidget);
-    expect(find.text('Step 1 of $processStepCount'), findsOneWidget);
+    expect(find.text('Step 1 of 6'), findsOneWidget);
     expect(find.text('2 left'), findsOneWidget);
   });
 

@@ -253,6 +253,7 @@
   "hardLandscape": "Calendar",
   "hardLandscapeSubtitle": "due today & overdue",
   "filterAllContexts": "All contexts",
+  "filterNoContext": "No context",
   "filterAnyTime": "Any time",
   "filterUnder5m": "< 5m",
   "filterUnder15m": "< 15m",
@@ -1129,6 +1130,8 @@
   "@importWarnSourceDetails": {"description": "Tasks whose attachments, reminder settings or source statuses cannot be migrated.", "placeholders": {"count": {"type": "int"}}},
   "moreGroupOrganize": "Organize",
   "moreGroupPreferences": "Preferences",
+  "skipDelegationTitle": "Skip delegation in Clarify",
+  "skipDelegationDescription": "Go straight to the single-action question after the two-minute step.",
   "moreGroupData": "Data",
   "moreOn": "On",
   "moreOff": "Off",
@@ -1556,5 +1559,11 @@
   },
   "calendarNoImportEvents": "No new events to import. Events already added or linked to Trayzero are excluded. The range is the past 7 days and the next year.",
   "calendarImportFailed": "Could not import calendar events. Check calendar access and try again.",
-  "calendarDeviceHelp": "Uses your device’s calendar. No Trayzero account needed. A shared calendar may be visible to other people with access to it."
+  "calendarDeviceHelp": "Uses your device’s calendar. No Trayzero account needed. A shared calendar may be visible to other people with access to it.",
+  "planFollowUpOnDate": "Follow up {date}",
+  "@planFollowUpOnDate": {"description": "Daily plan metadata: date and optional time, formatted in the selected app language.", "placeholders": {"date": {"type": "String"}}},
+  "planScheduledOnDate": "Scheduled {date}",
+  "@planScheduledOnDate": {"description": "Daily plan metadata: date and optional time, formatted in the selected app language.", "placeholders": {"date": {"type": "String"}}},
+  "rateTrayzero": "Rate Trayzero",
+  "sendFeedback": "Send feedback"
 }

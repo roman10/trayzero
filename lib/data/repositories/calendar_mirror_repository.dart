@@ -11,6 +11,19 @@ class CalendarMirrorRepository {
   Future<List<CalendarMirrorRow>> all() =>
       _db.select(_db.calendarMirrors).get();
 
+  Future<CalendarMirrorRow?> currentForItem(String itemId, String? eventId) {
+    final query = _db.select(_db.calendarMirrors)
+      ..where((t) {
+        final sameItem = t.itemId.equals(itemId);
+        final matches = eventId == null
+            ? sameItem
+            : sameItem | t.eventId.equals(eventId);
+        return t.isCurrent.equals(true) & matches;
+      })
+      ..limit(1);
+    return query.getSingleOrNull();
+  }
+
   /// Older databases knew event ids but not calendar ids. Bind those records
   /// once, to the previously selected calendar supplied by the mirror run.
   Future<void> bindLegacyCalendar(String calendarId) async {

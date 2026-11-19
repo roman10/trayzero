@@ -24,16 +24,38 @@ const searchStatusChips = <ItemStatus>[
 /// "match nothing". Derived from [searchStatusChips] so the two cannot drift.
 final _activeSearchStatuses = searchStatusChips.toSet();
 
-/// Immutable filter selection for the Search screen. Mirrors the
-/// `EngageFilter` pattern: `null`/empty fields mean "no constraint on that
-/// dimension". Kept value-equal (including the [statuses] set) so Riverpod
-/// does not re-derive results spuriously.
+/// Selects all contexts, items without a context, or one assigned context.
+class SearchContextFilter {
+  const SearchContextFilter.all() : id = null, isUnassigned = false;
+  const SearchContextFilter.unassigned() : id = null, isUnassigned = true;
+  const SearchContextFilter.assigned(String contextId)
+    : id = contextId,
+      isUnassigned = false;
+
+  final String? id;
+  final bool isUnassigned;
+
+  bool get isAll => id == null && !isUnassigned;
+
+  bool matches(String? contextId) => isAll || contextId == id;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchContextFilter &&
+      other.id == id &&
+      other.isUnassigned == isUnassigned;
+
+  @override
+  int get hashCode => Object.hash(id, isUnassigned);
+}
+
+/// Immutable, value-equal filter selection for the Search screen.
 class SearchFilter {
   const SearchFilter({
     this.statuses = const {},
     this.includeCompleted = false,
     this.projectId,
-    this.contextId,
+    this.context = const SearchContextFilter.all(),
   });
 
   /// Multi-select status narrowing. **Empty means "all active statuses"**
@@ -47,28 +69,27 @@ class SearchFilter {
   /// `null` = any project.
   final String? projectId;
 
-  /// `null` = any context.
-  final String? contextId;
+  final SearchContextFilter context;
 
   bool get isEmpty =>
       statuses.isEmpty &&
       !includeCompleted &&
       projectId == null &&
-      contextId == null;
+      context.isAll;
 
   /// Number of active filter dimensions — drives the AppBar badge.
   int get activeCount =>
       (statuses.isEmpty ? 0 : 1) +
       (includeCompleted ? 1 : 0) +
       (projectId != null ? 1 : 0) +
-      (contextId != null ? 1 : 0);
+      (context.isAll ? 0 : 1);
 
   SearchFilter withStatuses(Set<ItemStatus> s) => SearchFilter(
-        statuses: s,
-        includeCompleted: includeCompleted,
-        projectId: projectId,
-        contextId: contextId,
-      );
+    statuses: s,
+    includeCompleted: includeCompleted,
+    projectId: projectId,
+    context: context,
+  );
 
   SearchFilter toggleStatus(ItemStatus s) {
     final next = {...statuses};
@@ -77,25 +98,25 @@ class SearchFilter {
   }
 
   SearchFilter withIncludeCompleted(bool v) => SearchFilter(
-        statuses: statuses,
-        includeCompleted: v,
-        projectId: projectId,
-        contextId: contextId,
-      );
+    statuses: statuses,
+    includeCompleted: v,
+    projectId: projectId,
+    context: context,
+  );
 
   SearchFilter withProject(String? id) => SearchFilter(
-        statuses: statuses,
-        includeCompleted: includeCompleted,
-        projectId: id,
-        contextId: contextId,
-      );
+    statuses: statuses,
+    includeCompleted: includeCompleted,
+    projectId: id,
+    context: context,
+  );
 
-  SearchFilter withContext(String? id) => SearchFilter(
-        statuses: statuses,
-        includeCompleted: includeCompleted,
-        projectId: projectId,
-        contextId: id,
-      );
+  SearchFilter withContext(SearchContextFilter selection) => SearchFilter(
+    statuses: statuses,
+    includeCompleted: includeCompleted,
+    projectId: projectId,
+    context: selection,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -103,15 +124,15 @@ class SearchFilter {
       setEquals(other.statuses, statuses) &&
       other.includeCompleted == includeCompleted &&
       other.projectId == projectId &&
-      other.contextId == contextId;
+      other.context == context;
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAllUnordered(statuses),
-        includeCompleted,
-        projectId,
-        contextId,
-      );
+    Object.hashAllUnordered(statuses),
+    includeCompleted,
+    projectId,
+    context,
+  );
 }
 
 /// Pure filter applied to raw search results. Riverpod-free so it is
@@ -124,11 +145,10 @@ class SearchFilter {
 ///    true — orthogonal to the status set.
 ///  - Any other status must be in the effective allow-set: the selected
 ///    [SearchFilter.statuses], or all active statuses when none selected.
-///  - `projectId`/`contextId` constrain by exact match when non-null.
+///  - A selected project and context each constrain the results.
 ///  - Dimensions combine with AND.
 List<Item> applySearchFilter(List<Item> items, SearchFilter f) {
-  final allowed =
-      f.statuses.isEmpty ? _activeSearchStatuses : f.statuses;
+  final allowed = f.statuses.isEmpty ? _activeSearchStatuses : f.statuses;
 
   return items.where((i) {
     if (i.status == ItemStatus.trashed) return false;
@@ -140,8 +160,7 @@ List<Item> applySearchFilter(List<Item> items, SearchFilter f) {
     }
 
     if (f.projectId != null && i.projectId != f.projectId) return false;
-    if (f.contextId != null && i.contextId != f.contextId) return false;
-    return true;
+    return f.context.matches(i.contextId);
   }).toList();
 }
 
@@ -151,25 +170,39 @@ class SearchFilterController extends StateNotifier<SearchFilter> {
   void toggleStatus(ItemStatus s) => state = state.toggleStatus(s);
   void setIncludeCompleted(bool v) => state = state.withIncludeCompleted(v);
   void setProject(String? id) => state = state.withProject(id);
-  void setContext(String? id) => state = state.withContext(id);
+  void setContext(SearchContextFilter selection) =>
+      state = state.withContext(selection);
   void clear() => state = const SearchFilter();
 }
 
 /// The query string driving search, fed by the AppBar text field.
 final searchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
 
-/// Raw DB results, keyed solely on the query. Queries too short to be
-/// meaningful (see [isSearchableQuery]) skip the database entirely. Trashed
-/// rows are already excluded by the repo.
+/// The effective query: null shows the typing hint, while an empty string
+/// browses unassigned items without a text constraint.
+final effectiveSearchQueryProvider = Provider.autoDispose<String?>((ref) {
+  final q = ref.watch(searchQueryProvider).trim();
+  if (isSearchableQuery(q)) return q;
+  final browseUnassigned =
+      q.isEmpty &&
+      ref.watch(
+        searchFilterProvider.select((filter) => filter.context.isUnassigned),
+      );
+  return browseUnassigned ? '' : null;
+});
+
+/// Raw DB results for a text query or for browsing unassigned items.
+/// Trashed rows are already excluded by the repo.
 ///
 /// Watched (not one-shot) so a mutation made while the search screen is
 /// still mounted — e.g. deleting, editing, or completing an item via the
 /// detail screen pushed on top of a result — is reflected on return
 /// instead of showing a stale cached list.
-final searchResultsProvider =
-    StreamProvider.autoDispose<List<Item>>((ref) {
-  final q = ref.watch(searchQueryProvider).trim();
-  if (!isSearchableQuery(q)) return Stream.value(const []);
+final searchResultsProvider = StreamProvider.autoDispose<List<Item>>((ref) {
+  final q = ref.watch(effectiveSearchQueryProvider);
+  if (q == null) return Stream.value(const []);
+  final items = ref.watch(itemRepositoryProvider);
+  if (q.isEmpty) return items.watchSearchWithoutContext();
   // A query also matches tag names (ADR 0010). Selected as a joined string so
   // the query re-subscribes only when the set of matching tags changes, not
   // on every tag-list emission.
@@ -178,10 +211,10 @@ final searchResultsProvider =
       (tags) => tagIdsMatchingQuery(tags.valueOrNull ?? const [], q).join(' '),
     ),
   );
-  return ref.watch(itemRepositoryProvider).watchSearch(
-        q,
-        tagIds: tagIds.isEmpty ? const [] : tagIds.split(' '),
-      );
+  return items.watchSearch(
+    q,
+    tagIds: tagIds.isEmpty ? const [] : tagIds.split(' '),
+  );
 });
 
 /// Ids of [tags] whose name contains [query], folded like item search text

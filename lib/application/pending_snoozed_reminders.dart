@@ -1,7 +1,5 @@
 import '../core/notification_intent.dart';
 import '../core/notification_scheduler.dart';
-import 'schedule_backup_reminder.dart';
-import 'schedule_weekly_review_reminder.dart';
 
 /// Group once before walking restored Items, so each Item only inspects its
 /// own pending requests. Expiry/identity validation remains per Item because
@@ -39,9 +37,8 @@ Set<int> pendingSnoozedReminderIds(
         itemId,
         2,
       ),
-      NotificationKind.weeklyReview when itemId == null =>
-        weeklyReviewReminderId,
-      NotificationKind.backup when itemId == null => backupReminderId,
+      NotificationKind.weeklyReview when itemId == null => weeklyReviewSnoozeId,
+      NotificationKind.backup when itemId == null => backupSnoozeId,
       _ => null,
     };
     if (request.id == expectedId) ids.add(request.id);

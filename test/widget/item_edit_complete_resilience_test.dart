@@ -5,6 +5,7 @@ import 'package:cleartray/app/theme.dart';
 import 'package:cleartray/features/item_edit/item_edit_screen.dart';
 import 'package:cleartray/l10n/gen/app_localizations.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
+import 'package:cleartray/core/haptic_feedback.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:flutter/material.dart';
@@ -108,7 +109,12 @@ void main() {
     await items.upsert(
       anItem(id: 'a', title: 'Pay rent', status: ItemStatus.nextAction),
     );
-    final container = ProviderContainer(overrides: env.overrides());
+    final cues = <HapticCue>[];
+    final container = ProviderContainer(
+      overrides: env.overrides([
+        playHapticCueProvider.overrideWithValue((cue) async => cues.add(cue)),
+      ]),
+    );
     addTearDown(container.dispose);
     final router = container.read(routerProvider);
 
@@ -140,8 +146,10 @@ void main() {
           .first,
     );
     await tester.tap(find.text('Mark complete'));
+    await tester.tap(find.text('Mark complete'));
     await tester.pumpAndSettle();
     expect((await items.getById('a'))!.status, ItemStatus.done);
+    expect(cues, [HapticCue.taskCompleted]);
     expect(find.text('Edit'), findsNothing);
     expect(find.text('Completed'), findsOneWidget);
 

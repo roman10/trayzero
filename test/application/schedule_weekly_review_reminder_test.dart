@@ -1,5 +1,6 @@
 import 'package:cleartray/application/schedule_weekly_review_reminder.dart';
 import 'package:cleartray/core/clock.dart';
+import 'package:cleartray/core/notification_intent.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,9 +41,12 @@ void main() {
   });
 
   group('CancelWeeklyReviewReminder', () {
-    test('cancels exactly the weekly review reminder id', () async {
+    test('cancels the weekly review reminder and its Snooze', () async {
       await CancelWeeklyReviewReminder(scheduler: scheduler).call();
-      expect(scheduler.cancelled, [weeklyReviewReminderId]);
+      expect(scheduler.cancelled, [
+        weeklyReviewReminderId,
+        weeklyReviewSnoozeId,
+      ]);
       expect(scheduler.scheduled, isEmpty);
     });
   });

@@ -1,0 +1,35 @@
+Trayzero is a private, offline GTD task manager and to-do list built around the Getting Things Done method. Get to inbox zero by turning loose thoughts into clear next actions.
+
+Your tasks, notes and attachments are stored on your device. No Trayzero account is required. Every feature is available without a purchase, and there are no ads.
+
+Capture what is on your mind
+Add tasks from anywhere in the app, share text and links into your inbox, or use the home-screen widget. Dictate a thought with your device's speech recognizer, and attach photos or voice memos.
+
+Clarify your inbox
+Process Inbox guides you through each item: Is it actionable? Can you do it in two minutes? Is it a next action, a project, something to delegate, or something for later? Clear your GTD inbox by deciding what each item means.
+
+Organize your commitments
+Keep Next Actions, Projects, Waiting For, Someday/Maybe, Calendar and Reference in dedicated lists. Give projects an outcome and see which ones need a next action. Use contexts, tags and Areas of Responsibility to organize work and life.
+
+Choose the next action
+Filter actions by context, available time and energy. Build a daily plan and find work that fits the moment, whether you have five minutes at home or an hour at your computer.
+
+Keep your system current
+A guided Weekly Review helps you capture loose ends, clear your inbox, and review actions, waiting items, projects, your calendar and Someday/Maybe. Save your progress and continue later.
+
+Remember what matters
+Set due dates, deferred actions, waiting-for follow-ups and repeating tasks. Reminder notifications offer actions such as Done and Snooze. You can manually publish scheduled items to your chosen system calendar. Notification delivery depends on your device permissions and settings.
+
+Bring your tasks with you
+Import supported exports from Todoist, TickTick, Nirvana, Google Tasks, Things 3 and OmniFocus, or paste a plain-text list. You can also connect to Microsoft To Do for a one-time import. Preview before importing and undo an import if needed. Export formats and supported fields vary by source.
+
+Own your backups
+Export and restore portable JSON backups, including attachments. Enable automatic backups to a folder you choose. Backups are unencrypted; if you choose a cloud-synced folder, its provider handles synchronization. Trayzero does not provide cross-device task sync.
+
+Privacy with clear choices
+Your task content is not sent to a Trayzero server. Optional Microsoft imports, system-calendar integration, speech recognition and cloud-folder backups use the services you choose. See the privacy policy for details.
+
+Free and open source
+Light and dark themes, adjustable appearance, and accessibility support are included. Explore the source at github.com/roman10/trayzero.
+
+Trayzero is an independent app, not affiliated with, endorsed by, or sponsored by the David Allen Company. "Getting Things Done" and "GTD" are trademarks of the David Allen Company.

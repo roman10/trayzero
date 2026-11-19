@@ -5,6 +5,7 @@ import '../application/appearance_controller.dart';
 import '../features/capture/share_intent_listener.dart';
 import '../features/common/notification_permission_refresher.dart';
 import '../features/common/time_sensitive_items_refresher.dart';
+import '../features/common/review_prompt_host.dart';
 import '../features/settings/settings_controller.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'app_keyboard_shortcuts.dart';
@@ -40,7 +41,10 @@ class TrayzeroApp extends ConsumerWidget {
             child: ShareIntentListener(
               child: AppKeyboardShortcuts(
                 router: router,
-                child: child ?? const SizedBox.shrink(),
+                child: ReviewPromptHost(
+                  router: router,
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             ),
           ),

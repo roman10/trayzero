@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
 #
-# Build a RevenueCat- and Play-Core-free FOSS APK (for IzzyOnDroid and other
+# Build a RevenueCat-, Play Billing-, and Play Core-free FOSS APK (for IzzyOnDroid and other
 # FOSS channels).
 #
 # DEFAULT BUILDS ARE UNAFFECTED. `flutter build appbundle` (Play), Xcode Archive
-# (App Store), `flutter run`, Android Studio — all keep the real RevenueCat
-# gateway. This script is the ONLY path that strips it.
+# (App Store), `flutter run`, Android Studio — keep the normal platform billing gateways.
 #
-# It temporarily (a) removes the `purchases_flutter` and `in_app_review`
-# dependencies from pubspec.yaml and (b) swaps the billing gateway and in-app
-# review adapter for inert stubs, builds a
-# release APK, then ALWAYS restores the originals via an EXIT trap — even on
-# build failure or Ctrl-C. The working tree is left identical to how it started.
+# Applies the FOSS source transform, builds a release APK, and restores
+# the input files via an EXIT trap even on failure or Ctrl-C.
 #
 # Usage:  ./tool/build_foss_apk.sh [extra flutter build args]
 # Output: build/app/outputs/flutter-apk/app-release.apk
@@ -20,7 +16,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."   # -> mobile/
 
 PUBSPEC="pubspec.yaml"
-GATEWAY="lib/infrastructure/revenuecat_billing_gateway.dart"
+LOCKFILE="pubspec.lock"
+BILLING_PROVIDER="lib/infrastructure/billing_providers.dart"
 REVIEW="lib/infrastructure/in_app_review_prompter.dart"
 GRADLE_PROPS="android/gradle.properties"
 OUT="build/app/outputs/flutter-apk/app-release.apk"
@@ -29,19 +26,21 @@ BAK_DIR="$(mktemp -d)"
 
 restore() {
   cp "$BAK_DIR/pubspec.yaml" "$PUBSPEC"
-  cp "$BAK_DIR/gateway.dart" "$GATEWAY"
+  cp "$BAK_DIR/pubspec.lock" "$LOCKFILE"
+  cp "$BAK_DIR/billing_providers.dart" "$BILLING_PROVIDER"
   cp "$BAK_DIR/review.dart" "$REVIEW"
   cp "$BAK_DIR/gradle.properties" "$GRADLE_PROPS"
   rm -rf "$BAK_DIR"
-  # Return deps/lockfile to the default (RevenueCat) state.
+  # Return deps/lockfile to the default state.
   flutter pub get >/dev/null
-  echo "==> Restored default pubspec.yaml + billing gateway + review adapter + gradle.properties."
+  echo "==> Restored default pubspec.yaml + billing provider + review adapter + gradle.properties."
 }
 trap restore EXIT
 
 echo "==> Backing up originals…"
 cp "$PUBSPEC" "$BAK_DIR/pubspec.yaml"
-cp "$GATEWAY" "$BAK_DIR/gateway.dart"
+cp "$LOCKFILE" "$BAK_DIR/pubspec.lock"
+cp "$BILLING_PROVIDER" "$BAK_DIR/billing_providers.dart"
 cp "$REVIEW" "$BAK_DIR/review.dart"
 cp "$GRADLE_PROPS" "$BAK_DIR/gradle.properties"
 
@@ -57,14 +56,22 @@ echo "==> flutter build apk --release…"
 flutter build apk --release "$@"
 
 echo "==> Verifying APK contains no RevenueCat classes…"
-if unzip -p "$OUT" 'classes*.dex' | grep -qa 'revenuecat'; then
+if unzip -p "$OUT" 'classes*.dex' | grep -ai 'revenuecat' >/dev/null; then
   echo "!! FAIL: RevenueCat classes found in $OUT" >&2
   exit 1
 fi
 echo "==> OK: no RevenueCat code in APK."
 
+echo "==> Verifying APK contains no Google Play Billing classes or permission…"
+if unzip -p "$OUT" 'classes*.dex' | grep -aE 'com/android/billingclient|com.android.vending.BILLING' >/dev/null ||
+   unzip -p "$OUT" AndroidManifest.xml | tr -d '\000' | grep -a 'com.android.vending.BILLING' >/dev/null; then
+  echo "!! FAIL: Google Play Billing found in $OUT" >&2
+  exit 1
+fi
+echo "==> OK: no Google Play Billing in APK."
+
 echo "==> Verifying APK contains no Play Core review classes…"
-if unzip -p "$OUT" 'classes*.dex' | grep -qa 'com/google/android/play/core/review'; then
+if unzip -p "$OUT" 'classes*.dex' | grep -a 'com/google/android/play/core/review' >/dev/null; then
   echo "!! FAIL: Google Play Core review classes found in $OUT" >&2
   exit 1
 fi

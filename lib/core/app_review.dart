@@ -6,7 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 abstract class AppReviewPrompter {
   const AppReviewPrompter();
 
-  /// Whether the platform can show the in-app review sheet now.
+  /// Whether the platform supports in-app review. Availability does not
+  /// guarantee that the store will display the sheet.
   Future<bool> isAvailable();
 
   /// Asks the OS to show its review sheet. The OS may decide not to.
@@ -25,26 +26,34 @@ class NoopAppReviewPrompter extends AppReviewPrompter {
 class ReviewPromptState {
   const ReviewPromptState({
     this.firstSessionAt,
-    this.sessions = 0,
+    this.activeDays = const {},
     this.lastPromptAt,
     this.prompts = 0,
+    this.promptAttempts = const [],
   });
 
   final DateTime? firstSessionAt;
-  final int sessions;
+
+  /// Local calendar dates; only the first five are needed for eligibility.
+  final Set<String> activeDays;
   final DateTime? lastPromptAt;
+
+  /// Lifetime attempt count retained for compatibility, not eligibility.
   final int prompts;
+  final List<DateTime> promptAttempts;
 
   ReviewPromptState copyWith({
     DateTime? firstSessionAt,
-    int? sessions,
+    Set<String>? activeDays,
     DateTime? lastPromptAt,
     int? prompts,
+    List<DateTime>? promptAttempts,
   }) => ReviewPromptState(
     firstSessionAt: firstSessionAt ?? this.firstSessionAt,
-    sessions: sessions ?? this.sessions,
+    activeDays: activeDays ?? this.activeDays,
     lastPromptAt: lastPromptAt ?? this.lastPromptAt,
     prompts: prompts ?? this.prompts,
+    promptAttempts: promptAttempts ?? this.promptAttempts,
   );
 }
 

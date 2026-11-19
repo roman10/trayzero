@@ -4,6 +4,12 @@
 "%lld done" = "%lld hechos";
 "+%lld more" = "+%lld más";
 "Complete %@" = "Completar %@";
+"%lld pending" = "%lld pendientes";
+"Completion pending for %@" = "Finalización pendiente para %@";
+"Review notes" = "Revisar notas";
+"Send the agenda" = "Enviar el orden del día";
+"Water the plants" = "Regar las plantas";
+"Plan tomorrow" = "Planificar mañana";
 "All done for today" = "Todo hecho por hoy";
 "Nothing focused yet" = "Nada en foco todavía";
 "Plan your day" = "Planifica tu día";

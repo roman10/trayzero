@@ -1,3 +1,4 @@
+import 'package:cleartray/application/calendar_sync_service.dart';
 import 'package:cleartray/application/rearm_item_reminders.dart';
 import 'package:cleartray/core/clock.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
@@ -11,7 +12,7 @@ import '../support/fakes.dart';
 
 /// An [ItemRepository] that runs [_onFirstGet] exactly once, the first time
 /// `getById` is called — i.e. *after* `RearmItemReminders` has taken its
-/// `allActive()` snapshot but *before* it reconciles. Lets a test land a
+/// candidate ID snapshot but *before* it reconciles. Lets a test land a
 /// concurrent edit / delete in the race window the unawaited re-arm opens.
 class _RaceRepo extends ItemRepository {
   _RaceRepo(super.db, super.clock, this._onFirstGet);
@@ -28,17 +29,27 @@ class _RaceRepo extends ItemRepository {
   }
 }
 
+class _CountingScheduler extends FakeNotificationScheduler {
+  int pendingReads = 0;
+
+  @override
+  Future<List<PendingNotification>> getPendingNotifications() {
+    pendingReads++;
+    return super.getPendingNotifications();
+  }
+}
+
 void main() {
   late AppDatabase db;
   late ItemRepository items;
-  late FakeNotificationScheduler scheduler;
+  late _CountingScheduler scheduler;
   late FakeClock clock;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     clock = FakeClock(DateTime(2026, 5, 14, 12));
     items = ItemRepository(db, clock);
-    scheduler = FakeNotificationScheduler();
+    scheduler = _CountingScheduler();
   });
 
   tearDown(() async => db.close());
@@ -94,11 +105,39 @@ void main() {
       () async {
     await items.upsert(mk('c', status: ItemStatus.inbox));
     await rearm().call();
-    // Empty `cancelled` proves the perf guard `continue`d before reconcile
-    // (a thousands-of-rows restore stays O(dated items)).
     expect(scheduler.scheduled, isEmpty);
     expect(scheduler.cancelled, isEmpty);
+    // Legacy notification ID migration still runs, even with no candidates.
+    expect(scheduler.pendingReads, 1);
   });
+
+  test(
+    'candidate IDs exclude undated, closed and device calendar items',
+    () async {
+      final future = DateTime(2026, 5, 20, 8);
+      final past = DateTime(2026, 5, 13, 8);
+      await items.upsertAll([
+        mk('past-due', status: ItemStatus.calendar, dueAt: past),
+        mk('deferred', status: ItemStatus.nextAction, deferUntil: future),
+        mk('CAL-local', status: ItemStatus.calendar, dueAt: future),
+        mk('undated', status: ItemStatus.inbox),
+        mk('done', status: ItemStatus.done, dueAt: future),
+        mk('trashed', status: ItemStatus.trashed, dueAt: future),
+        mk(
+          'completed',
+          status: ItemStatus.calendar,
+          dueAt: future,
+          completedAt: past,
+        ),
+        mk('cal-external', status: ItemStatus.calendar, dueAt: future),
+      ]);
+
+      final ids = await items.reminderCandidateIds(
+        importedCalendarIdPrefix: CalendarSyncService.importedIdPrefix,
+      );
+      expect(ids, unorderedEquals(['past-due', 'deferred', 'CAL-local']));
+    },
+  );
 
   test('skips imported "cal-" calendar events even when they carry a dueAt',
       () async {

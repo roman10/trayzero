@@ -12,3 +12,11 @@
 -keep class app.cleartray.AppIconManager { *; }
 -keep class app.cleartray.AppIconManagerTest { *; }
 -keep class app.cleartray.MicrosoftTodoAuthTest { *; }
+
+# Widget layout tests inflate the provider’s RemoteViews in the minified APK.
+-keep class app.cleartray.TodayWidgetProvider { *; }
+-keep class app.cleartray.TodayWidgetProvider$* { *; }
+-keep class app.cleartray.TodayWidgetProviderTest { *; }
+-keep class app.cleartray.R$id { *; }
+-keep class app.cleartray.R$layout { *; }
+-keep class app.cleartray.R$string { *; }

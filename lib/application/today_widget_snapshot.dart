@@ -1,10 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../core/home_widget_bridge.dart';
 import '../domain/entities/entities.dart';
 import '../domain/today_focus.dart';
-import 'current_time.dart';
-import 'providers.dart';
 
 /// Rows the snapshot carries. Native layouts show at most this many (the
 /// large iOS widget); smaller layouts fold the rest into "+N more".
@@ -38,13 +34,3 @@ TodayWidgetSnapshot buildTodayWidgetSnapshot(List<Item> items, DateTime now) {
     done: done,
   );
 }
-
-/// The current Today widget snapshot. Watched from `main()`, which
-/// publishes each new value; `null` until the focused stream has loaded.
-final todayWidgetSnapshotProvider = Provider.autoDispose<TodayWidgetSnapshot?>((
-  ref,
-) {
-  final now = ref.watch(currentTimeProvider);
-  final items = ref.watch(focusedItemsProvider).valueOrNull;
-  return items == null ? null : buildTodayWidgetSnapshot(items, now);
-});

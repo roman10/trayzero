@@ -4,6 +4,12 @@
 "%lld done" = "已完成 %lld 項";
 "+%lld more" = "還有 %lld 項";
 "Complete %@" = "完成「%@」";
+"%lld pending" = "%lld 項待確認";
+"Completion pending for %@" = "%@ 的完成操作待確認";
+"Review notes" = "查看筆記";
+"Send the agenda" = "傳送會議議程";
+"Water the plants" = "給植物澆水";
+"Plan tomorrow" = "安排明天";
 "All done for today" = "今天的項目都完成了";
 "Nothing focused yet" = "尚未聚焦任何項目";
 "Plan your day" = "規劃今天";

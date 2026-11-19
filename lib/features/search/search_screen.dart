@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/providers.dart';
-import '../../core/search_text.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/empty_state.dart';
@@ -78,6 +77,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _buildSearch(BuildContext context) {
     final query = ref.watch(searchQueryProvider);
+    final canShowResults = ref.watch(effectiveSearchQueryProvider) != null;
     final filter = ref.watch(searchFilterProvider);
     final results = ref.watch(filteredSearchResultsProvider);
     final l = AppLocalizations.of(context);
@@ -119,7 +119,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             const _SearchFilterBar(),
             const Divider(height: 1),
             Expanded(
-              child: !isSearchableQuery(query)
+              child: !canShowResults
                   ? _Hint(text: l.searchMinChars, icon: Icons.search)
                   : results.when(
                       skipLoadingOnReload: true,
@@ -129,7 +129,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         error: e,
                         stackTrace: st,
                         onRetry: () =>
-                            ref.invalidate(filteredSearchResultsProvider),
+                            ref.invalidate(searchResultsProvider),
                       ),
                       data: (list) {
                         if (widget.selectedItemId != null) {
@@ -329,17 +329,31 @@ class _SearchFilterBar extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 FilterChip(
-                  selected: filter.contextId == null,
+                  selected: filter.context.isAll,
                   label: Text(l.filterAllContexts),
-                  onSelected: (_) => controller.setContext(null),
+                  onSelected: (_) =>
+                      controller.setContext(const SearchContextFilter.all()),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  selected: filter.context.isUnassigned,
+                  label: Text(l.filterNoContext),
+                  onSelected: (selected) => controller.setContext(
+                    selected
+                        ? const SearchContextFilter.unassigned()
+                        : const SearchContextFilter.all(),
+                  ),
                 ),
                 const SizedBox(width: 6),
                 for (final c in contexts) ...[
                   FilterChip(
-                    selected: filter.contextId == c.id,
+                    selected: filter.context.id == c.id,
                     label: Text(c.name),
-                    onSelected: (sel) =>
-                        controller.setContext(sel ? c.id : null),
+                    onSelected: (selected) => controller.setContext(
+                      selected
+                          ? SearchContextFilter.assigned(c.id)
+                          : const SearchContextFilter.all(),
+                    ),
                   ),
                   const SizedBox(width: 6),
                 ],

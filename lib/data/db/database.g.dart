@@ -4723,6 +4723,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TagsTable tags = $TagsTable(this);
   late final $ItemTagsTable itemTags = $ItemTagsTable(this);
   late final $ImportBatchesTable importBatches = $ImportBatchesTable(this);
+  late final Index itemsProjectId = Index(
+    'items_project_id',
+    'CREATE INDEX items_project_id ON items (project_id)',
+  );
+  late final Index itemsStatusCompletedAt = Index(
+    'items_status_completed_at',
+    'CREATE INDEX items_status_completed_at ON items (status, completed_at)',
+  );
   late final Index itemTagsTagId = Index(
     'item_tags_tag_id',
     'CREATE INDEX item_tags_tag_id ON item_tags (tag_id)',
@@ -4746,6 +4754,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tags,
     itemTags,
     importBatches,
+    itemsProjectId,
+    itemsStatusCompletedAt,
     itemTagsTagId,
     importBatchesFingerprint,
   ];

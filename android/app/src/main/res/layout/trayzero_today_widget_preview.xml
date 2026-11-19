@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/today_widget_background"
+    android:orientation="vertical"
+    android:paddingStart="6dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="@dimen/today_widget_vertical_padding"
+    android:paddingBottom="@dimen/today_widget_vertical_padding">
+
+    <include layout="@layout/trayzero_today_widget_header" />
+
+    <TextView
+        style="@style/TrayzeroTodayPreviewRow"
+        android:drawableStart="@drawable/ic_widget_check"
+        android:text="@string/today_widget_preview_task_one" />
+
+    <TextView
+        style="@style/TrayzeroTodayPreviewRow"
+        android:drawableStart="@drawable/ic_widget_check"
+        android:text="@string/today_widget_preview_task_two" />
+
+    <TextView
+        style="@style/TrayzeroTodayPreviewRow"
+        android:drawableStart="@drawable/ic_widget_check_done"
+        android:text="@string/today_widget_preview_task_three"
+        android:textColor="@color/today_widget_text_muted" />
+</LinearLayout>

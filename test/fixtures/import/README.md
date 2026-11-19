@@ -2,6 +2,8 @@
 
 Last checked: 2026-11-04. These fixtures contain example/QA tasks, not a user's
 export. Passing them does not certify the latest source app's full export schema.
+See [the importer testing record](../../../../docs/mobile/importer-testing.md)
+for executed tests and remaining device checks.
 
 | Fixture | Origin and purpose |
 |---|---|

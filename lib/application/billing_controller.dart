@@ -7,19 +7,29 @@ import '../core/billing_diagnostics.dart';
 import '../infrastructure/billing_providers.dart';
 
 /// Live supporter entitlement. Subscribes to store-reported changes first,
-/// then seeds the current snapshot, so a status push that lands during the
-/// initial async read is not dropped. Resolves to [SupporterStatus.none]
+/// then seeds the current snapshot if no store update arrived during the read.
+/// Resolves to [SupporterStatus.none]
 /// when billing is disabled.
 final supporterStatusProvider = StreamProvider<SupporterStatus>((ref) {
   final gateway = ref.watch(billingGatewayProvider);
   final controller = StreamController<SupporterStatus>();
-  final sub = gateway.statusChanges().listen(
-    controller.add,
-    onError: controller.addError,
+  var receivedUpdate = false;
+  final sub = gateway.statusChanges().listen((status) {
+    receivedUpdate = true;
+    controller.add(status);
+  }, onError: controller.addError);
+  unawaited(
+    gateway.currentStatus().then<void>(
+      (status) {
+        if (!receivedUpdate && !controller.isClosed) controller.add(status);
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!receivedUpdate && !controller.isClosed) {
+          controller.addError(error, stackTrace);
+        }
+      },
+    ),
   );
-  gateway.currentStatus().then((s) {
-    if (!controller.isClosed) controller.add(s);
-  });
   ref.onDispose(() {
     sub.cancel();
     controller.close();

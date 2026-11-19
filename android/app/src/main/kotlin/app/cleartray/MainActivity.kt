@@ -4,7 +4,9 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import android.app.Activity
 import android.app.ActivityManager
 import java.lang.ref.WeakReference
@@ -57,11 +59,44 @@ class MainActivity : FlutterActivity() {
         super.onDestroy()
     }
 
+    private var playBilling: PlayBillingChannel? = null
     private var folderBackup: FolderBackupChannel? = null
+    private var hapticsChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        playBilling = PlayBillingChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         folderBackup = FolderBackupChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        hapticsChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "app.cleartray/haptics"
+        ).apply {
+            setMethodCallHandler { call, result ->
+                val decorView = window.decorView
+                when (call.method) {
+                    "setEnabled" -> {
+                        val enabled = call.arguments as? Boolean
+                        if (enabled == null) {
+                            result.error("invalid_argument", "Expected a boolean", null)
+                            return@setMethodCallHandler
+                        }
+                        // Flutter's PlatformPlugin requests haptics on this view.
+                        decorView.isHapticFeedbackEnabled = enabled
+                        result.success(null)
+                    }
+                    "confirm" -> {
+                        val effect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            HapticFeedbackConstants.CONFIRM
+                        } else {
+                            HapticFeedbackConstants.VIRTUAL_KEY
+                        }
+                        decorView.performHapticFeedback(effect)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
         val icons = AppIconManager(this)
         LaunchLinks.channel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -70,7 +105,27 @@ class MainActivity : FlutterActivity() {
             // iOS holds App Intent links here; Android launches go through
             // home_widget, so there is never a pending link.
             setMethodCallHandler { call, result ->
-                if (call.method == "takePending") result.success(null) else result.notImplemented()
+                try {
+                    when (call.method) {
+                        "takePending" -> result.success(null)
+                        "readExternalQueue" -> {
+                            val queue = if (call.arguments == ExternalQueue.COMPLETIONS_KEY) {
+                                ExternalQueue.readQueue(this@MainActivity)
+                            } else "[]"
+                            result.success(queue)
+                        }
+                        "acknowledgeExternalQueue" -> {
+                            if (call.argument<String>("key") == ExternalQueue.COMPLETIONS_KEY) {
+                                val receipts = call.argument<List<String>>("receipts").orEmpty()
+                                ExternalQueue.acknowledge(this@MainActivity, receipts.toSet())
+                            }
+                            result.success(null)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (error: Exception) {
+                    result.error("external_queue_failed", error.message, null)
+                }
             }
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.cleartray/app_icon")
@@ -101,8 +156,12 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        playBilling?.dispose()
+        playBilling = null
         folderBackup?.dispose()
         folderBackup = null
+        hapticsChannel?.setMethodCallHandler(null)
+        hapticsChannel = null
         LaunchLinks.channel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }

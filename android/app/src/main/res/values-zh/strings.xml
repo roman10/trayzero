@@ -10,6 +10,11 @@
     <string name="today_widget_all_done">今天的事项都完成了</string>
     <string name="today_widget_plan">规划今天</string>
     <string name="today_widget_complete">完成“%1$s”</string>
+    <string name="today_widget_completion_pending">“%1$s”正在等待完成</string>
+    <string name="today_widget_pending">%1$d 项待处理</string>
+    <string name="today_widget_preview_task_one">查看笔记</string>
+    <string name="today_widget_preview_task_two">发送回复</string>
+    <string name="today_widget_preview_task_three">安排本周计划</string>
     <string name="tile_capture_label">收集到 Trayzero</string>
     <string name="shortcut_capture_short">收集</string>
     <string name="shortcut_capture_long">收集到收件箱</string>

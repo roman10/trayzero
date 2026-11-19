@@ -51,10 +51,16 @@ final class CaptureItem {
     DateTime? deferUntil,
     DateTime? dueAt,
     List<String> tagNames = const [],
+    String? queuedCaptureId,
   }) async {
+    // A queued capture can be replayed if the app exits before acknowledging it.
+    if (queuedCaptureId != null) {
+      final existing = await _items.getById(queuedCaptureId);
+      if (existing != null) return existing;
+    }
     final now = _clock.now();
     final item = Item(
-      id: _ids.newId(),
+      id: queuedCaptureId ?? _ids.newId(),
       title: title,
       notes: notes,
       status: ItemStatus.inbox,

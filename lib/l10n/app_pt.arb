@@ -124,6 +124,7 @@
   "hardLandscape": "Agenda",
   "hardLandscapeSubtitle": "vencem hoje ou estão atrasados",
   "filterAllContexts": "Todos os contextos",
+  "filterNoContext": "Sem contexto",
   "filterAnyTime": "Qualquer duração",
   "filterUnder5m": "< 5 min",
   "filterUnder15m": "< 15 min",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count, plural, =1{1 tarefa tem anexos, configurações de lembrete ou um estado que não são importados} other{{count} tarefas têm anexos, configurações de lembrete ou estados que não são importados}}",
   "moreGroupOrganize": "Organizar",
   "moreGroupPreferences": "Preferências",
+  "skipDelegationTitle": "Pular a etapa de delegação ao esclarecer",
+  "skipDelegationDescription": "Vá direto à pergunta sobre a ação única após a etapa dos dois minutos.",
   "moreGroupData": "Dados",
   "moreOn": "Ativado",
   "moreOff": "Desativado",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "Acompanhar em {date}",
+  "planScheduledOnDate": "Agendado para {date}",
+  "rateTrayzero": "Avaliar o Trayzero",
+  "sendFeedback": "Enviar feedback"
 }

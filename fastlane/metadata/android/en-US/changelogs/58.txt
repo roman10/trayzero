@@ -1,0 +1,1 @@
+Trayzero opens faster and handles longer Next Actions lists more smoothly. This update improves reminders, calendar updates, and backup restore. Tips and Supporter subscriptions now use Google Play Billing directly. Restore Purchases is under More → Support Trayzero.

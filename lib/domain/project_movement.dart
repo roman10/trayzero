@@ -13,10 +13,15 @@ import 'entities/entities.dart';
 ///   — they haven't been clarified yet.
 enum ProjectMovement { healthy, awaiting, stalled }
 
-ProjectMovement projectMovement(Iterable<Item> items) {
+ProjectMovement projectMovement(Iterable<Item> items) =>
+    projectMovementOfStatuses(items.map((i) => i.status));
+
+/// [projectMovement] over just the statuses present, for read models that
+/// aggregate in the database instead of loading every Item.
+ProjectMovement projectMovementOfStatuses(Iterable<ItemStatus> statuses) {
   var hasAwaiting = false;
-  for (final i in items) {
-    switch (i.status) {
+  for (final status in statuses) {
+    switch (status) {
       case ItemStatus.nextAction:
         return ProjectMovement.healthy;
       case ItemStatus.waiting:

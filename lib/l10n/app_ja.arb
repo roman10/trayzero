@@ -124,6 +124,7 @@
   "hardLandscape": "カレンダー",
   "hardLandscapeSubtitle": "今日が期限・期限超過",
   "filterAllContexts": "すべての状況",
+  "filterNoContext": "状況なし",
   "filterAnyTime": "時間問わず",
   "filterUnder5m": "< 5分",
   "filterUnder15m": "< 15分",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count} 件のタスクに、取り込まれない添付ファイル、リマインダー設定、またはステータスがあります。",
   "moreGroupOrganize": "整理",
   "moreGroupPreferences": "環境設定",
+  "skipDelegationTitle": "明確化で委任のステップを省略",
+  "skipDelegationDescription": "2分ルールの次に、1つの行動で済むかを確認します。",
   "moreGroupData": "データ",
   "moreOn": "オン",
   "moreOff": "オフ",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "フォローアップ：{date}",
+  "planScheduledOnDate": "予定：{date}",
+  "rateTrayzero": "Trayzeroを評価",
+  "sendFeedback": "フィードバックを送信"
 }

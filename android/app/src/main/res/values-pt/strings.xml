@@ -10,6 +10,11 @@
     <string name="today_widget_all_done">Tudo feito por hoje</string>
     <string name="today_widget_plan">Planejar o dia</string>
     <string name="today_widget_complete">Concluir %1$s</string>
+    <string name="today_widget_completion_pending">Conclusão pendente para %1$s</string>
+    <string name="today_widget_pending">%1$d pendentes</string>
+    <string name="today_widget_preview_task_one">Revisar anotações</string>
+    <string name="today_widget_preview_task_two">Enviar uma resposta</string>
+    <string name="today_widget_preview_task_three">Planejar a semana</string>
     <string name="tile_capture_label">Capturar no Trayzero</string>
     <string name="shortcut_capture_short">Capturar</string>
     <string name="shortcut_capture_long">Capturar na caixa de entrada</string>

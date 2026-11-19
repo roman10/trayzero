@@ -4,6 +4,7 @@ import 'core/calendar_connection.dart';
 import 'infrastructure/shared_preferences_calendar_connection.dart';
 import 'application/calendar_connection_controller.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -16,7 +17,6 @@ import 'application/drain_pending_notification_intents.dart';
 import 'application/automatic_folder_backup.dart';
 import 'application/handle_notification_response.dart';
 import 'application/providers.dart';
-import 'application/today_widget_snapshot.dart';
 import 'app/router.dart';
 import 'core/app_review.dart';
 import 'core/appearance_preferences.dart';
@@ -30,6 +30,7 @@ import 'data/seed.dart';
 import 'l10n/gen/app_localizations.dart';
 import 'features/settings/settings_controller.dart';
 import 'infrastructure/billing_providers.dart';
+import 'infrastructure/device_haptics.dart';
 import 'infrastructure/pending_notification_intents.dart';
 import 'infrastructure/providers.dart';
 import 'infrastructure/shared_preferences_appearance_store.dart';
@@ -58,9 +59,13 @@ Future<void> main() async {
       prefs.getBool('crash_reporting_enabled') ?? false;
   final sentryActive = _sentryDsn.isNotEmpty && crashReportingEnabled;
 
+  final standingRemindersReady = Completer<void>();
   final container = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
+      startupStandingRemindersProvider.overrideWithValue(
+        standingRemindersReady.future,
+      ),
       calendarConnectionPreferencesProvider.overrideWithValue(
         SharedPreferencesCalendarConnection(prefs),
       ),
@@ -77,12 +82,21 @@ Future<void> main() async {
     ],
   );
 
-  // Count this launch for the store-rating prompt policy (ADR 0007). Best
-  // effort: a preference write failure must never block launch.
-  try {
-    await container.read(recordAppSessionProvider).call();
-  } catch (e) {
-    debugPrint('[review-prompt] session record FAILED: $e');
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    Future<void> applyHaptics(bool enabled) async {
+      try {
+        await androidHapticsChannel.invokeMethod<void>('setEnabled', enabled);
+      } catch (error) {
+        debugPrint('[haptics] Could not apply preference: $error');
+      }
+    }
+
+    // Flutter's built-in controls also request haptics. Apply the saved
+    // preference to the Android view before any of those controls can run.
+    await applyHaptics(container.read(hapticsEnabledProvider));
+    container.listen(hapticsEnabledProvider, (_, enabled) {
+      unawaited(applyHaptics(enabled));
+    });
   }
 
   // Bootstrap one-time defaults (idempotent). Resolve the UI locale the same
@@ -114,23 +128,12 @@ Future<void> main() async {
   await notifications.init();
   await homeWidget.init();
 
-  // Initialise billing (RevenueCat). No-op unless a platform key is supplied
-  // via --dart-define; guarded so an unreachable store never blocks launch.
+  // Start observing store transactions before presenting the app.
+  // Keep launch independent of billing setup errors.
   try {
     await container.read(billingGatewayProvider).configure();
   } catch (e, st) {
     debugPrint('[billing] configure FAILED: $e\n$st');
-  }
-
-  // Re-arm the standing reminders (weekly review / backup) whose Settings
-  // toggle is enabled. Heals the default-ON nudge that was never scheduled
-  // and any pending alarms an OEM force-stop wiped; idempotent on fixed ids.
-  // Guarded: reminder delivery is best-effort — an OEM scheduler/permission
-  // quirk must never keep the app from launching.
-  try {
-    await container.read(rearmStandingRemindersProvider).call();
-  } catch (e, st) {
-    debugPrint('[notif] startup re-arm FAILED: $e\n$st');
   }
 
   // Finish deletes whose Undo window was cut short by the app being killed:
@@ -160,7 +163,12 @@ Future<void> main() async {
   container.listen<TodayWidgetSnapshot?>(
     todayWidgetSnapshotProvider,
     (prev, next) {
-      if (next != null) unawaited(homeWidget.publishToday(next));
+      if (next == null) return;
+      unawaited(
+        homeWidget.publishToday(next).catchError((Object error, StackTrace stack) {
+          debugPrint('[widget] Today snapshot publish FAILED: $error\n$stack');
+        }),
+      );
     },
     fireImmediately: true,
   );
@@ -297,6 +305,18 @@ Future<void> main() async {
       debugPrint('[notif] startup item re-arm FAILED: $e\n$st');
     }
   }());
+
+  // Heal missing standing alarms after the first frame. Settings waits for
+  // this pass before applying a user's reminder change.
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    try {
+      await container.read(rearmStandingRemindersProvider).call();
+    } catch (e, st) {
+      debugPrint('[notif] startup re-arm FAILED: $e\n$st');
+    } finally {
+      standingRemindersReady.complete();
+    }
+  });
 
   final app = UncontrolledProviderScope(
     container: container,

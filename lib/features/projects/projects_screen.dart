@@ -233,8 +233,8 @@ class _Section extends ConsumerWidget {
 /// Open next actions in a project's items. Waiting, someday, reference and
 /// calendar items are not actions the user can do now, so they are excluded
 /// from the count shown on the project tile.
-int projectNextActionCount(Iterable<Item> items) =>
-    items.where((i) => i.status == ItemStatus.nextAction).length;
+int projectNextActionCount(Map<ItemStatus, int> counts) =>
+    counts[ItemStatus.nextAction] ?? 0;
 
 class _ProjectTile extends ConsumerWidget {
   const _ProjectTile({
@@ -250,13 +250,16 @@ class _ProjectTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items =
-        ref.watch(projectItemsProvider(project.id)).valueOrNull ?? const [];
-    final movement = projectMovement(items);
-    final nextCount = projectNextActionCount(items);
-    final waitingCount = items
-        .where((i) => i.status == ItemStatus.waiting)
-        .length;
+    final counts =
+        ref.watch(
+          projectStatusCountsProvider.select(
+            (all) => all.valueOrNull?[project.id],
+          ),
+        ) ??
+        const <ItemStatus, int>{};
+    final movement = projectMovementOfStatuses(counts.keys);
+    final nextCount = projectNextActionCount(counts);
+    final waitingCount = counts[ItemStatus.waiting] ?? 0;
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),

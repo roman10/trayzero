@@ -193,3 +193,14 @@ DailyPlanSuggestions buildDailyPlan({
     nextActions: rest,
   );
 }
+
+/// Resolve row identities once per entity update, without changing plan order.
+final dailyPlanEntitiesProvider = Provider.autoDispose((ref) {
+  final projects = ref.watch(projectsProvider).valueOrNull ?? const <Project>[];
+  final contexts =
+      ref.watch(contextsProvider).valueOrNull ?? const <GtdContext>[];
+  return (
+    projects: {for (final project in projects) project.id: project},
+    contexts: {for (final context in contexts) context.id: context},
+  );
+});

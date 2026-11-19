@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../application/current_time.dart';
 import '../../application/providers.dart';
+import '../../core/due_status.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/today_focus.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/error_view.dart';
+import '../common/focus_star.dart';
+import '../common/item_card_appearance.dart';
+import '../common/item_metadata_label.dart';
+import '../common/localized_dates.dart';
 import '../common/localized_due_label.dart';
 import 'today_controller.dart';
 
@@ -71,6 +77,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
+            showCloseIcon: true,
             content: Text(
               cleared.isEmpty
                   ? l.planDoneSnackbar
@@ -136,9 +143,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     final focusedCount = focusedItems
         .where(
           (i) =>
-              canFocus(i) &&
-              isFocusedToday(i, now) &&
-              !bandIds.contains(i.id),
+              canFocus(i) && isFocusedToday(i, now) && !bandIds.contains(i.id),
         )
         .length;
     bool isOn(Item i) {
@@ -148,14 +153,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
 
     final unkept = carryOver.where((i) => !isOn(i)).toList();
 
-    Widget rows(List<Item> items, {String Function(Item)? subtitle}) => Column(
+    Widget rows(List<Item> items) => Column(
       children: [
         for (final item in items)
           _PlanRow(
             key: ValueKey('plan-${item.id}'),
-            item: item,
+            item: live[item.id] ?? item,
             focused: isOn(item),
-            subtitle: subtitle?.call(item),
+            onOpen: () => context.push('/item/${item.id}'),
             onToggle: () => _toggle(item, isOn(item)),
           ),
       ],
@@ -194,21 +199,17 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           if (plan.calendar.isNotEmpty) ...[
             _SectionHeader(title: l.planSectionCalendar),
             for (final item in plan.calendar)
-              _CalendarRow(
+              _PlanRow(
                 key: ValueKey('plan-${item.id}'),
                 item: item,
-                subtitle: localizedDueChipLabel(item.dueAt!, now, l),
-                onTap: () => context.push('/item/${item.id}'),
+                focused: false,
+                automatic: true,
+                onOpen: () => context.push('/item/${item.id}'),
               ),
           ],
           if (plan.waiting.isNotEmpty) ...[
             _SectionHeader(title: l.planSectionWaiting),
-            rows(
-              plan.waiting,
-              subtitle: (i) => i.waitingOn == null || i.waitingOn!.isEmpty
-                  ? ''
-                  : l.waitingOnPerson(i.waitingOn!),
-            ),
+            rows(plan.waiting),
           ],
           if (plan.available.isNotEmpty) ...[
             _SectionHeader(title: l.planSectionAvailable),
@@ -234,22 +235,36 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          // Wraps the button below the count at large text sizes.
-          child: Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              Semantics(
-                liveRegion: true,
-                child: Text(l.planFocusedCount(focusedCount)),
-              ),
-              FilledButton(
+          // Keep the count inside the primary action rather than a second
+          // fixed block that consumes the viewport at large text sizes.
+          child: MergeSemantics(
+            child: Semantics(
+              liveRegion: true,
+              value: l.planFocusedCount(focusedCount),
+              child: FilledButton(
                 onPressed: _saving ? null : () => _startDay(live, now),
-                child: Text(l.planStartDay),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(l.planStartDay)),
+                    const SizedBox(width: 12),
+                    Tooltip(
+                      message: l.planFocusedCount(focusedCount),
+                      excludeFromSemantics: true,
+                      child: ExcludeSemantics(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, size: 20),
+                            const SizedBox(width: 4),
+                            Text('$focusedCount'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -266,16 +281,18 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 8, 4),
-      child: Row(
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 4,
         children: [
-          Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+          Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
@@ -286,88 +303,216 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// One suggestion: the whole row toggles the star, so the target is the
-/// full row height rather than the icon.
-class _PlanRow extends StatelessWidget {
+/// Opening an item and changing its Today commitment have separate targets.
+/// Metadata stays consistent across suggestions and automatic calendar rows.
+class _PlanRow extends ConsumerWidget {
   const _PlanRow({
     required this.item,
     required this.focused,
-    required this.onToggle,
-    this.subtitle,
+    required this.onOpen,
+    this.onToggle,
+    this.automatic = false,
     super.key,
   });
 
   final Item item;
   final bool focused;
-  final String? subtitle;
-  final VoidCallback onToggle;
+  final bool automatic;
+  final VoidCallback onOpen;
+  final VoidCallback? onToggle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    final now = ref.watch(currentTimeProvider);
+    final entities = ref.watch(dailyPlanEntitiesProvider);
+    final project = entities.projects[item.projectId];
+    final gtdContext = entities.contexts[item.contextId];
     final scheme = Theme.of(context).colorScheme;
-    final sub = subtitle;
-    return Semantics(
-      label: focused
-          ? l.focusRemoveItem(item.title)
-          : l.focusAddItem(item.title),
-      toggled: focused,
-      button: true,
-      excludeSemantics: true,
-      child: ListTile(
-        minTileHeight: 48,
-        title: Text(item.title),
-        subtitle: sub == null || sub.isEmpty ? null : Text(sub),
-        trailing: Icon(
-          focused ? Icons.star_rounded : Icons.star_outline_rounded,
-          color: focused ? scheme.primary : scheme.outline,
-        ),
-        onTap: onToggle,
+    final metadata = <({String label, IconData icon, Color color})>[];
+    void meta(String label, IconData icon, [Color? color]) => metadata.add((
+      label: label,
+      icon: icon,
+      color: (color ?? scheme.onSurfaceVariant).foregroundOn(
+        scheme.surfaceContainerLow,
       ),
-    );
-  }
-}
+    ));
+    final due = item.dueAt?.toLocal();
+    final start = item.deferUntil?.toLocal();
+    String date(DateTime at) => localizedDeferLabel(at, l, now: now);
 
-/// A calendar item due today or overdue: on Today automatically, so it is
-/// shown read-only with no star. Tapping opens the item.
-class _CalendarRow extends StatelessWidget {
-  const _CalendarRow({
-    required this.item,
-    required this.subtitle,
-    required this.onTap,
-    super.key,
-  });
+    if (item.status == ItemStatus.waiting) {
+      final person = item.waitingOn?.trim();
+      meta(
+        person == null || person.isEmpty
+            ? l.waitingFor
+            : l.waitingOnPerson(person),
+        Icons.hourglass_top,
+        context.gtd.waiting,
+      );
+      final followUp = start ?? due;
+      if (followUp != null) {
+        meta(l.planFollowUpOnDate(date(followUp)), Icons.event_outlined);
+      }
+    } else if (item.status == ItemStatus.calendar) {
+      meta(
+        due == null ? l.scheduled : l.planScheduledOnDate(date(due)),
+        Icons.event_outlined,
+      );
+    } else if (start != null &&
+        !start.isBefore(DateTime(now.year, now.month, now.day))) {
+      meta(
+        l.startsOnDate(date(start)),
+        Icons.schedule_send_outlined,
+        scheme.secondary,
+      );
+    }
+    // Waiting uses defer (else due) as its follow-up date. Preserve a
+    // separate deadline when set instead of labelling it a start date.
+    if (due != null &&
+        item.status != ItemStatus.calendar &&
+        (item.status != ItemStatus.waiting ||
+            (start != null && start != due))) {
+      meta(
+        dueStatusOf(due, now).phase == DuePhase.upcoming
+            ? l.dueOnDate(date(due))
+            : localizedDueChipLabel(due, now, l),
+        Icons.event_outlined,
+        scheme.error,
+      );
+    }
+    if (item.status == ItemStatus.calendar &&
+        due != null &&
+        dueStatusOf(due, now).phase == DuePhase.overdue) {
+      meta(
+        localizedDueChipLabel(due, now, l),
+        Icons.event_busy_outlined,
+        scheme.error,
+      );
+    }
+    if (gtdContext != null) {
+      meta(
+        gtdContext.name,
+        Icons.place_outlined,
+        Color(gtdContext.color).onSurfaceOf(scheme.brightness),
+      );
+    }
+    final minutes = item.timeEstimateMinutes ?? (item.isTwoMin ? 2 : null);
+    if (minutes != null) {
+      meta(l.minutesShort(minutes), Icons.schedule_outlined, scheme.secondary);
+    }
 
-  final Item item;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return ListTile(
-      minTileHeight: 48,
-      title: Text(item.title),
-      subtitle: subtitle.isEmpty ? null : Text(subtitle),
-      trailing: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 120),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.event_outlined, size: 16, color: scheme.outline),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                l.planOnToday,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+    final identity = [
+      item.title,
+      if (project != null) project.title,
+      ...metadata.map((entry) => entry.label),
+    ].join(', ');
+    final textTheme = Theme.of(context).textTheme;
+    final metadataStyle =
+        textTheme.bodySmall?.copyWith(fontSize: 12.5, height: 1.3) ??
+        const TextStyle(fontSize: 12.5, height: 1.3);
+    const inset = ItemCardAppearance.padding + ItemCardAppearance.borderWidth;
+    const starOverhang = (FocusStar.targetSize - FocusStar.iconSize) / 2;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Stack(
+        children: [
+          Semantics(
+            button: true,
+            child: InkWell(
+              onTap: onOpen,
+              borderRadius: ItemCardAppearance.radius,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(ItemCardAppearance.padding),
+                decoration: ItemCardAppearance.decoration(scheme),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            style: ItemCardAppearance.titleStyle,
+                          ),
+                        ),
+                        if (!automatic)
+                          const SizedBox(
+                            width: 10 + FocusStar.iconSize,
+                            height:
+                                FocusStar.targetSize -
+                                ItemCardAppearance.padding,
+                          ),
+                      ],
+                    ),
+                    if (project != null) ...[
+                      const SizedBox(height: 6),
+                      ItemMetadataLabel(
+                        text: project.title,
+                        icon: Icons.folder_outlined,
+                        iconSize: 16,
+                        style: metadataStyle.copyWith(color: scheme.primary),
+                      ),
+                    ],
+                    if (metadata.isNotEmpty || automatic) ...[
+                      const SizedBox(height: 10),
+                      LayoutBuilder(
+                        builder: (context, constraints) => Wrap(
+                          spacing: 12,
+                          runSpacing: 6,
+                          children: [
+                            for (final entry in metadata)
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: ItemMetadataLabel(
+                                  text: entry.label,
+                                  icon: entry.icon,
+                                  iconSize: 16,
+                                  style: metadataStyle.copyWith(
+                                    color: entry.color,
+                                  ),
+                                ),
+                              ),
+                            if (automatic)
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: ItemMetadataLabel(
+                                  text: l.planOnToday,
+                                  icon: Icons.today_outlined,
+                                  iconSize: 16,
+                                  style: metadataStyle.copyWith(
+                                    color: scheme.primary,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          if (!automatic)
+            Positioned(
+              top: inset - starOverhang,
+              right: inset - starOverhang,
+              child: FocusStar(
+                title: identity,
+                focused: focused,
+                onToggle: onToggle!,
+              ),
+            ),
+        ],
       ),
-      onTap: onTap,
     );
   }
 }

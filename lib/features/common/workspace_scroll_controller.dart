@@ -88,11 +88,24 @@ class WorkspaceScrollController extends ScrollController {
         _seeking = false;
         return;
       }
-      final built = _keys.entries
-          .where((entry) => entry.value.currentContext != null)
-          .map((entry) => _indices[entry.key])
-          .whereType<int>()
-          .toList();
+      // Prefer visible rows: a preceding box sliver can keep its rows
+      // mounted after scrolling past it. Fall back to mounted rows when the
+      // viewport only shows unkeyed content, such as a section heading.
+      final visible = <int>[];
+      final mounted = <int>[];
+      for (final MapEntry(key: id, value: key) in _keys.entries) {
+        final index = _indices[id];
+        final row = key.currentContext?.findRenderObject();
+        if (index == null || row == null || !row.attached) continue;
+        mounted.add(index);
+        final viewport = RenderAbstractViewport.of(row);
+        final bounds = MatrixUtils.transformRect(
+          row.getTransformTo(viewport),
+          row.paintBounds,
+        );
+        if (bounds.overlaps(viewport.paintBounds)) visible.add(index);
+      }
+      final built = visible.isEmpty ? mounted : visible;
       if (built.isEmpty) {
         _seeking = false;
         return;

@@ -25,10 +25,12 @@ struct AddToInboxIntent: AppIntent {
         guard !trimmed.isEmpty else {
             throw $text.needsValueError(IntentDialog("What do you want to capture?"))
         }
-        TrayzeroShared.append(
+        guard TrayzeroShared.append(
             ["text": trimmed, "at": TrayzeroShared.nowMillis],
             to: TrayzeroShared.inboxCapturesKey
-        )
+        ) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
         // Lets a running app drain now rather than on its next resume.
         NotificationCenter.default.post(name: .trayzeroQueueChanged, object: nil)
         return .result(dialog: IntentDialog("Added to your Inbox."))

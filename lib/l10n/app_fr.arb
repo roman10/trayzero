@@ -124,6 +124,7 @@
   "hardLandscape": "Agenda",
   "hardLandscapeSubtitle": "à échéance aujourd'hui ou en retard",
   "filterAllContexts": "Tous les contextes",
+  "filterNoContext": "Sans contexte",
   "filterAnyTime": "Toute durée",
   "filterUnder5m": "< 5 min",
   "filterUnder15m": "< 15 min",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "{count, plural, =1{1 tâche comporte des pièces jointes, des réglages de rappel ou un statut qui ne sont pas importés} other{{count} tâches comportent des pièces jointes, des réglages de rappel ou des statuts qui ne sont pas importés}}",
   "moreGroupOrganize": "Organiser",
   "moreGroupPreferences": "Préférences",
+  "skipDelegationTitle": "Ignorer la délégation pendant la clarification",
+  "skipDelegationDescription": "Passez directement à la question sur l’action unique après l’étape des deux minutes.",
   "moreGroupData": "Données",
   "moreOn": "Activé",
   "moreOff": "Désactivé",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "Relancer le {date}",
+  "planScheduledOnDate": "Prévu le {date}",
+  "rateTrayzero": "Noter Trayzero",
+  "sendFeedback": "Envoyer des commentaires"
 }

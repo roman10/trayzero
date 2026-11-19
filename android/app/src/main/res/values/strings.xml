@@ -11,6 +11,11 @@
     <string name="today_widget_all_done">All done for today</string>
     <string name="today_widget_plan">Plan your day</string>
     <string name="today_widget_complete">Complete %1$s</string>
+    <string name="today_widget_completion_pending">Completion pending for %1$s</string>
+    <string name="today_widget_pending">%1$d pending</string>
+    <string name="today_widget_preview_task_one">Review notes</string>
+    <string name="today_widget_preview_task_two">Send a reply</string>
+    <string name="today_widget_preview_task_three">Plan the week</string>
     <string name="tile_capture_label">Capture to Trayzero</string>
     <string name="shortcut_capture_short">Capture</string>
     <string name="shortcut_capture_long">Capture to Inbox</string>

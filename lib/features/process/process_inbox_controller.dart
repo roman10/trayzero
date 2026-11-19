@@ -4,19 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/process_inbox_decision.dart';
 import '../../application/providers.dart';
 import '../../domain/entities/entities.dart';
+import '../settings/settings_controller.dart';
 
-/// Steps in the GTD clarify flow. Indices correspond to the step widgets in
-/// `process_inbox_screen.dart`. The trailing `detail` step is the only
-/// terminal step that needs draft fields before the decision is final.
+/// Steps in the GTD clarify flow, in navigation order.
 enum ProcessStep { actionable, twoMin, delegate, singleStep, defer, detail }
 
-const _stepOrder = ProcessStep.values;
-int get processStepCount => _stepOrder.length;
+final _stepsWithoutDelegation = [
+  for (final step in ProcessStep.values)
+    if (step != ProcessStep.delegate) step,
+];
 
 @immutable
 class ProcessInboxState {
   const ProcessInboxState({
     this.step = ProcessStep.actionable,
+    this.skipDelegation = false,
     this.waitingOn,
     this.defer,
     this.recurrence,
@@ -30,6 +32,7 @@ class ProcessInboxState {
   });
 
   final ProcessStep step;
+  final bool skipDelegation;
   final String? waitingOn;
   final DateTime? defer;
 
@@ -44,11 +47,15 @@ class ProcessInboxState {
   final int filed;
   final int trashed;
 
-  int get stepIndex => _stepOrder.indexOf(step);
+  List<ProcessStep> get _steps =>
+      skipDelegation ? _stepsWithoutDelegation : ProcessStep.values;
+  int get stepCount => _steps.length;
+  int get stepIndex => _steps.indexOf(step);
   bool get canGoBack => stepIndex > 0;
 
   ProcessInboxState copyWith({
     ProcessStep? step,
+    bool? skipDelegation,
     String? waitingOn,
     bool clearWaitingOn = false,
     DateTime? defer,
@@ -69,6 +76,7 @@ class ProcessInboxState {
   }) =>
       ProcessInboxState(
         step: step ?? this.step,
+        skipDelegation: skipDelegation ?? this.skipDelegation,
         waitingOn:
             clearWaitingOn ? null : (waitingOn ?? this.waitingOn),
         defer: clearDefer ? null : (defer ?? this.defer),
@@ -104,6 +112,14 @@ class ProcessInboxController extends Notifier<ProcessInboxState> {
 
   @override
   ProcessInboxState build() {
+    ref.listen(skipDelegationProvider, (_, skip) {
+      state = state.copyWith(
+        skipDelegation: skip,
+        step: skip && state.step == ProcessStep.delegate
+            ? ProcessStep.singleStep
+            : state.step,
+      );
+    });
     ref.listen(inboxItemsProvider, (_, next) {
       final list = next.valueOrNull;
       final headId =
@@ -112,13 +128,14 @@ class ProcessInboxController extends Notifier<ProcessInboxState> {
       _clarifyingId = headId;
       state = _fresh(list?.firstOrNull);
     });
-    return const ProcessInboxState();
+    return ProcessInboxState(skipDelegation: ref.read(skipDelegationProvider));
   }
 
   /// A restarted flow for [head], keeping the session tally. A Context or
   /// Project recognized at capture (ADR 0007) is preselected for the detail
   /// step; the user can still change or clear it there.
   ProcessInboxState _fresh(Item? head) => ProcessInboxState(
+        skipDelegation: state.skipDelegation,
         selectedContextId: head?.contextId,
         selectedProjectId: head?.projectId,
         doneNow: state.doneNow,
@@ -127,13 +144,13 @@ class ProcessInboxController extends Notifier<ProcessInboxState> {
       );
 
   void advance() {
-    final next = (state.stepIndex + 1).clamp(0, _stepOrder.length - 1);
-    state = state.copyWith(step: _stepOrder[next]);
+    final next = (state.stepIndex + 1).clamp(0, state.stepCount - 1);
+    state = state.copyWith(step: state._steps[next]);
   }
 
   void back() {
-    final prev = (state.stepIndex - 1).clamp(0, _stepOrder.length - 1);
-    state = state.copyWith(step: _stepOrder[prev]);
+    final prev = (state.stepIndex - 1).clamp(0, state.stepCount - 1);
+    state = state.copyWith(step: state._steps[prev]);
   }
 
   void setWaitingOn(String? v) =>

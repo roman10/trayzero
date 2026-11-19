@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../application/providers.dart';
+import '../../application/maybe_request_app_review.dart';
+import '../../application/review_prompt_scheduler.dart';
 import '../../domain/entities/entities.dart';
 import '../../l10n/gen/app_localizations.dart';
 import '../common/complete_with_undo.dart';
@@ -131,7 +133,20 @@ class _WeeklyReviewCard extends ConsumerWidget {
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => context.push('/review/weekly'),
+        onTap: () async {
+          final finished = await context.push<bool>('/review/weekly');
+          if (!context.mounted || finished != true) return;
+          final route = ModalRoute.of(context);
+          final scheduler = ref.read(reviewPromptSchedulerProvider);
+          final bar = ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l.reviewCompleteSnackbar)));
+          scheduler.schedule(
+            ReviewMoment.weeklyReviewFinished,
+            settled: bar.closed.then((_) {}),
+            isRelevant: () => context.mounted && (route?.isCurrent ?? false),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

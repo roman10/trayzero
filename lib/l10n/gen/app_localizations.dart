@@ -857,6 +857,12 @@ abstract class AppLocalizations {
   /// **'All contexts'**
   String get filterAllContexts;
 
+  /// No description provided for @filterNoContext.
+  ///
+  /// In en, this message translates to:
+  /// **'No context'**
+  String get filterNoContext;
+
   /// No description provided for @filterAnyTime.
   ///
   /// In en, this message translates to:
@@ -3731,6 +3737,18 @@ abstract class AppLocalizations {
   /// **'Preferences'**
   String get moreGroupPreferences;
 
+  /// No description provided for @skipDelegationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip delegation in Clarify'**
+  String get skipDelegationTitle;
+
+  /// No description provided for @skipDelegationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Go straight to the single-action question after the two-minute step.'**
+  String get skipDelegationDescription;
+
   /// No description provided for @moreGroupData.
   ///
   /// In en, this message translates to:
@@ -5308,6 +5326,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uses your device’s calendar. No Trayzero account needed. A shared calendar may be visible to other people with access to it.'**
   String get calendarDeviceHelp;
+
+  /// Daily plan metadata: date and optional time, formatted in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow up {date}'**
+  String planFollowUpOnDate(String date);
+
+  /// Daily plan metadata: date and optional time, formatted in the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled {date}'**
+  String planScheduledOnDate(String date);
+
+  /// No description provided for @rateTrayzero.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate Trayzero'**
+  String get rateTrayzero;
+
+  /// No description provided for @sendFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get sendFeedback;
 }
 
 class _AppLocalizationsDelegate

@@ -82,6 +82,23 @@ already exists, so the table does not change. A snackbar offers Undo, which
 restores the cleared focus. The plan screen says "Items you don't keep go back
 to their lists" before the user commits.
 
+**Planning-row refinement (2026-11-08).** Each linked Item shows its Project
+beneath the title, followed by compact Context, duration, and applicable date
+metadata. Waiting Items retain their person and follow-up date even in carry-over;
+Calendar Items show their scheduled date/time. Start, follow-up, and hard dates
+keep distinct labels; Next Actions retain their start-date-only invariant.
+Tapping the row opens details; a separate 48dp star changes Today focus. Both
+accessibility targets retain the Project and metadata needed to distinguish
+identical titles. Automatic Calendar Items retain “On Today” with no star.
+The existing sections and ordering are unchanged. Rows and section headers wrap
+at large text sizes, including on a 320px-wide phone.
+The planning cards share their surface, border, title typography, and icon-label
+component with Next Actions. Project names remain on a dedicated wrapping line;
+planning metadata uses wrapping groups rather than the full task-card contents.
+The fixed footer combines Start my day with a star and focused count; its full
+localized count remains available to accessibility and as a tooltip, without a
+separate count block consuming the viewport at large text sizes.
+
 A daily-review reminder notification was considered and deferred. The
 existing review and backup reminders hard-code English copy and support only
 weekly repeats. Adding a daily repeat, routing, a Settings toggle, and re-arm
@@ -179,16 +196,42 @@ built APK contains no Play Core review classes.
 `shouldPromptForReview` is a pure policy. A prompt is allowed only when all of
 these are true:
 
-- at least 5 app launches have been recorded;
+- at least 5 distinct local calendar dates of activity have been recorded;
 - at least 7 days have passed since the first recorded launch;
 - at least 120 days have passed since the previous prompt;
-- fewer than 3 prompts have been shown in total;
+- fewer than 3 prompt requests have been attempted in the preceding 365 days;
 - the platform reports that review is available.
 
 Prompts follow a meaningful success:
 
 - finishing a Weekly Review;
-- reaching Inbox Zero after processing at least 5 Items in one session.
+- reaching Inbox Zero after processing at least 5 Items in one session;
+- completing all work in Today after planning the day, with at least 3 Items
+  completed today and no remaining Calendar, focused, or carry-over Items.
+  This opportunity follows a completion in Today, never opening an already
+  finished plan or merely removing its remaining commitments.
+
+Completion feedback and any Undo snackbar finish before a one-second quiet
+period. Input, navigation, or backgrounding cancels the pending request. Weekly
+Review requests originate on the returned Review screen after successful finish;
+Inbox Zero skips the opportunity when reminder-permission recovery UI was
+needed, so its feedback cannot be interrupted. Requests scheduled while the app
+is already inactive are ignored as well.
+
+Launches, resumes, and interaction record the local date, retaining only the first
+five distinct dates needed for eligibility. Upgrades preserve first-use and prompt
+history, but do not infer active days from the legacy launch count.
+
+Settings exposes independent Rate Trayzero (opens the appropriate store listing)
+and Send feedback (composes email to support@trayzero.app, with a selectable
+address fallback when no email client is available). Neither action depends on
+automatic prompt eligibility.
+
+Attempt timestamps are retained for a rolling 365-day quota; the lifetime count
+is retained for compatibility only. Legacy installs have only a count and last
+attempt date, so migration conservatively places up to three prior attempts at
+that date. They become eligible again as that history expires. Overlapping
+review requests are rejected while a request is in progress.
 
 State is stored in SharedPreferences behind a `ReviewPromptStore` port. The OS
 applies its own quotas on top of this policy.

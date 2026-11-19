@@ -1,6 +1,7 @@
 import 'package:cleartray/application/providers.dart';
 import 'package:cleartray/application/process_inbox_decision.dart';
 import 'package:cleartray/features/process/process_inbox_controller.dart';
+import 'package:cleartray/features/settings/settings_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,7 +33,7 @@ void main() {
     expect(itemA.id, 'a');
 
     // Walk 'a' to the final step (step 6 of 6).
-    for (var i = 0; i < processStepCount - 1; i++) {
+    for (var i = 0; i < ProcessStep.values.length - 1; i++) {
       notifier.advance();
     }
     expect(
@@ -83,6 +84,34 @@ void main() {
         reason: 'skip restarts the flow even when the head is unchanged');
     expect(container.read(inboxItemsProvider).valueOrNull!.single.id, 'solo',
         reason: 'the lone item is still there to clarify later');
+  });
+
+  test('enabling skip on delegation advances and survives an item restart',
+      () async {
+    final container = env.container();
+    final repo = container.read(itemRepositoryProvider);
+    await repo.upsert(anItem(id: 'solo', title: 'Solo'));
+    final notifier = container.read(processInboxControllerProvider.notifier);
+    await pumpEventQueue();
+
+    notifier.advance();
+    notifier.advance();
+    expect(container.read(processInboxControllerProvider).step,
+        ProcessStep.delegate);
+
+    await container.read(skipDelegationProvider.notifier).set(true);
+    final state = container.read(processInboxControllerProvider);
+    expect(state.step, ProcessStep.singleStep);
+    expect(state.stepIndex, 2);
+
+    final solo = container.read(inboxItemsProvider).valueOrNull!.single;
+    await notifier.skip(solo);
+    expect(container.read(processInboxControllerProvider).step,
+        ProcessStep.actionable);
+    notifier.advance();
+    notifier.advance();
+    expect(container.read(processInboxControllerProvider).step,
+        ProcessStep.singleStep);
   });
 
   test('captured context and project are preselected per item (ADR 0007)',

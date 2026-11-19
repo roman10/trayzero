@@ -44,11 +44,12 @@ final class HandleNotificationResponse {
       case OpenScreen(:final location):
         _navigate(location);
       case RescheduleAt(payload: final p, :final at):
-        // Re-arm under the same OS id so the snoozed reminder replaces,
-        // not duplicates, the original.
+        // Item reminders re-arm under the same OS id so the Snooze replaces,
+        // not duplicates, the original; standing reminders snooze under a
+        // reserved id so their weekly repeat survives.
         if (event.id == null) return;
         await _scheduler.schedule(
-          id: event.id!,
+          id: snoozeNotificationId(event.id!, p.kind),
           at: at,
           title: p.title,
           body: p.body,

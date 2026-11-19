@@ -452,6 +452,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get filterAllContexts => 'Todos los contextos';
 
   @override
+  String get filterNoContext => 'Sin contexto';
+
+  @override
   String get filterAnyTime => 'Cualquier duración';
 
   @override
@@ -2372,6 +2375,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get moreGroupPreferences => 'Preferencias';
 
   @override
+  String get skipDelegationTitle => 'Omitir la delegación al aclarar';
+
+  @override
+  String get skipDelegationDescription =>
+      'Pasa directamente a la pregunta sobre la acción única después del paso de los dos minutos.';
+
+  @override
   String get moreGroupData => 'Datos';
 
   @override
@@ -3434,4 +3444,20 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get calendarDeviceHelp =>
       'Usa el calendario del dispositivo. No necesitas cuenta de Trayzero. Otras personas con acceso a un calendario compartido pueden ver sus eventos.';
+
+  @override
+  String planFollowUpOnDate(String date) {
+    return 'Hacer seguimiento el $date';
+  }
+
+  @override
+  String planScheduledOnDate(String date) {
+    return 'Programado para el $date';
+  }
+
+  @override
+  String get rateTrayzero => 'Valorar Trayzero';
+
+  @override
+  String get sendFeedback => 'Enviar comentarios';
 }

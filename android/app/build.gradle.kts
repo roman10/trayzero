@@ -18,10 +18,16 @@ val keystoreProperties = Properties().apply {
     }
 }
 
+val fossBuild = providers.gradleProperty("fdroid").isPresent
+
 android {
     namespace = "app.cleartray"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+
+    sourceSets.named("main") {
+        java.srcDir(if (fossBuild) "src/foss/kotlin" else "src/play/kotlin")
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -95,8 +101,8 @@ android {
     // source scanner passes. Gated on -Pfdroid; ABSENT by default so Play (AAB)
     // and App Store builds keep AGP defaults (true/true) and are byte-identical.
     dependenciesInfo {
-        includeInApk = !project.hasProperty("fdroid")
-        includeInBundle = !project.hasProperty("fdroid")
+        includeInApk = !fossBuild
+        includeInBundle = !fossBuild
     }
 
     // Per-ABI split builds (`flutter build apk --split-per-abi`, used by F-Droid)
@@ -120,6 +126,7 @@ android {
 }
 
 dependencies {
+    if (!fossBuild) implementation("com.android.billingclient:billing-ktx:9.1.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // AGP requires the tested APK and instrumentation APK to resolve the same

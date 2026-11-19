@@ -2,7 +2,7 @@
 name: cleartray
 description: "Trayzero — a GTD-method productivity app: capture, clarify, organize, reflect, engage."
 publish_to: 'none'
-version: 1.0.8+54
+version: 1.0.9+58
 
 environment:
   sdk: ^3.11.4
@@ -81,7 +81,6 @@ dependencies:
   file_picker: ^11.0.2
   # Import from other apps (ADR 0008): read Todoist backup ZIPs. Pure Dart.
   archive: ^4.0.9
-  purchases_flutter: ^10.13.2
   # Store rating prompt. Android pulls Google Play Core, so the FOSS transform
   # (tool/foss/strip.sh) removes this line and stubs the adapter.
   in_app_review: ^2.0.11

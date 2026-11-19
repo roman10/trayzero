@@ -4,6 +4,12 @@
 "%lld done" = "%lld개 완료";
 "+%lld more" = "+%lld개 더";
 "Complete %@" = "%@ 완료";
+"%lld pending" = "처리 대기 %lld개";
+"Completion pending for %@" = "%@ 완료 처리 대기 중";
+"Review notes" = "메모 검토하기";
+"Send the agenda" = "회의 안건 보내기";
+"Water the plants" = "화분에 물 주기";
+"Plan tomorrow" = "내일 계획하기";
 "All done for today" = "오늘 할 일을 모두 마쳤습니다";
 "Nothing focused yet" = "아직 집중한 항목이 없습니다";
 "Plan your day" = "하루 계획하기";

@@ -11,6 +11,7 @@ const _kWeeklyReviewReminder = 'weekly_review_reminder_enabled';
 const _kLeadTimeMinutes = 'reminder_lead_time_minutes';
 const _kDeferSurfaceMinutes = 'defer_surface_minutes';
 const _kHapticsEnabled = 'haptics_enabled';
+const _kSkipDelegation = 'skip_delegation';
 const _kCrashReportingEnabled = 'crash_reporting_enabled';
 const _kBackupReminderEnabled = 'backup_reminder_enabled';
 const _kNotificationPrimed = 'notification_primed_v1';
@@ -113,6 +114,14 @@ final hapticsEnabledProvider =
     prefs: ref.watch(sharedPreferencesProvider),
     key: _kHapticsEnabled,
     defaultValue: true,
+  );
+});
+
+final skipDelegationProvider = StateNotifierProvider<_BoolPref, bool>((ref) {
+  return _BoolPref(
+    prefs: ref.watch(sharedPreferencesProvider),
+    key: _kSkipDelegation,
+    defaultValue: false,
   );
 });
 

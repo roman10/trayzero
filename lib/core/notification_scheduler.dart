@@ -135,20 +135,36 @@ abstract class NotificationScheduler {
   Future<NotificationActionEvent?> takeLaunchResponse();
 }
 
-/// Stable int notification id derived from an entity id string. Lifted from
-/// the old [NotificationsService] so call sites can compute matching ids
-/// without holding a scheduler instance.
-int notificationIdFor(String s, [int salt = 0]) {
-  var h = 0;
-  for (var i = 0; i < s.length; i++) {
-    h = 0x1fffffff & (h + s.codeUnitAt(i));
-    h = 0x1fffffff & (h + ((0x0007ffff & h) << 10));
-    h ^= h >> 6;
+/// Item reminder OS ids occupy `[itemNotificationIdBase, 2^31 - 1]`. Every
+/// id below the base is reserved for fixed standing reminders (weekly review,
+/// backup and their Snoozes, currently 990001–990004), so an Item reminder can
+/// never replace or cancel one. New standing ids must stay below this base.
+const int itemNotificationIdBase = 1 << 24;
+
+/// Each Item owns one block of consecutive ids, one per reminder salt
+/// (1 = Due, 2 = Ready, 3 = Soon).
+const int _itemReminderSlots = 3;
+const int _itemReminderBlocks =
+    (0x7fffffff - itemNotificationIdBase + 1) ~/ _itemReminderSlots;
+
+/// Stable OS notification id for reminder [salt] (1–3) of Item [itemId].
+///
+/// Ids are positive 32-bit ints, as Android requires. Two Items share ids
+/// only when their 32-bit hashes collide modulo the ~7×10^8 blocks — not,
+/// as with the old `hash + salt` scheme, whenever their hashes were within 2.
+/// Changing this mapping strands requests pending under the old ids;
+/// the launch re-arm (`RearmItemReminders`) moves those.
+int notificationIdFor(String itemId, int salt) {
+  assert(salt >= 1 && salt <= _itemReminderSlots);
+  // FNV-1a over UTF-16 code units, kept to 32 bits.
+  var h = 0x811c9dc5;
+  for (final unit in itemId.codeUnits) {
+    h = ((h ^ unit) * 0x01000193) & 0xffffffff;
   }
-  h = 0x1fffffff & (h + ((0x03ffffff & h) << 3));
-  h ^= h >> 11;
-  h = 0x1fffffff & (h + ((0x00003fff & h) << 15));
-  return (h + salt).abs() % 0x7fffffff;
+  return itemNotificationIdBase +
+      (h % _itemReminderBlocks) * _itemReminderSlots +
+      salt -
+      1;
 }
 
 final notificationSchedulerProvider = Provider<NotificationScheduler>((ref) {

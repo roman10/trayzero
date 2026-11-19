@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/maybe_request_app_review.dart';
 import '../../application/providers.dart';
+import '../../application/review_prompt_scheduler.dart';
 import '../../application/process_inbox_decision.dart';
 import '../../core/clock.dart';
 import '../../domain/entities/entities.dart';
@@ -38,6 +39,8 @@ const _reviewPromptMinProcessed = 5;
 
 class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
   bool _askedForReview = false;
+  bool _reviewSuppressedForDecision = false;
+  Future<void> _reviewSettled = Future.value();
 
   void _haptic([HapticFeedbackKind k = HapticFeedbackKind.selection]) {
     final on = ref.read(hapticsEnabledProvider);
@@ -71,6 +74,7 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
     final controller = ref.read(processInboxControllerProvider.notifier);
     final purge = ref.read(purgeTrashProvider);
     setState(() => _busy = true);
+    _reviewSuppressedForDecision = false;
     final String? spawnedId;
     try {
       spawnedId = await controller.decide(current, d);
@@ -88,7 +92,6 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
       if (d is TrashDecision) await purge(ids: [current.id]);
       return;
     }
-    setState(() => _busy = false);
     // Every decision but Convert-to-Project can be taken back: the item goes
     // back to the inbox exactly as it was. (Undoing a Project conversion
     // would also have to unwind the Project row it created.)
@@ -110,6 +113,7 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
             : null,
       ),
     );
+    _reviewSettled = bar.closed.then((_) {});
     if (d is TrashDecision) {
       // The trashed row is only hard-deleted once Undo is no longer possible.
       unawaited(
@@ -130,9 +134,23 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
         deferUntil?.isAfter(now) ?? false,
       _ => false,
     };
-    if (needsReminderCheck && mounted) {
-      await ensureReminderDeliveryReachable(context, ref);
+    try {
+      if (needsReminderCheck && mounted) {
+        _reviewSuppressedForDecision = await ensureReminderDeliveryReachable(
+          context,
+          ref,
+        );
+      }
+    } catch (error) {
+      // The decision is already saved. Recovery must not lock processing or
+      // turn an interrupted permission flow into a rating opportunity.
+      _reviewSuppressedForDecision = true;
+      debugPrint('[process] Reminder recovery failed: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
+    if (!mounted) return;
+    _maybeAskForReview();
     _haptic(switch (d) {
       TrashDecision() => HapticFeedbackKind.light,
       DoItNowDecision() => HapticFeedbackKind.medium,
@@ -143,16 +161,26 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
   /// Inbox Zero after a real processing session is a success moment; the
   /// policy decides whether to actually ask for a store rating (ADR 0007).
   void _maybeAskForReview() {
-    if (_askedForReview) return;
+    if (_askedForReview || _busy || _reviewSuppressedForDecision || !mounted) {
+      return;
+    }
     final s = ref.read(processInboxControllerProvider);
     final empty = ref.read(inboxItemsProvider).valueOrNull?.isEmpty ?? false;
     if (!empty || s.filed + s.doneNow + s.trashed < _reviewPromptMinProcessed) {
       return;
     }
     _askedForReview = true;
-    unawaited(
-      ref.read(maybeRequestAppReviewProvider).call(ReviewMoment.inboxZero),
-    );
+    final route = ModalRoute.of(context);
+    ref
+        .read(reviewPromptSchedulerProvider)
+        .schedule(
+          ReviewMoment.inboxZero,
+          settled: _reviewSettled,
+          isRelevant: () =>
+              mounted &&
+              (route?.isCurrent ?? false) &&
+              (ref.read(inboxItemsProvider).valueOrNull?.isEmpty ?? false),
+        );
   }
 
   @override
@@ -213,7 +241,7 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
           child: LinearProgressIndicator(
-            value: stepNumber / processStepCount,
+            value: stepNumber / state.stepCount,
             minHeight: 3,
           ),
         ),
@@ -230,7 +258,7 @@ class _ProcessInboxScreenState extends ConsumerState<ProcessInboxScreen> {
                 spacing: 16,
                 runSpacing: 4,
                 children: [
-                  Text(l10n.processStepCounter(stepNumber, processStepCount)),
+                  Text(l10n.processStepCounter(stepNumber, state.stepCount)),
                   Text(l10n.processItemsRemaining(items.length)),
                 ],
               ),

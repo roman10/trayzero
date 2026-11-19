@@ -39,13 +39,18 @@ class RemindersScreen extends ConsumerWidget {
                 subtitle: l10n.weeklyReviewNudgeDescription,
                 value: weeklyNudge,
                 onChanged: (v) async {
-                  await ref.read(weeklyReviewReminderProvider.notifier).set(v);
-                  if (v) {
-                    await ref.read(scheduleWeeklyReviewReminderProvider).call();
-                    if (!context.mounted) return;
+                  final startup = ref.read(startupStandingRemindersProvider);
+                  final preference = ref.read(
+                    weeklyReviewReminderProvider.notifier,
+                  );
+                  final reconcile = v
+                      ? ref.read(scheduleWeeklyReviewReminderProvider).call
+                      : ref.read(cancelWeeklyReviewReminderProvider).call;
+                  await startup;
+                  await preference.set(v);
+                  await reconcile();
+                  if (v && context.mounted) {
                     await ensureReminderDeliveryReachable(context, ref);
-                  } else {
-                    await ref.read(cancelWeeklyReviewReminderProvider).call();
                   }
                 },
               ),
@@ -55,13 +60,18 @@ class RemindersScreen extends ConsumerWidget {
                 subtitle: l10n.weeklyBackupReminderDescription,
                 value: backupReminderOn,
                 onChanged: (v) async {
-                  await ref.read(backupReminderEnabledProvider.notifier).set(v);
-                  if (v) {
-                    await ref.read(scheduleBackupReminderProvider).call();
-                    if (!context.mounted) return;
+                  final startup = ref.read(startupStandingRemindersProvider);
+                  final preference = ref.read(
+                    backupReminderEnabledProvider.notifier,
+                  );
+                  final reconcile = v
+                      ? ref.read(scheduleBackupReminderProvider).call
+                      : ref.read(cancelBackupReminderProvider).call;
+                  await startup;
+                  await preference.set(v);
+                  await reconcile();
+                  if (v && context.mounted) {
                     await ensureReminderDeliveryReachable(context, ref);
-                  } else {
-                    await ref.read(cancelBackupReminderProvider).call();
                   }
                 },
               ),

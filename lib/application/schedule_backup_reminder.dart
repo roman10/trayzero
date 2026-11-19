@@ -37,7 +37,11 @@ final class CancelBackupReminder {
       : _scheduler = scheduler;
   final NotificationScheduler _scheduler;
 
-  Future<void> call() => _scheduler.cancel(backupReminderId);
+  /// Also cancels a pending Snooze, which lives under its own id.
+  Future<void> call() async {
+    await _scheduler.cancel(backupReminderId);
+    await _scheduler.cancel(backupSnoozeId);
+  }
 }
 
 DateTime _nextSunday9am(DateTime now) {

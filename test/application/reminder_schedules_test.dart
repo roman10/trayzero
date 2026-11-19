@@ -53,13 +53,13 @@ void main() {
     });
   });
 
-  test('CancelWeeklyReviewReminder cancels its specific id', () async {
+  test('CancelWeeklyReviewReminder cancels its weekly and Snooze ids', () async {
     await CancelWeeklyReviewReminder(scheduler: scheduler).call();
-    expect(scheduler.cancelled, [weeklyReviewReminderId]);
+    expect(scheduler.cancelled, [weeklyReviewReminderId, weeklyReviewSnoozeId]);
   });
 
-  test('CancelBackupReminder cancels its specific id', () async {
+  test('CancelBackupReminder cancels its weekly and Snooze ids', () async {
     await CancelBackupReminder(scheduler: scheduler).call();
-    expect(scheduler.cancelled, [backupReminderId]);
+    expect(scheduler.cancelled, [backupReminderId, backupSnoozeId]);
   });
 }

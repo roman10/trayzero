@@ -10,6 +10,11 @@
     <string name="today_widget_all_done">오늘 할 일을 모두 마쳤습니다</string>
     <string name="today_widget_plan">하루 계획하기</string>
     <string name="today_widget_complete">%1$s 완료</string>
+    <string name="today_widget_completion_pending">%1$s 완료 처리 대기 중</string>
+    <string name="today_widget_pending">%1$d개 처리 대기 중</string>
+    <string name="today_widget_preview_task_one">메모 검토하기</string>
+    <string name="today_widget_preview_task_two">답장 보내기</string>
+    <string name="today_widget_preview_task_three">한 주 계획하기</string>
     <string name="tile_capture_label">Trayzero에 수집</string>
     <string name="shortcut_capture_short">수집</string>
     <string name="shortcut_capture_long">받은함에 수집</string>

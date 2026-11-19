@@ -11,6 +11,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
 
+class _CalendarGatewayWithUpsertHook extends FakeCalendarGateway {
+  Future<void> Function()? afterUpsert;
+
+  @override
+  Future<String?> upsertEvent(CalendarEventDraft draft) async {
+    final eventId = await super.upsertEvent(draft);
+    await afterUpsert?.call();
+    return eventId;
+  }
+}
+
 void main() {
   late AppDatabase db;
   late ItemRepository repo;
@@ -225,6 +236,38 @@ void main() {
       expect(gateway.events, hasLength(1));
       expect(gateway.events.containsKey(eventId), isTrue);
       // Ownership moved from the completed instance to its successor.
+      expect((await repo.getById('r'))!.calendarEventId, isNull);
+      expect((await repo.getById('r2'))!.calendarEventId, eventId);
+    });
+
+    test('cleanup finds a successor created during the native write', () async {
+      final hookedGateway = _CalendarGatewayWithUpsertHook();
+      final mirrors = CalendarMirrorRepository(db);
+      final service = CalendarSyncService(
+        repo,
+        FakeClock(now),
+        hookedGateway,
+        mirrors: mirrors,
+      );
+      await seed(recurring('r'));
+      await service.mirrorOut(calendarId: 'cal-1');
+      final original = (await repo.getById('r'))!;
+      final eventId = original.calendarEventId;
+      hookedGateway.afterUpsert = () async {
+        await db.transaction(() async {
+          await repo.markCompleted('r', now);
+          await repo.upsert(
+            nextRecurrenceOf(original, completedAt: now, newId: 'r2')!,
+          );
+        });
+      };
+
+      final result = await service.mirrorOut(calendarId: 'cal-1');
+
+      expect(result.written, 1);
+      expect(result.removed, 0);
+      expect(hookedGateway.deleted, isEmpty);
+      expect((await mirrors.all()).single.itemId, 'r2');
       expect((await repo.getById('r'))!.calendarEventId, isNull);
       expect((await repo.getById('r2'))!.calendarEventId, eventId);
     });

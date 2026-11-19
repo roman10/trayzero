@@ -11,6 +11,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';
 
+class _FailingItems extends ItemRepository {
+  _FailingItems(super.db, super.clock);
+
+  @override
+  Future<void> upsert(Item item) async => throw StateError('disk full');
+}
+
 void main() {
   late AppDatabase db;
   late ItemRepository items;
@@ -30,6 +37,7 @@ void main() {
     scheduler = FakeNotificationScheduler();
     saveItem = SaveItem(items: items, scheduler: scheduler, clock: clock);
     convertToProject = ConvertToProject(
+      database: db,
       projects: projects,
       saveItem: saveItem,
       clock: clock,
@@ -100,5 +108,21 @@ void main() {
     expect((await items.getById('i1'))?.dueAt, isNull);
     expect(scheduler.scheduled.any((s) => s.title.startsWith('Due')),
         isFalse);
+  });
+
+  test('a failed item write rolls back the project — no orphan, no '
+      'duplicate on retry', () async {
+    final failing = ConvertToProject(
+      database: db,
+      projects: projects,
+      saveItem: SaveItem(
+          items: _FailingItems(db, clock), scheduler: scheduler, clock: clock),
+      clock: clock,
+      ids: ids,
+    );
+    await expectLater(failing(captured()), throwsStateError);
+
+    expect(await projects.getById('proj-1'), isNull);
+    expect(scheduler.cancelled, isEmpty);
   });
 }

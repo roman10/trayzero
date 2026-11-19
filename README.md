@@ -9,6 +9,7 @@ Trayzero has no ads and requires no Trayzero account.
 
 - [Download for iPhone and iPad on the App Store](https://apps.apple.com/app/id6771756447)
 - [Download for Android on Google Play](https://play.google.com/store/apps/details?id=app.cleartray)
+- [Download for Android on F-Droid](https://f-droid.org/packages/app.cleartray/)
 
 [Video tutorials on YouTube](https://www.youtube.com/@trayzeroapp) · [Website](https://trayzero.app) · [Privacy policy](https://trayzero.app/privacy)
 
@@ -30,8 +31,8 @@ Trayzero has no ads and requires no Trayzero account.
 - **Reminders** — local notifications with action buttons (Done / Snooze / Move
   to Next Actions) that survive reboots; opt-in two-way system-calendar sync.
 - **Attachments** — photos and voice memos on any item.
-- **Privacy** — tasks, notes, and attachments are stored locally. Standard builds
-  use RevenueCat for anonymous purchase checks and purchase analytics. See the
+- **Privacy** — tasks, notes, and attachments are stored locally. Store builds
+  verify optional purchases on your device. See the
   [privacy policy](https://trayzero.app/privacy) for crash reporting and optional
   integrations. Portable JSON backups include attachments and Review history.
   Older JSON backups remain supported.
@@ -70,7 +71,7 @@ an explicitly empty value disables this importer. See
 - **Drift** over SQLite for local persistence
 - **go_router** for navigation
 - **flutter_local_notifications**, **device_calendar**, **speech_to_text**,
-  **home_widget**, **purchases_flutter** (RevenueCat) for platform features
+  **home_widget**, **StoreKit 2** on iOS, and **Google Play Billing** on Android
 
 ## Build from source
 
@@ -87,12 +88,9 @@ dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
-In-app purchases (voluntary tips + a "supporter" subscription) are wired through
-RevenueCat with **public** SDK keys baked in as defaults, so a plain
-`flutter run`/`flutter build` works with billing enabled. If the keys are
-overridden with empty values, the app falls back to a disabled billing gateway
-and runs identically with the Support section showing "unavailable" — nothing
-touches the stores.
+Voluntary tips and Supporter subscriptions use StoreKit 2 on iOS and Google
+Play Billing on Android. Use a Play internal test build of `app.cleartray`
+for Android purchase testing. F-Droid builds disable store billing.
 
 ### Platform builds
 
@@ -101,7 +99,7 @@ touches the stores.
   builds require your own signing team and an App Group for the extensions.
   See [iOS extensions](ios/EXTENSIONS.md).
 - FOSS Android APK — `bash tool/build_foss_apk.sh`. This build omits the
-  RevenueCat and Google Play in-app review SDKs.
+  Google Play Billing and in-app review SDKs.
 
 If Xcode 27.2 reports a Flutter framework architecture error on Apple silicon,
 build for arm64 after generating the simulator configuration and installing pods:

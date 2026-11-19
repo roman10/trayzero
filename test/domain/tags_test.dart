@@ -157,5 +157,80 @@ void main() {
       expect(plan.idMap, {'a': 'a', 'b': 'b'});
       expect(plan.upserts.map((t) => t.name), ['Garage', 'Kitchen']);
     });
+
+    test('a later rename frees a name an earlier new tag claims', () {
+      // Renamed Home -> Work, then created a new Home: name order puts the
+      // new Home first, but it must not merge onto the renamed tag.
+      final plan = planTagRestore(
+        const [Tag(id: 'x', name: 'Home'), Tag(id: 'a', name: 'Work')],
+        const [Tag(id: 'a', name: 'Home')],
+      );
+      expect(plan.idMap, {'x': 'x', 'a': 'a'});
+      expect(
+        plan.upserts,
+        unorderedEquals(const [
+          Tag(id: 'a', name: 'Work'),
+          Tag(id: 'x', name: 'Home'),
+        ]),
+      );
+    });
+
+    test('a chain of renames keeps every id on its own tag', () {
+      final plan = planTagRestore(
+        const [Tag(id: 'a', name: 'B'), Tag(id: 'b', name: 'C')],
+        const [Tag(id: 'a', name: 'A'), Tag(id: 'b', name: 'B')],
+      );
+      expect(plan.idMap, {'a': 'a', 'b': 'b'});
+      expect(
+        plan.upserts,
+        unorderedEquals(const [
+          Tag(id: 'a', name: 'B'),
+          Tag(id: 'b', name: 'C'),
+        ]),
+      );
+    });
+
+    test('swapped names swap without merging', () {
+      final plan = planTagRestore(
+        const [Tag(id: 'a', name: 'B'), Tag(id: 'b', name: 'A')],
+        const [Tag(id: 'a', name: 'A'), Tag(id: 'b', name: 'B')],
+      );
+      expect(plan.idMap, {'a': 'a', 'b': 'b'});
+      expect(
+        plan.upserts,
+        unorderedEquals(const [
+          Tag(id: 'a', name: 'B'),
+          Tag(id: 'b', name: 'A'),
+        ]),
+      );
+    });
+
+    test('a rename onto a name an untouched local tag holds merges', () {
+      final plan = planTagRestore(
+        const [Tag(id: 'a', name: 'b', isPerson: true)],
+        const [Tag(id: 'a', name: 'A'), Tag(id: 'b', name: 'B')],
+      );
+      expect(plan.idMap, {'a': 'b'});
+      expect(plan.upserts, const [Tag(id: 'b', name: 'B', isPerson: true)]);
+    });
+
+    test('a blocked rename keeps its local name for later backup tags', () {
+      // `a` can't take "B" (held by untouched `b`), so it stays "A"; that
+      // blocks `c` renaming to "A", so `c` stays "C" and a new "c" joins it.
+      final plan = planTagRestore(
+        const [
+          Tag(id: 'a', name: 'B'),
+          Tag(id: 'c', name: 'A'),
+          Tag(id: 'n', name: 'c'),
+        ],
+        const [
+          Tag(id: 'a', name: 'A'),
+          Tag(id: 'b', name: 'B'),
+          Tag(id: 'c', name: 'C'),
+        ],
+      );
+      expect(plan.idMap, {'a': 'b', 'c': 'a', 'n': 'c'});
+      expect(plan.upserts, isEmpty);
+    });
   });
 }

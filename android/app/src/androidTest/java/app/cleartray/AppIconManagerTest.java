@@ -44,6 +44,13 @@ public class AppIconManagerTest {
     @Test public void launchThemesUseNeutralDayNightBackgroundsAndSelectedArtwork() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         PackageManager pm = context.getPackageManager();
+        // The shrunk target APK can omit the AndroidX R class while retaining its resources.
+        int backgroundAttribute = context.getResources().getIdentifier(
+            "windowSplashScreenBackground", "attr", context.getPackageName());
+        int artworkAttribute = context.getResources().getIdentifier(
+            "windowSplashScreenAnimatedIcon", "attr", context.getPackageName());
+        assertNotEquals(0, backgroundAttribute);
+        assertNotEquals(0, artworkAttribute);
         for (int night : new int[]{Configuration.UI_MODE_NIGHT_NO, Configuration.UI_MODE_NIGHT_YES}) {
             Configuration configuration = new Configuration(context.getResources().getConfiguration());
             configuration.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | night;
@@ -54,10 +61,10 @@ public class AppIconManagerTest {
                 int theme = pm.getActivityInfo(launcher, PackageManager.MATCH_DISABLED_COMPONENTS).getThemeResource();
                 Context themed = new ContextThemeWrapper(configured, theme);
                 TypedValue background = new TypedValue();
-                assertTrue(themed.getTheme().resolveAttribute(androidx.core.splashscreen.R.attr.windowSplashScreenBackground, background, true));
+                assertTrue(themed.getTheme().resolveAttribute(backgroundAttribute, background, true));
                 assertEquals(night == Configuration.UI_MODE_NIGHT_YES ? 0xff121212 : 0xfffafafa, background.data);
                 TypedValue artwork = new TypedValue();
-                assertTrue(themed.getTheme().resolveAttribute(androidx.core.splashscreen.R.attr.windowSplashScreenAnimatedIcon, artwork, true));
+                assertTrue(themed.getTheme().resolveAttribute(artworkAttribute, artwork, true));
                 assertEquals(context.getResources().getIdentifier("splash_icon_" + icon, "drawable", context.getPackageName()), artwork.resourceId);
             }
         }

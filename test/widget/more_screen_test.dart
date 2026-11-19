@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:cleartray/app/app.dart';
 import 'package:cleartray/app/router.dart';
 import 'package:cleartray/application/automatic_folder_backup.dart';
+import 'package:cleartray/application/providers.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
-import 'package:cleartray/infrastructure/shared_preferences_folder_backup.dart';
+import 'package:cleartray/features/settings/settings_controller.dart';
 import 'package:cleartray/features/settings/settings_screen.dart';
+import 'package:cleartray/infrastructure/shared_preferences_folder_backup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -174,6 +176,58 @@ void main() {
     await tester.tap(find.text('Language'));
     await tester.pumpAndSettle();
     expect(find.text('Deutsch'), findsOneWidget);
+  });
+
+  testWidgets('Skip delegation persists and changes the Clarify route', (
+    tester,
+  ) async {
+    final container = await boot(tester);
+    final router = container.read(routerProvider);
+    await container.read(itemRepositoryProvider).upsert(anItem(id: 'task'));
+
+    final setting = find.widgetWithText(
+      SwitchListTile,
+      'Skip delegation in Clarify',
+    );
+    expect(tester.widget<SwitchListTile>(setting).value, isFalse);
+    await tester.tap(setting);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(setting).value, isTrue);
+    await env.prefs.reload();
+    expect(env.container().read(skipDelegationProvider), isTrue);
+
+    Future<void> openClarify() async {
+      unawaited(router.push<void>('/process'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Yes — there is something to do'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('No — keep clarifying'));
+      await tester.pumpAndSettle();
+    }
+
+    await openClarify();
+    expect(find.text('Is this a single physical action?'), findsOneWidget);
+    expect(find.text('Step 3 of 5'), findsOneWidget);
+
+    final previous = find.byTooltip('Previous step');
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+    expect(find.text('Will it take less than 2 minutes?'), findsOneWidget);
+    expect(find.text('Step 2 of 5'), findsOneWidget);
+    await tester.tap(previous);
+    await tester.pumpAndSettle();
+    router.pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(setting);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(setting).value, isFalse);
+    await env.prefs.reload();
+    expect(env.container().read(skipDelegationProvider), isFalse);
+
+    await openClarify();
+    expect(find.text('Can someone else do it?'), findsOneWidget);
+    expect(find.text('Step 3 of 6'), findsOneWidget);
   });
 }
 

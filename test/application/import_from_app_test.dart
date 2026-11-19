@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:cleartray/application/import_from_app.dart';
 import 'package:cleartray/application/providers.dart';
+import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:cleartray/data/mappers.dart';
 import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/domain/import/import_plan.dart';
@@ -222,6 +223,56 @@ void main() {
     final receipt = await import(plan);
     expect(receipt.remindersFailed, isFalse);
     expect(env.scheduler.scheduled, isNotEmpty);
+  });
+
+  test('skips reminder reconciliation for completed items', () async {
+    final plan = import.parseFile(
+      ImportSourceApp.googleTasks,
+      fileName: 'Tasks.json',
+      bytes: utf8.encode(jsonEncode({
+        'kind': 'tasks#taskLists',
+        'items': [
+          {
+            'kind': 'tasks#tasks',
+            'id': 'l',
+            'title': 'Home',
+            'items': [
+              {
+                'id': 'open',
+                'title': 'Open',
+                'status': 'needsAction',
+                'due': '2026-11-05T00:00:00Z',
+              },
+              {
+                'id': 'finished',
+                'title': 'Finished',
+                'status': 'completed',
+                'due': '2026-11-05T00:00:00Z',
+                'completed': '2026-10-21T12:30:00Z',
+              },
+            ],
+          },
+        ],
+      })),
+    );
+    await import(plan);
+    final items = await allItems();
+    final done = items.singleWhere((i) => i.status == ItemStatus.done);
+    final open = items.singleWhere((i) => i.status != ItemStatus.done);
+    expect(done.dueAt ?? done.deferUntil, isNotNull);
+    final touched = {
+      ...env.scheduler.cancelled,
+      for (final s in env.scheduler.scheduled) s.id,
+    };
+    for (final salt in [1, 2, 3]) {
+      expect(touched, isNot(contains(notificationIdFor(done.id, salt))));
+    }
+    expect(
+      touched.intersection({
+        for (final salt in [1, 2, 3]) notificationIdFor(open.id, salt),
+      }),
+      isNotEmpty,
+    );
   });
 
   test('undo removes only what the import created', () async {

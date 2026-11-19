@@ -59,6 +59,7 @@ import 'schedule_weekly_review_reminder.dart';
 import 'set_today_focus.dart';
 import 'skip_inbox_item.dart';
 import 'sweep_stale_item_notifications.dart';
+import 'today_widget_snapshot.dart';
 
 /// Re-export the data-layer DI so features depend on a single
 /// application-facing facade rather than reaching into data/ directly.
@@ -164,8 +165,8 @@ final maybeRequestAppReviewProvider = Provider<MaybeRequestAppReview>(
   ),
 );
 
-final recordAppSessionProvider = Provider<RecordAppSession>(
-  (ref) => RecordAppSession(
+final recordAppActiveDayProvider = Provider<RecordAppActiveDay>(
+  (ref) => RecordAppActiveDay(
     store: ref.watch(reviewPromptStoreProvider),
     clock: ref.watch(clockProvider),
   ),
@@ -193,14 +194,24 @@ final completeItemProvider = Provider<CompleteItem>(
 
 /// Applies Today widget completions and Siri captures queued outside the
 /// app (ADR 0009). One instance, so overlapping drains coalesce.
-final drainExternalQueueProvider = Provider<DrainExternalQueue>(
-  (ref) => DrainExternalQueue(
-    bridge: ref.watch(homeWidgetBridgeProvider),
-    items: ref.watch(itemRepositoryProvider),
+final drainExternalQueueProvider = Provider<DrainExternalQueue>((ref) {
+  final bridge = ref.watch(homeWidgetBridgeProvider);
+  final items = ref.watch(itemRepositoryProvider);
+  final clock = ref.watch(clockProvider);
+  return DrainExternalQueue(
+    bridge: bridge,
+    items: items,
     completeItem: ref.watch(completeItemProvider),
     captureItem: ref.watch(captureItemProvider),
-  ),
-);
+    publishTodayAfterCompletion: () async {
+      // The database can commit a widget action while the app is backgrounded
+      // and the reactive publisher is waiting for a foreground frame.
+      final now = clock.now().toLocal();
+      final focused = await items.getFocused(since: _startOfDay(now));
+      await bridge.publishToday(buildTodayWidgetSnapshot(focused, now));
+    },
+  );
+});
 
 final reopenItemProvider = Provider<ReopenItem>(
   (ref) => ReopenItem(
@@ -264,6 +275,7 @@ final skipInboxItemProvider = Provider<SkipInboxItem>(
 
 final convertToProjectProvider = Provider<ConvertToProject>(
   (ref) => ConvertToProject(
+    database: ref.watch(databaseProvider),
     projects: ref.watch(projectRepositoryProvider),
     saveItem: ref.watch(saveItemProvider),
     clock: ref.watch(clockProvider),
@@ -379,16 +391,21 @@ final cancelBackupReminderProvider = Provider<CancelBackupReminder>(
 
 /// Re-arms the enabled standing reminders on launch (see
 /// [RearmStandingReminders]). Read once from `main()` after notifications
-/// init; not watched by the UI.
+/// init and the first frame.
 final rearmStandingRemindersProvider = Provider<RearmStandingReminders>(
   (ref) => RearmStandingReminders(
     scheduler: ref.watch(notificationSchedulerProvider),
-    clock: ref.watch(clockProvider),
     scheduleWeeklyReview: ref.watch(scheduleWeeklyReviewReminderProvider),
     scheduleBackup: ref.watch(scheduleBackupReminderProvider),
     weeklyReviewEnabled: ref.watch(weeklyReviewReminderProvider),
     backupEnabled: ref.watch(backupReminderEnabledProvider),
   ),
+);
+
+/// Finishes when the app's initial standing reminder reconciliation has
+/// settled. Settings uses this to keep a user change ordered after startup.
+final startupStandingRemindersProvider = Provider<Future<void>>(
+  (_) => Future<void>.value(),
 );
 
 /// Re-arms every active dated item's reminder on launch (see
@@ -577,6 +594,15 @@ final focusedItemsProvider = StreamProvider.autoDispose<List<Item>>((ref) {
   return ref.watch(itemRepositoryProvider).watchFocused(since: since);
 });
 
+/// Mirrors focused items to the widget when the app changes them.
+final todayWidgetSnapshotProvider = Provider.autoDispose<TodayWidgetSnapshot?>(
+  (ref) {
+    final now = ref.watch(currentTimeProvider);
+    final items = ref.watch(focusedItemsProvider).valueOrNull;
+    return items == null ? null : buildTodayWidgetSnapshot(items, now);
+  },
+);
+
 DateTime _startOfDay(DateTime now) => DateTime(now.year, now.month, now.day);
 
 /// Latest finished daily plan; Today offers the plan card until one exists
@@ -631,15 +657,22 @@ final agendasProvider = Provider.autoDispose<List<Agenda>>((ref) {
   );
 });
 
-final projectItemsProvider = StreamProvider.family<List<Item>, String>(
+/// Open-Item counts per status for every Project id: the Projects list's
+/// tile read model, one query instead of one per tile.
+final projectStatusCountsProvider =
+    StreamProvider.autoDispose<Map<String, Map<ItemStatus, int>>>(
+  (ref) => ref.watch(itemRepositoryProvider).watchProjectStatusCounts(),
+);
+
+final projectItemsProvider =
+    StreamProvider.autoDispose.family<List<Item>, String>(
   (ref, id) => ref.watch(itemRepositoryProvider).watchForProject(id),
 );
 
 /// Completion history for one project. Kept separate from
-/// [projectItemsProvider] so the active lists (and the Projects screen's
-/// per-tile `hasNext` check) never pay for done rows.
+/// [projectItemsProvider] so the active lists never pay for done rows.
 final completedProjectItemsProvider =
-    StreamProvider.family<List<Item>, String>(
+    StreamProvider.autoDispose.family<List<Item>, String>(
   (ref, id) => ref.watch(itemRepositoryProvider).watchCompletedForProject(id),
 );
 

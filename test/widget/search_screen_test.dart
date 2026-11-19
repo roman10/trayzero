@@ -1,3 +1,4 @@
+import 'package:cleartray/data/repositories/context_repository.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/data/repositories/project_repository.dart';
 import 'package:cleartray/domain/entities/entities.dart';
@@ -45,10 +46,69 @@ void main() {
   testWidgets('filter chips keep a 48dp touch target', (tester) async {
     await pumpApp(tester, const SearchScreen(), env: env);
     await tester.pump(const Duration(milliseconds: 100));
-    for (final label in ['Inbox', 'All contexts']) {
+    for (final label in ['Inbox', 'All contexts', 'No context']) {
       final size = tester.getSize(find.widgetWithText(FilterChip, label));
       expect(size.height, greaterThanOrEqualTo(48), reason: label);
     }
+  });
+
+  testWidgets('No context browses unassigned items and combines with text', (
+    tester,
+  ) async {
+    await ContextRepository(env.db).upsert(
+      const GtdContext(id: 'home', name: '@home', icon: 'home', color: 0),
+    );
+    final unassigned = anItem(id: 'a', title: 'Report unassigned');
+    await items.upsert(unassigned);
+    await items.upsert(
+      anItem(id: 'b', title: 'Report at home', contextId: 'home'),
+    );
+    await items.upsert(anItem(id: 'c', title: 'Buy milk'));
+    await items.upsert(
+      anItem(id: 'd', title: 'Deleted report', status: ItemStatus.trashed),
+    );
+
+    await pumpApp(tester, const SearchScreen(), env: env);
+    final noContext = find.widgetWithText(FilterChip, 'No context');
+    final allContexts = find.widgetWithText(FilterChip, 'All contexts');
+    await tester.tap(noContext);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<FilterChip>(noContext).selected, isTrue);
+    expect(tester.widget<FilterChip>(allContexts).selected, isFalse);
+    expect(find.byTooltip('Clear filters'), findsOneWidget);
+    expect(find.text('Report unassigned'), findsOneWidget);
+    expect(find.text('Buy milk'), findsOneWidget);
+    expect(find.text('Report at home'), findsNothing);
+    expect(find.text('Deleted report'), findsNothing);
+
+    await type(tester, 'report');
+    expect(find.text('Report unassigned'), findsOneWidget);
+    expect(find.text('Buy milk'), findsNothing);
+    expect(find.text('Report at home'), findsNothing);
+
+    final home = find.widgetWithText(FilterChip, '@home');
+    await tester.tap(home);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilterChip>(noContext).selected, isFalse);
+    expect(find.text('Report unassigned'), findsNothing);
+    expect(find.text('Report at home'), findsOneWidget);
+
+    await tester.tap(noContext);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilterChip>(home).selected, isFalse);
+    await tester.tap(find.byTooltip('Clear search'));
+    await tester.pumpAndSettle();
+    expect(find.text('Buy milk'), findsOneWidget);
+
+    await items.upsert(unassigned.copyWith(contextId: 'home'));
+    await tester.pumpAndSettle();
+    expect(find.text('Report unassigned'), findsNothing);
+
+    await tester.tap(find.byTooltip('Clear filters'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilterChip>(allContexts).selected, isTrue);
+    expect(find.text('Type at least two characters'), findsOneWidget);
   });
 
   testWidgets('toggling a status chip re-filters without retyping', (

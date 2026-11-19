@@ -10,6 +10,11 @@
     <string name="today_widget_all_done">На сегодня всё сделано</string>
     <string name="today_widget_plan">Спланировать день</string>
     <string name="today_widget_complete">Выполнить «%1$s»</string>
+    <string name="today_widget_completion_pending">Ожидается завершение задачи «%1$s»</string>
+    <string name="today_widget_pending">В ожидании: %1$d</string>
+    <string name="today_widget_preview_task_one">Просмотреть заметки</string>
+    <string name="today_widget_preview_task_two">Отправить ответ</string>
+    <string name="today_widget_preview_task_three">Спланировать неделю</string>
     <string name="tile_capture_label">Записать в Trayzero</string>
     <string name="shortcut_capture_short">Записать</string>
     <string name="shortcut_capture_long">Записать во «Входящие»</string>

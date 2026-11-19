@@ -124,6 +124,7 @@
   "hardLandscape": "Календарь",
   "hardLandscapeSubtitle": "срок сегодня и просроченные",
   "filterAllContexts": "Все контексты",
+  "filterNoContext": "Без контекста",
   "filterAnyTime": "Любое время",
   "filterUnder5m": "< 5 мин",
   "filterUnder15m": "< 15 мин",
@@ -603,6 +604,8 @@
   "importWarnSourceDetails": "Количество задач с вложениями, настройками напоминаний или статусами, которые не импортируются: {count}.",
   "moreGroupOrganize": "Организация",
   "moreGroupPreferences": "Настройки",
+  "skipDelegationTitle": "Пропускать делегирование при уточнении",
+  "skipDelegationDescription": "После шага с правилом двух минут сразу переходить к вопросу об одном действии.",
   "moreGroupData": "Данные",
   "moreOn": "Вкл.",
   "moreOff": "Выкл.",
@@ -908,5 +911,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "planFollowUpOnDate": "Связаться {date}",
+  "planScheduledOnDate": "Запланировано на {date}",
+  "rateTrayzero": "Оценить Trayzero",
+  "sendFeedback": "Отправить отзыв"
 }

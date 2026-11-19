@@ -1,5 +1,10 @@
+import 'dart:async';
+
+import 'package:cleartray/application/providers.dart';
+import 'package:cleartray/application/schedule_weekly_review_reminder.dart';
 import 'package:cleartray/core/notification_scheduler.dart';
 import 'package:cleartray/features/common/notification_permission_recovery.dart';
+import 'package:cleartray/features/settings/reminders_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +49,33 @@ void main() {
 
   Future<void> drain(WidgetTester tester) =>
       tester.pumpAndSettle(const Duration(seconds: 6));
+
+  testWidgets('a reminder setting waits for launch reconciliation', (
+    tester,
+  ) async {
+    final startup = Completer<void>();
+    await pumpApp(
+      tester,
+      const RemindersScreen(),
+      env: env,
+      extraOverrides: [
+        startupStandingRemindersProvider.overrideWithValue(startup.future),
+      ],
+    );
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pump();
+    expect(env.scheduler.cancelled, isEmpty);
+
+    // Model a startup schedule that was in flight when the user tapped.
+    env.scheduler.pending[weeklyReviewReminderId] = null;
+    startup.complete();
+    await tester.pumpAndSettle();
+
+    expect(env.prefs.getBool('weekly_review_reminder_enabled'), isFalse);
+    expect(env.scheduler.pending, isNot(contains(weeklyReviewReminderId)));
+    expect(env.scheduler.cancelled, contains(weeklyReviewReminderId));
+  });
 
   testWidgets('granted: quiet confirm, no prompt, no settings deep-link',
       (tester) async {

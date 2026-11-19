@@ -128,31 +128,71 @@ List<Agenda> buildAgendas({
 /// matches a *different* tag (ignoring case) is merged onto that tag, so a
 /// restore never creates two tags with the same name. A merge keeps the
 /// person flag when either side has it.
+///
+/// Name ownership is decided against the names tags hold *after* the
+/// restore, not before: in-place renames are settled first, so a backup that
+/// renamed "Home" to "Work" and then created a new "Home" (or swapped two
+/// names) frees and reuses names instead of merging the wrong tags. Only a
+/// rename onto a name still held by a local tag the backup doesn't mention
+/// (or by an earlier backup tag) fails; that tag keeps its local row and
+/// merges onto the holder.
 ({List<Tag> upserts, Map<String, String> idMap}) planTagRestore(
   List<Tag> backup,
   List<Tag> local,
 ) {
-  final byId = {for (final t in local) t.id: t};
-  final byKey = {for (final t in local) tagKey(t.name): t.id};
+  final localById = {for (final t in local) t.id: t};
+  final backupIds = {for (final b in backup) b.id};
+  // Local tags the backup leaves alone keep their names no matter what.
+  final fixed = [
+    for (final t in local)
+      if (!backupIds.contains(t.id)) t,
+  ];
+  final renames = [
+    for (final b in backup)
+      if (localById.containsKey(b.id)) b,
+  ];
+  // Settle renames to a fixed point: a rename whose name is taken fails and
+  // its tag stays put under its local name, which may in turn block another
+  // rename. Each pass fixes one more tag, so this terminates.
+  late Map<String, String> owners;
+  while (true) {
+    owners = {for (final t in fixed) tagKey(t.name): t.id};
+    Tag? blocked;
+    for (final r in renames) {
+      final key = tagKey(r.name);
+      if (owners.containsKey(key)) {
+        blocked = r;
+        break;
+      }
+      owners[key] = r.id;
+    }
+    if (blocked == null) break;
+    renames.remove(blocked);
+    fixed.add(localById[blocked.id]!);
+  }
+
   final idMap = <String, String>{};
   final upserts = <String, Tag>{};
+  for (final r in renames) {
+    upserts[r.id] = r;
+    idMap[r.id] = r.id;
+  }
   for (final b in backup) {
+    if (idMap.containsKey(b.id)) continue;
     final key = tagKey(b.name);
-    final owner = byKey[key];
-    if (owner != null && owner != b.id) {
-      idMap[b.id] = owner;
-      final target = upserts[owner] ?? byId[owner]!;
-      if (b.isPerson && !target.isPerson) {
-        upserts[owner] = byId[owner] = target.copyWith(isPerson: true);
-      }
+    final owner = owners[key];
+    if (owner == null) {
+      // A new tag (renames are all settled, so only new ids get here).
+      owners[key] = b.id;
+      upserts[b.id] = b;
+      idMap[b.id] = b.id;
       continue;
     }
-    final previous = byId[b.id];
-    if (previous != null) byKey.remove(tagKey(previous.name));
-    byId[b.id] = b;
-    byKey[key] = b.id;
-    upserts[b.id] = b;
-    idMap[b.id] = b.id;
+    idMap[b.id] = owner;
+    final target = upserts[owner] ?? localById[owner]!;
+    if (b.isPerson && !target.isPerson) {
+      upserts[owner] = target.copyWith(isPerson: true);
+    }
   }
   return (upserts: upserts.values.toList(), idMap: idMap);
 }

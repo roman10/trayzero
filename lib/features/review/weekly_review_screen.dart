@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../application/maybe_request_app_review.dart';
 import '../../application/providers.dart';
+import '../../core/haptic_feedback.dart';
 import '../../domain/entities/entities.dart';
 import '../../domain/project_movement.dart';
 import '../../l10n/gen/app_localizations.dart';
@@ -14,6 +14,7 @@ import '../common/complete_with_undo.dart';
 import '../common/adaptive_workspace.dart';
 import '../common/error_view.dart';
 import '../common/item_card.dart';
+import '../common/play_haptic.dart';
 import '../common/undo_snack_bar.dart';
 import '../common/localized_dates.dart';
 import 'weekly_review_controller.dart';
@@ -60,22 +61,13 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           : await controller.moveTo(step);
       if (!mounted) return;
       if (saved && finish) {
-        // A finished Weekly Review is a success moment; the policy decides
-        // whether to actually ask for a store rating (ADR 0007).
-        unawaited(
-          ref
-              .read(maybeRequestAppReviewProvider)
-              .call(ReviewMoment.weeklyReviewFinished),
-        );
         // Let the completed route pop after PopScope rebuilds, while keeping
         // Finish disabled so a second tap cannot submit the same session.
         setState(() => _finished = true);
         await WidgetsBinding.instance.endOfFrame;
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.reviewCompleteSnackbar)));
-        context.pop();
+        playHaptic(ref, HapticCue.reviewFinished);
+        context.pop(true);
       }
     } catch (_) {
       if (mounted) {

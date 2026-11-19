@@ -31,6 +31,7 @@ import 'package:cleartray/domain/entities/entities.dart';
 import 'package:cleartray/features/settings/settings_controller.dart'
     show sharedPreferencesProvider;
 import 'package:cleartray/l10n/gen/app_localizations.dart';
+import 'package:drift/drift.dart' show DatabaseConnection;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,7 +77,15 @@ class TestEnv {
   }) async {
     SharedPreferences.setMockInitialValues(prefsValues);
     return TestEnv._(
-      db: AppDatabase.forTesting(NativeDatabase.memory()),
+      // Close drift streams synchronously: an autoDispose stream provider
+      // released in a test's final frame would otherwise leave drift's
+      // zero-duration cache timer pending when the widget tree is torn down.
+      db: AppDatabase.forTesting(
+        DatabaseConnection(
+          NativeDatabase.memory(),
+          closeStreamsSynchronously: true,
+        ),
+      ),
       prefs: await SharedPreferences.getInstance(),
       clock: FakeClock(now ?? DateTime(2026, 5, 14, 9)),
       ids: FixedIdGenerator(idQueue),

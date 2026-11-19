@@ -111,39 +111,34 @@ class CalendarSyncService {
   ) async {
     if (calendarId.isEmpty) throw ArgumentError.value(calendarId, 'calendarId');
     await _mirrors.bindLegacyCalendar(calendarId);
-    var ownership = await _mirrors.all();
+    final ownedEventIds = {
+      for (final row in await _mirrors.all()) row.eventId,
+    };
     // Adopt existing ids written before ownership was tracked (including
     // a recurrence successor that inherited its predecessor's event).
     for (final i in await _items.withCalendarEventId()) {
-      if (ownership.any((o) => o.eventId == i.calendarEventId)) continue;
+      final eventId = i.calendarEventId!;
+      if (!ownedEventIds.add(eventId)) continue;
       await _mirrors.record(
         itemId: i.id,
         calendarId: calendarId,
-        eventId: i.calendarEventId!,
+        eventId: eventId,
       );
-      ownership = await _mirrors.all();
     }
 
     var written = 0;
     var failedWrites = 0;
     final seen = <String>{};
-    for (final snapshot in (await _items.allActive()).where(_qualifies)) {
+    for (final id in await _items.calendarMirrorCandidateIds()) {
       if (!shouldContinue()) break;
+      if (id.startsWith(importedIdPrefix)) continue;
       // Edits/deletion made during native calendar writes take precedence.
-      final i = await _items.getById(snapshot.id);
+      final i = await _items.getById(id);
       if (i == null || !_qualifies(i)) continue;
       // A series may briefly have multiple live instances. Deduplicate its
       // inherited id even when switching calendars creates a replacement id.
       if (i.calendarEventId != null && !seen.add(i.calendarEventId!)) continue;
-      ownership = await _mirrors.all();
-      final matches = ownership
-          .where(
-            (o) =>
-                (o.itemId == i.id || o.eventId == i.calendarEventId) &&
-                o.isCurrent,
-          )
-          .toList();
-      final old = matches.isEmpty ? null : matches.first;
+      final old = await _mirrors.currentForItem(i.id, i.calendarEventId);
       final previousId = old?.calendarId == calendarId ? old!.eventId : null;
       String? eventId;
       try {
@@ -182,9 +177,8 @@ class CalendarSyncService {
       if (!shouldContinue()) break;
       // Re-read before cleanup so a newly-created recurrence successor can
       // claim its predecessor's event even if completion overlapped the run.
-      final live = (await _items.allActive())
-          .where((i) => _qualifies(i) && i.calendarEventId == row.eventId)
-          .toList();
+      final linked = await _items.withCalendarEventId(eventId: row.eventId);
+      final live = linked.where(_qualifies).toList();
       if (live.isNotEmpty) {
         final owner = live.firstWhere(
           (i) => i.id == row.itemId,
@@ -197,8 +191,10 @@ class CalendarSyncService {
             eventId: row.eventId,
           );
         }
-        for (final stale in await _items.withCalendarEventId()) {
-          if (stale.calendarEventId == row.eventId && !_qualifies(stale)) {
+        for (final stale in await _items.withCalendarEventId(
+          eventId: row.eventId,
+        )) {
+          if (!_qualifies(stale)) {
             await _items.setCalendarEventId(stale.id, null);
           }
         }

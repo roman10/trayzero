@@ -4,6 +4,7 @@ import 'package:cleartray/app/router.dart';
 import 'package:cleartray/features/item_edit/item_edit_screen.dart';
 import 'package:cleartray/app/theme.dart';
 import 'package:cleartray/application/providers.dart';
+import 'package:cleartray/core/haptic_feedback.dart';
 import 'package:cleartray/data/repositories/review_repository.dart';
 import 'package:cleartray/data/repositories/item_repository.dart';
 import 'package:cleartray/features/common/complete_circle.dart';
@@ -632,22 +633,28 @@ void main() {
   testWidgets('failed Finish leaves the session incomplete and allows retry', (
     tester,
   ) async {
+    final cues = <HapticCue>[];
     final repo = FailingReviewRepository(env.db)
       ..fail = false
       ..failFinish = true;
     await openReview(
       tester,
       step: WeeklyReviewStep.someday,
-      overrides: [reviewRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        reviewRepositoryProvider.overrideWithValue(repo),
+        playHapticCueProvider.overrideWithValue((cue) async => cues.add(cue)),
+      ],
     );
     await tester.tap(find.text('Finish review'));
     await tester.pumpAndSettle();
     expect(find.text('Step 7 of 7'), findsOneWidget);
     expect((await repo.all()).single.completedAt, isNull);
+    expect(cues, isEmpty);
     repo.failFinish = false;
     await tester.tap(find.text('Finish review'));
     await tester.pumpAndSettle();
     expect((await repo.all()).single.completedAt, env.clock.now());
+    expect(cues, [HapticCue.reviewFinished]);
     expect(find.text('Weekly review'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 100));
   });

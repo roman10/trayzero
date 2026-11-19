@@ -6,6 +6,12 @@ import '../domain/entities/entities.dart';
 import '../domain/recurrence/recurrence_policy.dart';
 import 'save_item.dart';
 
+final class ItemCompletion {
+  const ItemCompletion({required this.spawnedRecurrenceId});
+
+  final String? spawnedRecurrenceId;
+}
+
 /// Marks an item complete, cancels its outstanding reminders, and — when
 /// the completed item is recurring — produces a fresh instance with the
 /// dates advanced by the recurrence interval.
@@ -42,7 +48,11 @@ final class CompleteItem {
   /// [at] backdates a completion that was queued earlier (a Today widget
   /// tap, ADR 0009) so recurrence advances from the tap, not from the
   /// drain. It is clamped to now.
-  Future<String?> call(String id, {DateTime? at}) async {
+  Future<String?> call(String id, {DateTime? at}) async =>
+      (await complete(id, at: at))?.spawnedRecurrenceId;
+
+  /// Returns null if the item is missing or already done.
+  Future<ItemCompletion?> complete(String id, {DateTime? at}) async {
     final current = _clock.now();
     final now = at != null && at.isBefore(current) ? at : current;
     final completion = await _items.completeWithSuccessor(
@@ -56,9 +66,8 @@ final class CompleteItem {
     await _scheduler.cancel(notificationIdFor(id, 2));
     await _scheduler.cancel(notificationIdFor(id, 3));
     final next = completion.successor;
-    if (next == null) return null;
-    await _saveItem.reconcileReminders(next);
-    return next.id;
+    if (next != null) await _saveItem.reconcileReminders(next);
+    return ItemCompletion(spawnedRecurrenceId: next?.id);
   }
 }
 

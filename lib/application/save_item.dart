@@ -37,14 +37,22 @@ final class SaveItem {
   final int _deferSurfaceMinutes;
 
   Future<Item> call(Item updated) async {
-    // Normalise before stamping so the reminder reconciliation below sees the
+    final stamped = await write(updated);
+    await reconcileReminders(stamped);
+    return stamped;
+  }
+
+  /// Normalise, stamp, and persist [updated] without touching reminders.
+  /// For use cases that write it inside a larger transaction; they call
+  /// [reconcileReminders] with the result once that transaction commits.
+  Future<Item> write(Item updated) async {
+    // Normalise before stamping so the reminder reconciliation sees the
     // canonical item: a next action's `dueAt` is dropped here, which makes the
     // `else { cancel(dueId) }` branch correctly tear down any stale "Due:"
     // reminder instead of scheduling one we'd never honour.
     final stamped = enforceItemInvariants(updated)
         .copyWith(updatedAt: _clock.now());
     await _items.upsert(stamped);
-    await reconcileReminders(stamped);
     return stamped;
   }
 

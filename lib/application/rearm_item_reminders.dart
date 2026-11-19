@@ -1,8 +1,10 @@
 import '../core/clock.dart';
 import '../core/notification_scheduler.dart';
 import '../data/repositories/item_repository.dart';
+import '../domain/entities/entities.dart';
 import '../domain/item_invariants.dart';
 import 'calendar_sync_service.dart';
+import 'migrate_item_reminder_ids.dart';
 import 'reconcile_item_reminders.dart';
 import 'pending_snoozed_reminders.dart';
 
@@ -26,10 +28,11 @@ import 'pending_snoozed_reminders.dart';
 /// use. It therefore re-reads each candidate by id immediately before
 /// acting, instead of trusting the initial list snapshot: a concurrent
 /// edit / complete / delete must win, and a row removed mid-loop must not
-/// have its reminder revived. (The cheap "has a date?" pre-filter stays on
-/// the snapshot — an item that gained a date in that window was already
-/// scheduled by the `SaveItem` that dated it — so a huge restore stays
-/// O(dated items), not O(all items) of database reads.)
+/// have its reminder revived. SQLite returns only candidate IDs so the pass
+/// does not load undated items. Saves already reconcile newly dated items.
+///
+/// Requests still pending under an older notification-id scheme are first
+/// moved onto the current ids ([migrateItemReminderIds]).
 ///
 /// Imported calendar events (`cal-` id prefix) are skipped: they came from
 /// the user's real calendar, which already alerts, so Trayzero nagging too
@@ -54,34 +57,31 @@ final class RearmItemReminders {
   final int _deferSurfaceMinutes;
 
   Future<void> call() async {
-    final active = await _items.allActive(); // excludes done / trashed
+    await migrateItemReminderIds(
+      pending: await _scheduler.getPendingNotifications(),
+      items: _items,
+      scheduler: _scheduler,
+      now: _clock.now(),
+      reconcile: _reconcile,
+    );
+    final candidateIds = await _items.reminderCandidateIds(
+      importedCalendarIdPrefix: CalendarSyncService.importedIdPrefix,
+    );
+    if (candidateIds.isEmpty) return;
+
     final pendingByOwner = pendingSnoozesByOwner(
       await _scheduler.getPendingNotifications(),
     );
-    for (final snapshot in active) {
-      // Snapshot pre-filter — cheap, on fields that don't matter if stale:
-      // skip the majority carrying no reminder anchor (a huge restore stays
-      // O(dated items)), and skip device-calendar imports (the real
-      // calendar app alerts; their id prefix never changes).
-      if (snapshot.dueAt == null && snapshot.deferUntil == null) continue;
-      if (snapshot.id.startsWith(CalendarSyncService.importedIdPrefix)) {
-        continue;
-      }
+    for (final id in candidateIds) {
       // Re-read current truth before acting (this overlaps the first
       // seconds of use): a concurrent edit / complete wins over the
       // snapshot, and a row deleted meanwhile yields null — never revive
       // its reminder.
-      final item = await _items.getById(snapshot.id);
+      final item = await _items.getById(id);
       if (item == null || item.completedAt != null) continue;
-      await reconcileItemReminders(
-        // Read-only normalise, exactly as SaveItem does before persisting,
-        // so a stray next-action dueAt is dropped (no "Due:" we'd ignore).
-        enforceStatusDateInvariant(item),
-        scheduler: _scheduler,
-        now: _clock.now(),
-        leadTimeMinutes: _leadTimeMinutes,
-        deferSurfaceMinutes: _deferSurfaceMinutes,
-        preserveNotificationIds: pendingSnoozedReminderIds(
+      await _reconcile(
+        item,
+        pendingSnoozedReminderIds(
           pendingByOwner[item.id] ?? const [],
           now: _clock.now(),
           itemId: item.id,
@@ -89,4 +89,16 @@ final class RearmItemReminders {
       );
     }
   }
+
+  Future<void> _reconcile(Item item, Set<int> preserveIds) =>
+      reconcileItemReminders(
+        // Read-only normalise, exactly as SaveItem does before persisting,
+        // so a stray next-action dueAt is dropped (no "Due:" we'd ignore).
+        enforceStatusDateInvariant(item),
+        scheduler: _scheduler,
+        now: _clock.now(),
+        leadTimeMinutes: _leadTimeMinutes,
+        deferSurfaceMinutes: _deferSurfaceMinutes,
+        preserveNotificationIds: preserveIds,
+      );
 }

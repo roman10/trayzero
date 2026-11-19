@@ -4,6 +4,12 @@
 "%lld done" = "%lld 件完了";
 "+%lld more" = "ほか %lld 件";
 "Complete %@" = "%@ を完了";
+"%lld pending" = "%lld件の処理待ち";
+"Completion pending for %@" = "%@の完了処理待ち";
+"Review notes" = "メモを見直す";
+"Send the agenda" = "議題を送る";
+"Water the plants" = "植物に水をやる";
+"Plan tomorrow" = "明日の予定を立てる";
 "All done for today" = "今日はすべて完了";
 "Nothing focused yet" = "まだフォーカスがありません";
 "Plan your day" = "1日を計画";

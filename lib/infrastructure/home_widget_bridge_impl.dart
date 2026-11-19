@@ -134,13 +134,12 @@ class HomeWidgetBridgeImpl implements HomeWidgetBridge {
     if (!Platform.isAndroid && !Platform.isIOS) return;
     final json = jsonEncode(snapshot.toJson());
     if (json == _lastTodayJson) return;
-    try {
-      await HomeWidget.saveWidgetData<String>(todaySnapshotKey, json);
-      _lastTodayJson = json;
-      await _refreshToday();
-    } on Object catch (_) {
-      // Widget not installed — no-op.
+    final saved = await HomeWidget.saveWidgetData<String>(todaySnapshotKey, json);
+    if (saved != true) {
+      throw StateError('Could not save the Today widget snapshot');
     }
+    await _refreshToday();
+    _lastTodayJson = json;
   }
 
   Future<void> _refreshToday() => HomeWidget.updateWidget(
@@ -149,37 +148,66 @@ class HomeWidgetBridgeImpl implements HomeWidgetBridge {
   );
 
   @override
-  Future<ExternalQueue> takeQueue() async {
+  Future<ExternalQueue> readQueue() async {
     await init();
-    if (!Platform.isAndroid && !Platform.isIOS) return const ExternalQueue();
-    final completions = await _take(todayCompletionsKey);
-    final captures = await _take(inboxCapturesKey);
-    if (completions.isNotEmpty) {
-      // Re-render: a skipped entry (Item deleted since the tap) leaves the
-      // snapshot unchanged, so publishing alone would keep its check.
-      try {
-        await _refreshToday();
-      } on Object catch (_) {}
+    try {
+      return ExternalQueue(
+        completions: await _read(todayCompletionsKey, completionFrom),
+        captures: await _read(inboxCapturesKey, captureFrom),
+      );
+    } on MissingPluginException {
+      return const ExternalQueue();
     }
-    return ExternalQueue(
-      completions: [for (final e in completions) ?_completion(e)],
-      captures: [for (final e in captures) ?_capture(e)],
-    );
   }
 
-  /// Reads queue [key] and removes exactly the entries read. The key is
-  /// read again just before writing so an entry appended meanwhile (the
-  /// widget or an intent runs in another thread or process) is kept.
-  Future<List<Map<String, Object?>>> _take(String key) async {
-    final taken = decodeQueue(await HomeWidget.getWidgetData<String>(key));
-    if (taken.isEmpty) return taken;
-    final latest = decodeQueue(await HomeWidget.getWidgetData<String>(key));
-    final remaining = removeTaken(latest, taken);
-    await HomeWidget.saveWidgetData<String>(
+  Future<List<T>> _read<T>(
+    String key,
+    T? Function(Map<String, Object?>) parse,
+  ) async {
+    final raw = await _launchChannel.invokeMethod<String>(
+      'readExternalQueue',
       key,
-      remaining.isEmpty ? null : jsonEncode(remaining),
     );
-    return taken;
+    final entries = <T>[];
+    final malformedReceipts = <String>[];
+    for (final data in decodeQueue(raw)) {
+      final entry = parse(data);
+      if (entry != null) {
+        entries.add(entry);
+      } else if (data['receipt'] case final String receipt
+          when receipt.isNotEmpty) {
+        malformedReceipts.add(receipt);
+      }
+    }
+    await _acknowledge(key, malformedReceipts);
+    return entries;
+  }
+
+  @override
+  Future<void> acknowledgeQueue({
+    List<String> completionReceipts = const [],
+    List<String> captureReceipts = const [],
+  }) async {
+    await init();
+    await _acknowledge(todayCompletionsKey, completionReceipts);
+    await _acknowledge(inboxCapturesKey, captureReceipts);
+    if (completionReceipts.isNotEmpty) {
+      // Skipped entries can leave the snapshot unchanged, so they also need
+      // a refresh to clear the widget's pending overlay.
+      try {
+        await _refreshToday();
+      } on Object catch (e) {
+        debugPrint('[widget] queue refresh FAILED: $e');
+      }
+    }
+  }
+
+  Future<void> _acknowledge(String key, List<String> receipts) async {
+    if (receipts.isEmpty) return;
+    await _launchChannel.invokeMethod<void>('acknowledgeExternalQueue', {
+      'key': key,
+      'receipts': receipts,
+    });
   }
 
   /// Decodes a JSON-array queue. A corrupt value decodes as empty and is
@@ -199,41 +227,37 @@ class HomeWidgetBridgeImpl implements HomeWidgetBridge {
     }
   }
 
-  /// [latest] minus one occurrence of each entry in [taken].
-  @visibleForTesting
-  static List<Map<String, Object?>> removeTaken(
-    List<Map<String, Object?>> latest,
-    List<Map<String, Object?>> taken,
-  ) {
-    final pending = [for (final t in taken) jsonEncode(t)];
-    final remaining = <Map<String, Object?>>[];
-    for (final e in latest) {
-      if (!pending.remove(jsonEncode(e))) remaining.add(e);
-    }
-    return remaining;
+  static DateTime? _time(Object? ms) {
+    if (ms is! num || !ms.isFinite || ms.abs() > 8640000000000000) return null;
+    return DateTime.fromMillisecondsSinceEpoch(ms.toInt());
   }
 
-  static DateTime? _time(Object? ms) =>
-      ms is num ? DateTime.fromMillisecondsSinceEpoch(ms.toInt()) : null;
-
   @visibleForTesting
-  static QueuedCompletion? completionFrom(Map<String, Object?> e) =>
-      _completion(e);
-
-  @visibleForTesting
-  static QueuedCapture? captureFrom(Map<String, Object?> e) => _capture(e);
-
-  static QueuedCompletion? _completion(Map<String, Object?> e) {
+  static QueuedCompletion? completionFrom(Map<String, Object?> e) {
+    final receipt = e['receipt'];
     final id = e['id'];
     final at = _time(e['at']);
-    if (id is! String || id.isEmpty || at == null) return null;
-    return (id: id, at: at);
+    if (receipt is! String ||
+        receipt.isEmpty ||
+        id is! String ||
+        id.isEmpty ||
+        at == null) {
+      return null;
+    }
+    return (receipt: receipt, id: id, at: at);
   }
 
-  static QueuedCapture? _capture(Map<String, Object?> e) {
+  @visibleForTesting
+  static QueuedCapture? captureFrom(Map<String, Object?> e) {
+    final receipt = e['receipt'];
     final text = e['text'];
     final at = _time(e['at']);
-    if (text is! String || at == null) return null;
-    return (text: text, at: at);
+    if (receipt is! String ||
+        receipt.isEmpty ||
+        text is! String ||
+        at == null) {
+      return null;
+    }
+    return (receipt: receipt, text: text, at: at);
   }
 }

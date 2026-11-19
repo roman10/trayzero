@@ -1,21 +1,15 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/gen/app_localizations.dart';
-import '../settings/settings_controller.dart';
 
 /// The round "mark done" control on an item card.
 ///
 /// The visible ring is [diameter] wide, but the widget is a [targetSize]
 /// square that captures taps across all of it, meeting the 48dp minimum touch
-/// target. Tapping fills the ring, shows a check and (unless haptics are off in
-/// settings) gives a selection click, then calls [onComplete] after
+/// target. Tapping fills the ring, shows a check, then calls [onComplete] after
 /// [feedbackDuration] so the confirmation is seen before the item leaves the
 /// list.
-class CompleteCircle extends ConsumerStatefulWidget {
+class CompleteCircle extends StatefulWidget {
   const CompleteCircle({
     required this.title,
     required this.onComplete,
@@ -31,10 +25,10 @@ class CompleteCircle extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
 
   @override
-  ConsumerState<CompleteCircle> createState() => _CompleteCircleState();
+  State<CompleteCircle> createState() => _CompleteCircleState();
 }
 
-class _CompleteCircleState extends ConsumerState<CompleteCircle> {
+class _CompleteCircleState extends State<CompleteCircle> {
   bool _completing = false;
 
   Future<void> _complete() async {
@@ -43,9 +37,6 @@ class _CompleteCircleState extends ConsumerState<CompleteCircle> {
     // the completion the user asked for must still happen.
     final onComplete = widget.onComplete;
     setState(() => _completing = true);
-    if (ref.read(hapticsEnabledProvider)) {
-      unawaited(HapticFeedback.selectionClick());
-    }
     await Future<void>.delayed(CompleteCircle.feedbackDuration);
     onComplete();
   }

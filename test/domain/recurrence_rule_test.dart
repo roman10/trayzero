@@ -207,4 +207,78 @@ void main() {
       expect(rule.describe(), 'Every week on Mon, Fri');
     });
   });
+
+  // Calendar-day arithmetic across US DST boundaries (2026-03-08 spring
+  // forward, 2026-11-01 fall back). These pass trivially under UTC; run with
+  // `TZ=America/New_York flutter test test/domain/recurrence_rule_test.dart`
+  // to exercise the transitions — fixed 24h `Duration` math fails there.
+  group('DST boundaries keep wall-clock date and time', () {
+    void expectWallClock(DateTime actual, DateTime expected) {
+      expect(
+        [actual.year, actual.month, actual.day, actual.hour, actual.minute],
+        [
+          expected.year,
+          expected.month,
+          expected.day,
+          expected.hour,
+          expected.minute,
+        ],
+      );
+    }
+
+    test('untimed daily item across fall back lands on the next midnight',
+        () {
+      const r = RecurrenceRule(frequency: Recurrence.daily);
+      final first = r.nextAfter(DateTime(2026, 10, 31));
+      expectWallClock(first, DateTime(2026, 11, 1));
+      // The drift must not persist into the following occurrences.
+      expectWallClock(r.nextAfter(first), DateTime(2026, 11, 2));
+    });
+
+    test('timed daily item across spring forward keeps 9:00', () {
+      const r = RecurrenceRule(frequency: Recurrence.daily);
+      expectWallClock(
+          r.nextAfter(DateTime(2026, 3, 7, 9)), DateTime(2026, 3, 8, 9));
+      expectWallClock(
+          r.nextAfter(DateTime(2026, 3, 8, 9)), DateTime(2026, 3, 9, 9));
+    });
+
+    test('weekly with no weekdays across fall back keeps weekday', () {
+      const r = RecurrenceRule(frequency: Recurrence.weekly);
+      final next = r.nextAfter(DateTime(2026, 10, 28));
+      expectWallClock(next, DateTime(2026, 11, 4));
+      expect(next.weekday, DateTime.wednesday);
+    });
+
+    test('weekly by weekday across spring forward lands on that weekday',
+        () {
+      // Fri 2026-03-06 → next Monday 2026-03-09, crossing Sun 03-08.
+      const r = RecurrenceRule(
+        frequency: Recurrence.weekly,
+        byWeekdays: {DateTime.monday, DateTime.friday},
+      );
+      final next = r.nextAfter(DateTime(2026, 3, 6));
+      expectWallClock(next, DateTime(2026, 3, 9));
+      expect(next.weekday, DateTime.monday);
+    });
+
+    test('weekly by weekday later in the week across fall back', () {
+      // Sat 2026-10-31 → Sun 2026-11-01 (same Mon–Sun week), crossing the
+      // fall-back transition that night.
+      const r = RecurrenceRule(
+        frequency: Recurrence.weekly,
+        byWeekdays: {DateTime.sunday},
+      );
+      final next = r.nextAfter(DateTime(2026, 10, 31));
+      expectWallClock(next, DateTime(2026, 11, 1));
+      expect(next.weekday, DateTime.sunday);
+    });
+
+    test('UTC bases stay UTC', () {
+      const r = RecurrenceRule(frequency: Recurrence.daily);
+      final next = r.nextAfter(DateTime.utc(2026, 10, 31, 23));
+      expect(next, DateTime.utc(2026, 11, 1, 23));
+      expect(next.isUtc, isTrue);
+    });
+  });
 }

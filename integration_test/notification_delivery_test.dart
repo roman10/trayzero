@@ -15,7 +15,8 @@
 //
 // HOW TO RUN SO IT ACTUALLY GUARDS THE BUG
 // ----------------------------------------
-//   Run bash tool/ci_android_native.sh on a disposable Android emulator. flutter test --release cannot attach to a release VM service.
+//   See docs/mobile/native-release-checks.md for the release instrumentation
+//   runner. flutter test --release cannot attach to a release VM service.
 //
 // Release instrumentation is mandatory to exercise R8. Default `flutter test` builds the
 // `.debug` variant (applicationId app.cleartray.debug) which co-installs
@@ -69,7 +70,7 @@ void main() {
         '  ⚠  NOT a --release build: R8 is OFF, so the flutter_local_\n'
         '     notifications "Missing type parameter" regression is NOT\n'
         '     being exercised. Use the release instrumentation runner in\n'
-        '       tool/ci_android_native.sh\n'
+        '       docs/mobile/native-release-checks.md\n'
         '==================================================================\n',
       );
     }

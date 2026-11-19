@@ -200,6 +200,7 @@ void main() {
         trashItem: trash,
         completeItem: complete,
         convertToProject: ConvertToProject(
+          database: db,
           projects: ProjectRepository(db),
           saveItem: saveItem,
           clock: clock,

@@ -42,7 +42,7 @@ void main() {
         body: '',
       ).encode(),
     ));
-    return id;
+    return snoozeNotificationId(id, kind);
   }
 
   test('startup re-arm preserves a snoozed overdue item reminder', () async {
@@ -208,18 +208,78 @@ void main() {
       await env.prefs.setBool('weekly_review_reminder_enabled', true);
       await env.prefs.setBool('backup_reminder_enabled', true);
       final c = env.container();
+      await c.read(rearmStandingRemindersProvider).call();
       final reviewId = await snooze(NotificationKind.weeklyReview);
       final backupId = await snooze(NotificationKind.backup);
       final before = Map.of(env.scheduler.pending);
       await c.read(rearmStandingRemindersProvider).call();
-      expect(env.scheduler.pending[reviewId], before[reviewId]);
-      expect(env.scheduler.pending[backupId], before[backupId]);
+      expect(env.scheduler.pending, before);
+      expect(env.scheduler.pending.keys, {
+        weeklyReviewReminderId,
+        backupReminderId,
+        reviewId,
+        backupId,
+      });
       await env.prefs.setBool('weekly_review_reminder_enabled', false);
       await env.prefs.setBool('backup_reminder_enabled', false);
       await env.container().read(rearmStandingRemindersProvider).call();
       expect(env.scheduler.pending, isEmpty);
     },
   );
+
+  test('a standing Snooze keeps the weekly repeat armed', () async {
+    await env.prefs.setBool('backup_reminder_enabled', true);
+    await env.container().read(rearmStandingRemindersProvider).call();
+    final weekly = Map.of(env.scheduler.pending);
+    for (final kind in [
+      NotificationKind.weeklyReview,
+      NotificationKind.backup,
+    ]) {
+      final snoozeId = await snooze(kind);
+      final repeatId = kind == NotificationKind.weeklyReview
+          ? weeklyReviewReminderId
+          : backupReminderId;
+      expect(snoozeId, isNot(repeatId));
+      expect(env.scheduler.pending[repeatId], weekly[repeatId]);
+      final posted = env.scheduler.scheduled.last;
+      expect(posted.id, snoozeId);
+      expect(posted.repeat, ScheduleRepeat.once);
+      expect(posted.at, env.clock.now().add(const Duration(days: 1)));
+    }
+    expect([
+      weeklyReviewSnoozeId,
+      backupSnoozeId,
+    ], everyElement(isIn(env.scheduler.pending.keys)));
+  });
+
+  test('snoozing a standing Snooze replaces it instead of stacking', () async {
+    final c = env.container();
+    final first = await snooze(NotificationKind.weeklyReview);
+    // The Snooze fires and is snoozed again from its own notification.
+    await HandleNotificationResponse(
+      scheduler: env.scheduler,
+      completeItem: c.read(completeItemProvider),
+      moveToNextActions: c.read(moveItemToNextActionsProvider),
+      clock: env.clock,
+      navigate: (_) {},
+    ).call((
+      id: first,
+      actionId: NotificationAction.snooze.id,
+      payload: env.scheduler.pending[first],
+    ));
+    expect(env.scheduler.scheduled.map((s) => s.id), [first, first]);
+    expect(first, weeklyReviewSnoozeId);
+  });
+
+  test('disabling a standing reminder cancels its pending Snooze', () async {
+    final c = env.container();
+    final reviewId = await snooze(NotificationKind.weeklyReview);
+    final backupId = await snooze(NotificationKind.backup);
+    await c.read(cancelWeeklyReviewReminderProvider).call();
+    await c.read(cancelBackupReminderProvider).call();
+    expect(env.scheduler.pending, isNot(contains(reviewId)));
+    expect(env.scheduler.pending, isNot(contains(backupId)));
+  });
 
   test('expired standing Snoozes resume weekly scheduling', () async {
     await env.prefs.setBool('backup_reminder_enabled', true);

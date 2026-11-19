@@ -47,9 +47,14 @@ Item? nextRecurrenceOf(
     if (nextAnchor.isAfter(endOfUntilDay)) return null;
   }
 
-  final nextStatus = completed.status == ItemStatus.done
-      ? ItemStatus.nextAction
-      : completed.status;
+  // A completed occurrence was clarified work, so its successor is a next
+  // action. That includes an Inbox row finished directly (e.g. "Do it now"
+  // on an imported repeating task) — respawning it into the Inbox would make
+  // the user re-process the same series every cycle.
+  final nextStatus = switch (completed.status) {
+    ItemStatus.done || ItemStatus.inbox => ItemStatus.nextAction,
+    final status => status,
+  };
 
   // GTD Option A: a next action's only date anchor is `deferUntil`. If the
   // series is anchored on `dueAt` but spawns a next action, fold the advanced

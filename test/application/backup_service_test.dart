@@ -179,6 +179,53 @@ void main() {
       expect((await tags.tagIdsFor('i1')).toSet(), {'t1', 't2'});
     });
 
+    test('a backup that renamed a tag and reused its name restores both',
+        () async {
+      // In the backup: Kitchen was renamed Workshop, then a new Kitchen made.
+      await tags.upsertAll(const [
+        Tag(id: 't2', name: 'Workshop'),
+        Tag(id: 't3', name: 'Kitchen'),
+      ], createdAt: now);
+      await tags.replaceItemTags({
+        'i2': ['t3'],
+      });
+      final snapshot = await backup.export();
+      // This device still has the old name and no new tag.
+      await tags.delete('t3');
+      await tags.upsertAll(const [Tag(id: 't2', name: 'Kitchen')],
+          createdAt: now);
+
+      await backup.import(snapshot);
+
+      expect(await tags.all(), unorderedEquals(const [
+        Tag(id: 't1', name: 'Alice', isPerson: true),
+        Tag(id: 't2', name: 'Workshop'),
+        Tag(id: 't3', name: 'Kitchen'),
+      ]));
+      expect((await tags.tagIdsFor('i1')).toSet(), {'t1', 't2'});
+      expect(await tags.tagIdsFor('i2'), ['t3']);
+    });
+
+    test('a backup that swapped two tag names restores the swap', () async {
+      await tags.upsertAll(const [
+        Tag(id: 't1', name: 'Kitchen', isPerson: true),
+        Tag(id: 't2', name: 'Alice'),
+      ], createdAt: now);
+      final snapshot = await backup.export();
+      await tags.upsertAll(const [
+        Tag(id: 't1', name: 'Alice', isPerson: true),
+        Tag(id: 't2', name: 'Kitchen'),
+      ], createdAt: now);
+
+      await backup.import(snapshot);
+
+      expect(await tags.all(), unorderedEquals(const [
+        Tag(id: 't1', name: 'Kitchen', isPerson: true),
+        Tag(id: 't2', name: 'Alice'),
+      ]));
+      expect((await tags.tagIdsFor('i1')).toSet(), {'t1', 't2'});
+    });
+
     test('a v7 backup imports and leaves current tags alone', () async {
       final snapshot = await backup.export();
       snapshot['version'] = 7;
