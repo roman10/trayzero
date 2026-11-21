@@ -143,10 +143,19 @@ conventions — read it before contributing.
 
 ## Contributing
 
-To suggest a translation or improve existing wording, choose your language in
-[Trayzero on Hosted Weblate](https://hosted.weblate.org/projects/trayzero/app/).
-Keep placeholders and plural forms intact. If a string needs context, comment
-with the screen where it appears.
+### Translations
+
+1. Open [Trayzero on Hosted Weblate](https://hosted.weblate.org/projects/trayzero/app/)
+   and choose your language.
+2. Search for the wording you saw in the app.
+3. Enter your proposed wording and click **Suggest**. Keep placeholders and
+   plural forms intact. If a string needs context, comment with the screen
+   where it appears.
+
+If your language or string is missing, [open a GitHub issue](https://github.com/roman10/trayzero/issues/new)
+with your language, Trayzero version, and the screen where you saw the wording.
+
+### Code contributions
 
 UI labels live in the ARB files for all ten supported languages. Recurrence
 summaries, item-card metadata, and dates use the shared presentation formatters
